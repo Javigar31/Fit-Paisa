@@ -49,7 +49,7 @@ html,body{height:100%;overflow:hidden;background:var(--dark);color:var(--text);f
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.card{background:var(--dark2);border:1px solid var(--border);border-radius:14px;padding:18px;transition:border-color .2s}
+.card{background:var(--dark2);border:1px solid var(--border);border-radius:14px;padding:18px;transition:border-color .2s;min-width:0;max-width:100%}
 .card:hover{border-color:rgba(255,255,255,.1)}
 .card-title{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--lime);font-weight:700;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
 .stat-v{font-family:var(--fd);font-size:32px;line-height:1}
@@ -94,7 +94,7 @@ select.input{appearance:none;cursor:none}
 .log-item:last-child{border-bottom:none}
 .log-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px}
 .log-time{color:var(--muted);white-space:nowrap;font-size:11px;min-width:60px}
-.table-wrap{width:100%;overflow-x:auto}
+.table-wrap{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
 
 /* ═══ Modal overlay ═══ */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);z-index:500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
@@ -123,9 +123,13 @@ select.input{appearance:none;cursor:none}
 }
 
 @media (max-width: 768px){
-  html,body{height:auto;overflow:auto}
+  html,body{height:auto;min-height:100%;overflow:visible;overflow-x:hidden}
   .sidebar{
-    position:relative;
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    z-index:400;
     width:100%;
     height:auto;
     border-right:none;
@@ -143,6 +147,7 @@ select.input{appearance:none;cursor:none}
   .sb-user{display:none}
   .main{
     margin-left:0;
+    padding-top:160px;
     height:auto;
     min-height:calc(100vh - 140px);
     overflow:visible;
@@ -154,6 +159,7 @@ select.input{appearance:none;cursor:none}
     padding:20px 16px 100px;
     overflow:visible;
     transform:none !important;
+    scroll-margin-top:160px;
   }
   .section.hidden-right,.section.hidden-left,.section.visible{
     opacity:1;
@@ -162,6 +168,7 @@ select.input{appearance:none;cursor:none}
   #prog{
     left:0;
     right:0;
+    z-index:500;
   }
   .page-head{
     flex-direction:column;
@@ -186,26 +193,26 @@ select.input{appearance:none;cursor:none}
   </div>
   <nav class="sb-nav">
     <div class="sb-label">Gestión</div>
-    <div class="nav-item on" onclick="show('overview')">
+    <div class="nav-item on" onclick="show('overview', this)">
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Panel general
     </div>
-    <div class="nav-item" onclick="show('users')">
+    <div class="nav-item" onclick="show('users', this)">
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Usuarios
       <span class="nbadge" style="background:rgba(255,255,255,.1);color:var(--muted)">248</span>
     </div>
-    <div class="nav-item" onclick="show('coaches')">
+    <div class="nav-item" onclick="show('coaches', this)">
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Entrenadores/as
       <span class="nbadge" style="background:rgba(255,255,255,.1);color:var(--muted)">12</span>
     </div>
-    <div class="nav-item" onclick="show('subs')">
+    <div class="nav-item" onclick="show('subs', this)">
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Suscripciones
       <span class="nbadge" style="background:var(--limedim);color:var(--lime)">89</span>
     </div>
     <div class="sb-label">Sistema</div>
-    <div class="nav-item" onclick="show('logs')">
+    <div class="nav-item" onclick="show('logs', this)">
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Logs del sistema
     </div>
-    <div class="nav-item" onclick="show('config')">
+    <div class="nav-item" onclick="show('config', this)">
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>Configuración
     </div>
   </nav>
@@ -251,6 +258,7 @@ select.input{appearance:none;cursor:none}
     </div>
     <div class="card r r4">
       <div class="card-title">Registros recientes</div>
+      <div class="table-wrap">
       <table><thead><tr><th>Usuario</th><th>Acción</th><th>Fecha</th><th>Estado</th></tr></thead>
       <tbody>
         <tr><td>Carlos Méndez</td><td>Suscripción Premium activada</td><td style="color:var(--muted)">Hoy 10:32</td><td><span class="badge b-lime">OK</span></td></tr>
@@ -259,6 +267,7 @@ select.input{appearance:none;cursor:none}
         <tr><td>Ana García</td><td>Plan aprobado por entrenadora</td><td style="color:var(--muted)">Ayer 18:05</td><td><span class="badge b-lime">OK</span></td></tr>
         <tr><td>Nuevo usuario</td><td>Registro completado (3 pasos)</td><td style="color:var(--muted)">Ayer 17:30</td><td><span class="badge b-lime">OK</span></td></tr>
       </tbody></table>
+      </div>
     </div>
   </div>
 
@@ -270,6 +279,7 @@ select.input{appearance:none;cursor:none}
     </div>
     <div class="card r r2">
       <div class="card-title">Lista de usuarios <span style="font-weight:400;color:var(--muted);font-size:11px;text-transform:none;letter-spacing:0">248 registros</span></div>
+      <div class="table-wrap">
       <table>
         <thead><tr><th>Usuario</th><th>Correo</th><th>Rol</th><th>Suscripción</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody>
@@ -279,6 +289,7 @@ select.input{appearance:none;cursor:none}
           <tr><td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:26px;height:26px;font-size:10px">AG</div>Ana García</div></td><td style="color:var(--muted)">ana@mail.com</td><td><span class="badge b-gray">Usuario</span></td><td><span class="badge b-lime">Premium</span></td><td><span class="badge b-green">Activo</span></td><td><div style="display:flex;gap:6px"><button class="btn-ghost" onclick="openEditUser('Ana García','ana@mail.com','Usuario','Premium','Activo')">Editar</button><button class="btn-danger" onclick="openConfirmSuspend('Ana García')">Suspender</button></div></td></tr>
         </tbody>
       </table>
+      </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;font-size:12px;color:var(--muted)">
         <span>Mostrando 4 de 248</span>
         <div style="display:flex;gap:6px"><button class="btn-ghost">← Ant.</button><button class="btn-ghost">Sig. →</button></div>
@@ -298,6 +309,7 @@ select.input{appearance:none;cursor:none}
     </div>
     <div class="card r r3">
       <div class="card-title">Entrenadores/as registrados/as</div>
+      <div class="table-wrap">
       <table>
         <thead><tr><th>Nombre</th><th>Email</th><th>Clientes</th><th>Especialidad</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody>
@@ -306,6 +318,7 @@ select.input{appearance:none;cursor:none}
           <tr><td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:26px;height:26px;font-size:10px;background:rgba(255,179,71,.1);color:var(--warn)">RN</div>Rosa Núñez</div></td><td style="color:var(--muted)">rosa@mail.com</td><td>—</td><td>Pilates / Movilidad</td><td><span class="badge b-yellow">Validación</span></td><td><div style="display:flex;gap:6px"><button class="btn-lime" onclick="openConfirmValidate('Rosa Núñez')">✓ Validar</button><button class="btn-danger" onclick="openConfirmReject('Rosa Núñez')">Rechazar</button></div></td></tr>
         </tbody>
       </table>
+      </div>
     </div>
   </div>
 
@@ -320,6 +333,7 @@ select.input{appearance:none;cursor:none}
     </div>
     <div class="card r r3">
       <div class="card-title">Suscripciones recientes</div>
+      <div class="table-wrap">
       <table>
         <thead><tr><th>Usuario</th><th>Plan</th><th>Proveedor</th><th>Inicio</th><th>Renovación</th><th>Estado</th></tr></thead>
         <tbody>
@@ -329,6 +343,7 @@ select.input{appearance:none;cursor:none}
           <tr><td>Luis Moreno</td><td><span class="badge b-gray">Básico</span></td><td>—</td><td style="color:var(--muted)">—</td><td style="color:var(--muted)">—</td><td><span class="badge b-warn">Pendiente</span></td></tr>
         </tbody>
       </table>
+      </div>
       <div style="margin-top:14px;padding:12px;background:rgba(255,255,255,.03);border-radius:10px;font-size:12px;color:var(--muted)">🔒 Los datos de tarjeta son gestionados íntegramente por Stripe/PayPal (PCI-DSS). FitPaisa solo almacena el ID externo de la transacción.</div>
     </div>
   </div>
@@ -348,6 +363,7 @@ select.input{appearance:none;cursor:none}
     </div>
     <div class="card r r3">
       <div class="card-title">Logs de notificaciones SMTP</div>
+      <div class="table-wrap">
       <table>
         <thead><tr><th>Destinatario</th><th>Tipo</th><th>Estado</th><th>Enviado</th></tr></thead>
         <tbody>
@@ -357,6 +373,7 @@ select.input{appearance:none;cursor:none}
           <tr><td>test@null.com</td><td>Recordatorio actividad</td><td><span class="badge b-red">Error</span></td><td style="color:var(--muted)">Ayer 12:00</td></tr>
         </tbody>
       </table>
+      </div>
     </div>
   </div>
 
@@ -419,17 +436,28 @@ document.querySelectorAll('button,.nav-item').forEach(el=>{
 // sections
 const secs=['overview','users','coaches','subs','logs','config'];
 let active='overview';
-function show(id){
+function show(id, el){
   if(id===active)return;
   const prev=document.getElementById('sec-'+active);
   const next=document.getElementById('sec-'+id);
   const pi=secs.indexOf(active),ni=secs.indexOf(id);
+  
+  if (window.innerWidth <= 768) {
+    if (next) next.scrollIntoView({ behavior: 'smooth' });
+    active = id;
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('on'));
+    if (el) el.classList.add('on');
+    document.getElementById('prog').style.width=((ni+1)/secs.length*100)+'%';
+    if(id==='logs')renderLogs();
+    return;
+  }
+
   prev.className='section '+(ni>pi?'hidden-left':'hidden-right');
   next.className='section visible';
   void next.offsetWidth;
   active=id;
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('on'));
-  event.currentTarget.classList.add('on');
+  if (el) el.classList.add('on');
   document.getElementById('prog').style.width=((ni+1)/secs.length*100)+'%';
   if(id==='logs')renderLogs();
 }

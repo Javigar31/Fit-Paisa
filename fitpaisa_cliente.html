@@ -25,6 +25,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:va
 .s2{background:radial-gradient(ellipse 70% 60% at 20% 65%,#1a1208 0%,var(--dark) 65%)}
 .s3{background:radial-gradient(ellipse 60% 70% at 80% 55%,#0a0d1a 0%,var(--dark) 65%)}
 .s4{background:radial-gradient(ellipse 70% 60% at 30% 40%,#130a1a 0%,var(--dark) 65%)}
+.s5{background:radial-gradient(ellipse 70% 60% at 50% 50%,#1a1015 0%,var(--dark) 70%)}
 
 /* topbar */
 .topbar{
@@ -168,7 +169,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:va
 .btn-ghost:hover{border-color:var(--border);color:var(--text)}
 
 @media(max-width:768px){
-  html,body{height:auto;min-height:100%}
+  html,body{height:auto;min-height:100%;overflow:auto}
+  #scene, #carousel, .slide { position: relative; inset: auto; perspective: none; }
+  #carousel { transform: none !important; }
+  .slide { min-height: 100vh; opacity: 1 !important; transform: none !important; pointer-events: auto !important; }
+  .slide:not(.active) .slide-hero>*, .slide:not(.active) .slide-panel>*{opacity:1;transform:none;}
   .slide-body-wrap{grid-template-columns:1fr}
   .slide-panel{padding:20px 24px 110px}
   .slide-hero{border-right:none;padding:32px 24px}
@@ -448,6 +453,36 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:va
     </div>
   </div>
 
+    <!-- SLIDE 5 · Contacto -->
+    <div class="slide s5" data-i="5">
+      <div class="slide-body-wrap">
+        <div class="slide-hero">
+          <div class="slide-tag">Soporte · Contacto</div>
+          <div class="slide-title">¿NECESITAS<br>AYUDA?<br><em>HABLAMOS.</em></div>
+          <p class="slide-desc">¿Tienes dudas sobre tu plan o problemas con la plataforma? Envíanos un mensaje directo.</p>
+          <div class="contact-info">
+            <div class="contact-info-item">
+              <div class="contact-info-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+              garciajavierandres@hotmail.com
+            </div>
+          </div>
+        </div>
+        <div class="slide-panel">
+          <div class="card">
+            <div class="card-title">Formulario de soporte</div>
+            <form class="contact-form" action="https://formsubmit.co/garciajavierandres@hotmail.com" method="POST">
+              <input type="hidden" name="_subject" value="Soporte Cliente FitPaisa">
+              <input type="hidden" name="_captcha" value="false">
+              <input type="text" name="name" placeholder="Tu nombre" required>
+              <input type="email" name="email" placeholder="Tu correo electrónico" required>
+              <textarea name="message" placeholder="¿En qué podemos ayudarte?" required></textarea>
+              <button type="submit" class="contact-submit" style="width:100%">Enviar mensaje</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
  </div><!-- /carousel -->
 </div><!-- /scene -->
 
@@ -455,7 +490,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:va
 
 <script>
 // ── State ─────────────────────────────
-const TOTAL = 5;
+const TOTAL = 6;
 let current = 0, busy = false;
 
 const slides = document.querySelectorAll('.slide');
@@ -463,7 +498,7 @@ const prog   = document.getElementById('prog');
 
 // Build nav dots
 const nav = document.getElementById('nav');
-const labels = ['Dashboard','Entrenamiento','Nutrición','Mensajes','Progreso'];
+const labels = ['Dashboard','Entrenamiento','Nutrición','Mensajes','Progreso','Soporte'];
 labels.forEach((l,i) => {
   const d = document.createElement('div');
   d.className = 'ndot' + (i===0?' on':'');
@@ -501,7 +536,19 @@ function positionSlides() {
 
 function goTo(n) {
   if(busy||n===current||n<0||n>=TOTAL) return;
-  busy=true; current=n; positionSlides();
+  busy=true; current=n; 
+
+  if (window.innerWidth <= 768) {
+    const targetSlide = document.querySelector(`.slide[data-i="${current}"]`);
+    if (targetSlide) targetSlide.scrollIntoView({ behavior: 'smooth' });
+    document.querySelectorAll('.ndot').forEach((d,i)=>d.classList.toggle('on',i===current));
+    prog.style.width = ((current+1)/TOTAL*100)+'%';
+    if(current===4 && typeof drawChart === 'function') drawChart();
+    setTimeout(()=>busy=false, 500);
+    return;
+  }
+
+  positionSlides();
   setTimeout(()=>busy=false, 900);
 }
 function go(d) { goTo(current+d); }
@@ -627,14 +674,42 @@ function drawChart() {
 }
 
 // ── Input / wheel / keys / touch ──────
-window.addEventListener('wheel',e=>{if(Math.abs(e.deltaY)>30)go(e.deltaY>0?1:-1)},{passive:true});
+window.addEventListener('wheel',e=>{
+  if(window.innerWidth<=768)return;
+  if(Math.abs(e.deltaY)>30)go(e.deltaY>0?1:-1)
+},{passive:true});
 window.addEventListener('keydown',e=>{
+  if(window.innerWidth<=768)return;
   if(e.key==='ArrowDown'||e.key==='ArrowRight')go(1);
   if(e.key==='ArrowUp'||e.key==='ArrowLeft')go(-1);
 });
 let ty=0;
-window.addEventListener('touchstart',e=>{ty=e.touches[0].clientY},{passive:true});
-window.addEventListener('touchend',e=>{if(Math.abs(ty-e.changedTouches[0].clientY)>50)go(ty>e.changedTouches[0].clientY?1:-1)},{passive:true});
+window.addEventListener('touchstart',e=>{
+  if(window.innerWidth<=768)return;
+  ty=e.touches[0].clientY
+},{passive:true});
+window.addEventListener('touchend',e=>{
+  if(window.innerWidth<=768)return;
+  if(Math.abs(ty-e.changedTouches[0].clientY)>50)go(ty>e.changedTouches[0].clientY?1:-1)
+},{passive:true});
+
+// ── Mobile native scroll bindings ─────
+if (window.innerWidth <= 768) {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('active');
+        const idx = parseInt(entry.target.getAttribute('data-i'));
+        current = idx;
+        document.querySelectorAll('.ndot').forEach((d,i)=>d.classList.toggle('on',i===current));
+        prog.style.width = ((current+1)/TOTAL*100)+'%';
+        if(current===4 && typeof drawChart === 'function') drawChart();
+      }
+    });
+  }, { threshold: 0.3 });
+  
+  slides.forEach(s => observer.observe(s));
+}
 
 // ── Custom cursor ─────────────────────
 const cur=document.getElementById('cur'),ring=document.getElementById('cur-ring');

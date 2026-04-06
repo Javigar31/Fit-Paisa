@@ -60,7 +60,7 @@ html,body{height:100%;overflow:hidden;background:var(--dark);color:var(--text);f
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.card{background:var(--dark2);border:1px solid var(--border);border-radius:14px;padding:20px;transition:border-color .2s}
+.card{background:var(--dark2);border:1px solid var(--border);border-radius:14px;padding:20px;transition:border-color .2s;min-width:0;max-width:100%}
 .card:hover{border-color:rgba(255,255,255,.12)}
 .card-title{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--lime);font-weight:700;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
 .stat-v{font-family:var(--fd);font-size:34px;color:var(--lime);line-height:1}
@@ -130,7 +130,7 @@ select.input{cursor:none;appearance:none}
 .section::-webkit-scrollbar-track{background:transparent}
 .section::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
 
-.table-wrap{width:100%;overflow-x:auto}
+.table-wrap{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
 
 @media (max-width: 1024px){
   .grid4{grid-template-columns:repeat(2,1fr)}
@@ -139,9 +139,13 @@ select.input{cursor:none;appearance:none}
 }
 
 @media (max-width: 768px){
-  html,body{height:auto;overflow:auto}
+  html,body{height:auto;min-height:100%;overflow:visible;overflow-x:hidden}
   .sidebar{
-    position:relative;
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    z-index:400;
     width:100%;
     height:auto;
     border-right:none;
@@ -158,8 +162,9 @@ select.input{cursor:none;appearance:none}
   .sb-user{display:none}
   .main{
     margin-left:0;
+    padding-top:160px;
     height:auto;
-    min-height:calc(100vh - 132px);
+    min-height:calc(100vh - 140px);
     overflow:visible;
   }
   .section{
@@ -169,6 +174,7 @@ select.input{cursor:none;appearance:none}
     padding:22px 16px 90px;
     overflow:visible;
     transform:none !important;
+    scroll-margin-top:160px;
   }
   .section.hidden-right,.section.hidden-left,.section.visible{
     opacity:1;
@@ -177,6 +183,7 @@ select.input{cursor:none;appearance:none}
   #topbar-prog{
     left:0;
     right:0;
+    z-index:500;
   }
   .page-head h1{font-size:28px}
   .grid4,.grid3,.grid2{grid-template-columns:1fr}
@@ -204,21 +211,21 @@ select.input{cursor:none;appearance:none}
   </div>
   <nav class="sb-nav">
     <div class="sb-label">Principal</div>
-    <div class="nav-item on"  onclick="show('dashboard')">
+    <div class="nav-item on"  onclick="show('dashboard', this)">
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard
     </div>
-    <div class="nav-item" onclick="show('clients')">
+    <div class="nav-item" onclick="show('clients', this)">
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Mis clientes
     </div>
-    <div class="nav-item" onclick="show('plans')">
+    <div class="nav-item" onclick="show('plans', this)">
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>Planes
     </div>
-    <div class="nav-item" onclick="show('messages')">
+    <div class="nav-item" onclick="show('messages', this)">
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Mensajes
       <span class="nbadge">3</span>
     </div>
     <div class="sb-label">Cuenta</div>
-    <div class="nav-item" onclick="show('settings')">
+    <div class="nav-item" onclick="show('settings', this)">
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>Ajustes
     </div>
   </nav>
@@ -385,21 +392,31 @@ document.querySelectorAll('button,.nav-item,.client-card').forEach(el=>{
 const sections = ['dashboard','clients','plans','messages','settings'];
 let activeSec = 'dashboard';
 
-function show(id) {
+function show(id, el) {
   if(id===activeSec) return;
   const prev = document.getElementById('sec-'+activeSec);
   const next = document.getElementById('sec-'+id);
   const prevIdx = sections.indexOf(activeSec);
   const nextIdx = sections.indexOf(id);
+  
+  if (window.innerWidth <= 768) {
+    if (next) next.scrollIntoView({ behavior: 'smooth' });
+    activeSec = id;
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('on'));
+    if (el) el.classList.add('on');
+    document.getElementById('topbar-prog').style.width = ((sections.indexOf(id)+1)/sections.length*100)+'%';
+    if(id==='clients') renderClients();
+    if(id==='plans')   renderPlans();
+    if(id==='messages') renderContacts();
+    return;
+  }
+
   prev.className = 'section ' + (nextIdx > prevIdx ? 'hidden-left' : 'hidden-right');
   next.className = 'section visible';
-  // Force reflow for animation
   void next.offsetWidth;
   activeSec = id;
-  // update nav
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('on'));
-  event.currentTarget.classList.add('on');
-  // progress bar
+  if (el) el.classList.add('on');
   document.getElementById('topbar-prog').style.width = ((sections.indexOf(id)+1)/sections.length*100)+'%';
   if(id==='clients') renderClients();
   if(id==='plans')   renderPlans();

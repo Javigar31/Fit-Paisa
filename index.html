@@ -57,6 +57,7 @@
   .slide-3 { background: radial-gradient(ellipse 80% 50% at 80% 60%, #0a0d1a 0%, var(--dark) 70%); }
   .slide-4 { background: radial-gradient(ellipse 70% 70% at 40% 30%, #130a1a 0%, var(--dark) 70%); }
   .slide-5 { background: radial-gradient(ellipse 60% 80% at 60% 70%, #1a0d12 0%, var(--dark) 70%); }
+  .slide-6 { background: radial-gradient(ellipse 70% 60% at 50% 50%, #1a1015 0%, var(--dark) 70%); }
 
   /* ── Slide content ── */
   .slide-inner {
@@ -216,7 +217,9 @@
       opacity: 1 !important;
       transform: none !important;
       pointer-events: auto !important;
+      transition: opacity 0.4s ease;
     }
+    .slide:not(.is-active) .slide-inner > * { opacity: 1; transform: none; }
     .slide-inner { grid-template-columns: 1fr; gap: 40px; padding: 0 24px; }
     .ui-card { display: block; transform: none; }
     .slide-title { font-size: clamp(40px, 12vw, 64px); }
@@ -234,6 +237,8 @@
     .stat-grid { grid-template-columns: 1fr; }
   }
 
+  
+
 </style>
 </head>
 <body>
@@ -242,7 +247,7 @@
 <div id="cursor-ring"></div>
 <div id="progress-line"></div>
 <div id="logo">FITPAISA</div>
-<div id="counter"><span id="cur">01</span> / <span id="tot">06</span></div>
+<div id="counter"><span id="slide-cur">01</span> / <span id="tot">07</span></div>
 <div id="hint">Scroll o flechas para navegar</div>
 
 <div id="arrows">
@@ -495,6 +500,42 @@
       </div>
     </div>
 
+    <!-- SLIDE 6 · Contacto -->
+    <div class="slide slide-6" data-index="6">
+      <div class="deco" style="width:400px;height:400px;background:radial-gradient(circle,rgba(255,107,107,.05),transparent);bottom:-100px;left:-100px;animation-delay:1s"></div>
+      <div class="slide-inner">
+        <div>
+          <div class="slide-label">Contacto</div>
+          <div class="slide-title">¿TIENES<br>PREGUNTAS?<br><em>ESCRÍBENOS.</em></div>
+          <p class="slide-body">¿Dudas sobre la plataforma, planes o precios? Rellena el formulario y te responderemos en menos de 24 horas.</p>
+          <div class="contact-info">
+            <div class="contact-info-item">
+              <div class="contact-info-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+              garciajavierandres@hotmail.com
+            </div>
+            <div class="contact-info-item">
+              <div class="contact-info-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+              Medellín, Colombia
+            </div>
+          </div>
+        </div>
+        <div class="ui-card">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);font-weight:700;margin-bottom:16px">Formulario de contacto</div>
+          <form class="contact-form" action="https://formsubmit.co/garciajavierandres@hotmail.com" method="POST">
+            <input type="hidden" name="_subject" value="Nuevo mensaje desde FitPaisa">
+            <input type="hidden" name="_captcha" value="false">
+            <input type="hidden" name="_template" value="box">
+            <input type="text" name="name" placeholder="Tu nombre" required>
+            <input type="email" name="email" placeholder="Tu correo electrónico" required>
+            <input type="text" name="subject" placeholder="Asunto">
+            <textarea name="message" placeholder="Escribe tu mensaje aquí..." required></textarea>
+            <button type="submit" class="contact-submit">Enviar mensaje <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+          </form>
+          <div style="margin-top:14px;font-size:11px;color:var(--muted);text-align:center">🔒 Tus datos están protegidos y no se comparten con terceros.</div>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /carousel -->
 </div><!-- /scene -->
 
@@ -506,10 +547,11 @@
   <div class="nav-dot" onclick="goTo(3)"></div>
   <div class="nav-dot" onclick="goTo(4)"></div>
   <div class="nav-dot" onclick="goTo(5)"></div>
+  <div class="nav-dot" onclick="goTo(6)"></div>
 </div>
 
 <script>
-const TOTAL = 6;
+const TOTAL = 7;
 let current = 0;
 let isAnimating = false;
 
@@ -517,7 +559,7 @@ let isAnimating = false;
 const carousel = document.getElementById('carousel');
 const slides   = document.querySelectorAll('.slide');
 const dots     = document.querySelectorAll('.nav-dot');
-const curEl    = document.getElementById('cur');
+const curEl    = document.getElementById('slide-cur');
 const progressLine = document.getElementById('progress-line');
 
 function positionSlides() {
@@ -563,6 +605,15 @@ function goTo(n) {
   if (isAnimating || n === current) return;
   isAnimating = true;
   current = Math.max(0, Math.min(TOTAL - 1, n));
+  
+  if (window.innerWidth <= 768) {
+    const slide = document.querySelector(`.slide[data-index="${current}"]`);
+    if (slide) slide.scrollIntoView({ behavior: 'smooth' });
+    updateUI();
+    setTimeout(() => isAnimating = false, 500);
+    return;
+  }
+
   positionSlides();
   updateUI();
   setTimeout(() => isAnimating = false, 900);
@@ -577,6 +628,7 @@ updateUI();
 // ── Mouse wheel ───────────────────────
 let wheelTimer;
 window.addEventListener('wheel', e => {
+  if (window.innerWidth <= 768) return;
   clearTimeout(wheelTimer);
   wheelTimer = setTimeout(() => {
     go(e.deltaY > 0 ? 1 : -1);
@@ -585,17 +637,38 @@ window.addEventListener('wheel', e => {
 
 // ── Keyboard ──────────────────────────
 window.addEventListener('keydown', e => {
+  if (window.innerWidth <= 768) return;
   if (e.key === 'ArrowDown' || e.key === 'ArrowRight') go(1);
   if (e.key === 'ArrowUp'   || e.key === 'ArrowLeft')  go(-1);
 });
 
 // ── Touch swipe ───────────────────────
 let touchY = 0;
-window.addEventListener('touchstart', e => { touchY = e.touches[0].clientY; }, { passive: true });
+window.addEventListener('touchstart', e => { 
+  if (window.innerWidth <= 768) return;
+  touchY = e.touches[0].clientY; 
+}, { passive: true });
 window.addEventListener('touchend',   e => {
+  if (window.innerWidth <= 768) return;
   const delta = touchY - e.changedTouches[0].clientY;
   if (Math.abs(delta) > 50) go(delta > 0 ? 1 : -1);
 }, { passive: true });
+
+// ── Mobile native scroll bindings ─────
+if (window.innerWidth <= 768) {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('is-active');
+        const idx = parseInt(entry.target.getAttribute('data-index'));
+        current = idx;
+        updateUI();
+      }
+    });
+  }, { threshold: 0.3 });
+  
+  slides.forEach(s => observer.observe(s));
+}
 
 // ── Custom cursor ─────────────────────
 const cursor     = document.getElementById('cursor');
