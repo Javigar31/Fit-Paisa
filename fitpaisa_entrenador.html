@@ -250,7 +250,7 @@ select.input{cursor:none;appearance:none}
       <div class="card">
         <div class="card-title">Adherencia por cliente</div>
         <div style="display:flex;flex-direction:column;gap:12px">
-          <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Carlos Méndez</span><strong>78%</strong></div><div class="bar-track"><div class="bar-fill" style="width:78%"></div></div></div>
+          <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Javier García</span><strong>78%</strong></div><div class="bar-track"><div class="bar-fill" style="width:78%"></div></div></div>
           <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Sofía Reyes</span><strong>62%</strong></div><div class="bar-track"><div class="bar-fill" style="width:62%;background:var(--success)"></div></div></div>
           <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Pablo Torres</span><strong>45%</strong></div><div class="bar-track"><div class="bar-fill" style="width:45%;background:var(--warn)"></div></div></div>
           <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Ana García</span><strong>91%</strong></div><div class="bar-track"><div class="bar-fill" style="width:91%"></div></div></div>
@@ -260,8 +260,8 @@ select.input{cursor:none;appearance:none}
         <div class="card-title">Planes recientes</div>
         <div style="display:flex;flex-direction:column;gap:10px">
           <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-            <div class="avatar" style="font-size:10px;width:28px;height:28px">CM</div>
-            <div style="flex:1"><div style="font-size:13px;font-weight:600">Carlos Méndez</div><div style="font-size:11px;color:var(--muted)">Entrenamiento · Hace 2 días</div></div>
+            <div class="avatar" style="font-size:10px;width:28px;height:28px">JG</div>
+            <div style="flex:1"><div style="font-size:13px;font-weight:600">Javier García</div><div style="font-size:11px;color:var(--muted)">Entrenamiento · Hace 2 días</div></div>
             <span class="badge b-lime">Activo</span>
           </div>
           <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
@@ -298,7 +298,7 @@ select.input{cursor:none;appearance:none}
       <div class="card-title">Nuevo plan</div>
       <div class="grid2" style="gap:14px;margin-bottom:14px">
         <div class="field"><label class="label">Cliente</label>
-          <select class="input"><option>Carlos Méndez</option><option>Sofía Reyes</option><option>Pablo Torres</option><option>Ana García</option></select>
+          <select class="input"><option>Javier García</option><option>Sofía Reyes</option><option>Pablo Torres</option><option>Ana García</option></select>
         </div>
         <div class="field"><label class="label">Tipo</label>
           <select class="input"><option>Entrenamiento</option><option>Nutrición</option></select>
@@ -331,7 +331,7 @@ select.input{cursor:none;appearance:none}
         <div id="contactList" style="display:flex;flex-direction:column;gap:4px"></div>
       </div>
       <div class="card" style="display:flex;flex-direction:column">
-        <div class="card-title" id="chatTitle">Carlos Méndez</div>
+        <div class="card-title" id="chatTitle">Javier García</div>
         <div id="chatMsgs" style="flex:1;display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;max-height:400px;margin-bottom:14px"></div>
         <div style="display:flex;gap:8px">
           <input class="input" id="coachInput" placeholder="Escribe un mensaje…" onkeydown="if(event.key==='Enter')coachSend()" style="flex:1">
@@ -425,10 +425,10 @@ function show(id, el) {
 
 // ── Clients ───────────────────────────
 const clients = [
-  {initials:'CM',name:'Carlos Méndez',plan:'Volumen',status:'active', adh:78},
-  {initials:'SR',name:'Sofía Reyes',  plan:'Definición',status:'active', adh:62},
-  {initials:'PT',name:'Pablo Torres', plan:'Fuerza',  status:'pending',adh:45},
-  {initials:'AG',name:'Ana García',   plan:'Cardio',  status:'active', adh:91},
+  {initials:'JG',name:'Javier García',plan:'Volumen',status:'active', adh:78},
+  {initials:'SR',name:'Sofía Reyes',plan:'Mantenimiento',status:'active', adh:92},
+  {initials:'PT',name:'Pablo Torres',plan:'Definición',status:'warning', adh:45},
+  {initials:'AG',name:'Ana García',plan:'Volumen',status:'active', adh:88}
 ];
 function stBadge(s){return s==='active'?'<span class="badge b-lime">Activo</span>':'<span class="badge b-yellow">Pendiente</span>'}
 function renderClients(){
@@ -449,7 +449,7 @@ function renderClients(){
 
 // ── Plans ─────────────────────────────
 const plans=[
-  {client:'Carlos Méndez',initials:'CM',type:'Entrenamiento',status:'ACTIVO',   updated:'Hace 2 días'},
+  {client:'Javier García',initials:'JG',type:'Entrenamiento',status:'ACTIVO',   updated:'Hace 2 días'},
   {client:'Sofía Reyes',  initials:'SR',type:'Nutrición',    status:'PENDIENTE',updated:'Hace 1 día'},
   {client:'Pablo Torres', initials:'PT',type:'Entrenamiento',status:'BORRADOR', updated:'Hace 4 días'},
   {client:'Ana García',   initials:'AG',type:'Nutrición',    status:'ACTIVO',   updated:'Hace 1 hora'},
@@ -472,7 +472,7 @@ function toggleNewPlan(){
 
 // ── Messages ──────────────────────────
 const conversations={
-  'Carlos Méndez':[
+  'Javier García':[
     {text:'¿Cómo fue el entreno de hoy?',mine:false,time:'10:32'},
     {text:'¡Muy bien! Superé mi marca en sentadilla.',mine:true,time:'10:35'},
     {text:'Perfecto 💪 Mañana subimos las cargas.',mine:false,time:'10:36'},
@@ -486,7 +486,7 @@ const conversations={
     {text:'Vamos a sustituirlo por remo esta semana.',mine:false,time:'Ayer'},
   ],
 };
-let activeContact='Carlos Méndez';
+let activeContact='Javier García';
 function renderContacts(){
   document.getElementById('contactList').innerHTML=Object.keys(conversations).map(name=>`
     <div onclick="selectContact('${name}')" style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;cursor:none;transition:all .2s;background:${name===activeContact?'var(--limedim)':'transparent'};border:1px solid ${name===activeContact?'rgba(255,107,107,.2)':'transparent'}">

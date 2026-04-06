@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cabinet+Grotesk:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -24,6 +25,13 @@
     position: fixed; inset: 0;
     perspective: 1400px;
     perspective-origin: 50% 50%;
+    z-index: 2;
+  }
+  #global-bg {
+    position: fixed; inset: 0;
+    z-index: 0;
+    background: var(--dark);
+    transition: background .8s ease;
   }
 
   #carousel {
@@ -49,15 +57,7 @@
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
     pointer-events: none; opacity: .4;
   }
-
-  /* ── BG gradient per slide ── */
-  .slide-0 { background: radial-gradient(ellipse 80% 60% at 30% 50%, #251012 0%, var(--dark) 70%); }
-  .slide-1 { background: radial-gradient(ellipse 70% 80% at 70% 30%, #1f1216 0%, var(--dark) 70%); }
-  .slide-2 { background: radial-gradient(ellipse 60% 70% at 20% 70%, #1a1208 0%, var(--dark) 70%); }
-  .slide-3 { background: radial-gradient(ellipse 80% 50% at 80% 60%, #0a0d1a 0%, var(--dark) 70%); }
-  .slide-4 { background: radial-gradient(ellipse 70% 70% at 40% 30%, #130a1a 0%, var(--dark) 70%); }
-  .slide-5 { background: radial-gradient(ellipse 60% 80% at 60% 70%, #1a0d12 0%, var(--dark) 70%); }
-  .slide-6 { background: radial-gradient(ellipse 70% 60% at 50% 50%, #1a1015 0%, var(--dark) 70%); }
+  /* BG background is now handled by the #global-bg element via JS */
 
   /* ── Slide content ── */
   .slide-inner {
@@ -88,7 +88,7 @@
 
   /* ── UI Cards (right side) ── */
   .ui-card {
-    background: rgba(255,255,255,.04); border: 1px solid var(--border);
+    background: rgba(0,0,0,.82); border: 1px solid var(--border);
     border-radius: 20px; padding: 28px; backdrop-filter: blur(20px);
     transform: perspective(800px) rotateY(-8deg) rotateX(4deg);
     transition: transform .6s ease;
@@ -243,6 +243,9 @@
 </head>
 <body>
 
+<div id="global-bg"></div>
+<div id="canvas-3d" style="position:fixed;inset:0;z-index:1;pointer-events:none;opacity:1"></div>
+
 <div id="cursor"></div>
 <div id="cursor-ring"></div>
 <div id="progress-line"></div>
@@ -273,7 +276,7 @@
           <div style="display:flex;flex-direction:column;gap:12px">
             <div>
               <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Correo electrónico</div>
-              <div style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:11px 14px;font-size:13px;color:var(--muted)">carlos@fitpaisa.com</div>
+              <div style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:11px 14px;font-size:13px;color:var(--muted)">javier@fitpaisa.com</div>
             </div>
             <div>
               <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Contraseña</div>
@@ -550,6 +553,8 @@
   <div class="nav-dot" onclick="goTo(6)"></div>
 </div>
 
+</div>
+
 <script>
 const TOTAL = 7;
 let current = 0;
@@ -595,10 +600,21 @@ function positionSlides() {
   });
 }
 
+const gradients = [
+  "radial-gradient(ellipse 80% 60% at 30% 50%, #251012 0%, var(--dark) 70%)",
+  "radial-gradient(ellipse 70% 80% at 70% 30%, #1f1216 0%, var(--dark) 70%)",
+  "radial-gradient(ellipse 60% 70% at 20% 70%, #1a1208 0%, var(--dark) 70%)",
+  "radial-gradient(ellipse 80% 50% at 80% 60%, #0a0d1a 0%, var(--dark) 70%)",
+  "radial-gradient(ellipse 70% 70% at 40% 30%, #130a1a 0%, var(--dark) 70%)",
+  "radial-gradient(ellipse 60% 80% at 60% 70%, #1a0d12 0%, var(--dark) 70%)",
+  "radial-gradient(ellipse 70% 60% at 50% 50%, #1a1015 0%, var(--dark) 70%)"
+];
+
 function updateUI() {
   dots.forEach((d, i) => d.classList.toggle('active', i === current));
   curEl.textContent = String(current + 1).padStart(2, '0');
   progressLine.style.width = ((current + 1) / TOTAL * 100) + '%';
+  document.getElementById('global-bg').style.background = gradients[current];
 }
 
 function goTo(n) {
@@ -715,6 +731,171 @@ document.addEventListener('mousemove', e => {
     activeSlide.style.transform = `translate(${xPct * 8}px, ${yPct * 6}px)`;
   }
 });
+
+// ── 3D Scene Manager (Three.js) ─────────────────────
+let scene, camera, renderer, currentObject, clock;
+const accentColor = 0xff3b3b;
+
+function init3D() {
+  const canvas3d = document.getElementById('canvas-3d');
+  if (!canvas3d) {
+    console.error("Canvas container #canvas-3d not found!");
+    return;
+  }
+
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  canvas3d.appendChild(renderer.domElement);
+
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+  scene.add(ambientLight);
+
+  camera.position.z = 6;
+  clock = new THREE.Clock();
+  setMode('particle_dumbbell');
+  animate3D();
+}
+
+function clearCurrent() {
+  if (currentObject) scene.remove(currentObject);
+}
+
+let currentMode = 'particle_dumbbell';
+function setMode(mode) {
+  currentMode = mode;
+  clearCurrent();
+  const group = new THREE.Group();
+
+  // Glass Material Base
+  const glassMat = new THREE.MeshPhysicalMaterial({
+    color: accentColor,
+    metalness: 0.1,
+    roughness: 0.1,
+    transmission: 0.7,
+    thickness: 0.5,
+    transparent: true,
+    opacity: 0.5,
+    clearcoat: 1,
+    clearcoatRoughness: 0.1,
+    emissive: accentColor,
+    emissiveIntensity: 0.1
+  });
+
+  if (mode === 'particle_dumbbell') {
+    // Escena Oficial: Mancuerna de Partículas (Fondo)
+    const count = 10000;
+    const pts = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+        let x, y, z;
+        const rand = Math.random();
+        if (rand < 0.35) {
+            // Barra central
+            x = (Math.random() - 0.5) * 4.5;
+            const r = Math.random() * 0.12;
+            const angle = Math.random() * Math.PI * 2;
+            y = Math.cos(angle) * r;
+            z = Math.sin(angle) * r;
+        } else {
+            // Discos laterales
+            const side = Math.random() > 0.5 ? 1 : -1;
+            x = (side * 2.3) + (Math.random() - 0.5) * 0.9;
+            const r = Math.random() * 1.3;
+            const angle = Math.random() * Math.PI * 2;
+            y = Math.cos(angle) * r;
+            z = Math.sin(angle) * r;
+        }
+        pts[i*3]   = x;
+        pts[i*3+1] = y;
+        pts[i*3+2] = z;
+    }
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.BufferAttribute(pts, 3));
+    
+    // Shader Material for the wavy pulse effect
+    const shaderMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uColor: { value: new THREE.Color(accentColor) },
+        uPixelRatio: { value: window.devicePixelRatio || 1 }
+      },
+      vertexShader: `
+        uniform float uTime;
+        uniform float uPixelRatio;
+        varying float vAlpha;
+        void main() {
+          vec3 pos = position;
+          float dist = abs(pos.x);
+          float wave = sin(uTime * 3.5 - dist * 1.8) * 0.5 + 0.5;
+          pos.yz *= 1.0 + wave * 0.12;
+          vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+          gl_PointSize = 8.0 * uPixelRatio * (0.8 + wave * 0.4);
+          gl_Position = projectionMatrix * mvPosition;
+          vAlpha = (0.3 + wave * 0.5) * 0.9;
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 uColor;
+        varying float vAlpha;
+        void main() {
+          float d = distance(gl_PointCoord, vec2(0.5));
+          if (d > 0.5) discard;
+          gl_FragColor = vec4(uColor, vAlpha);
+        }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+
+    const particles = new THREE.Points(geom, shaderMat);
+    group.add(particles);
+  }
+
+  // Centrado absoluto para el fondo
+  group.position.set(0, 0, 0);
+  group.scale.set(1.6, 1.6, 1.6); // Escala grande como fondo
+
+  currentObject = group;
+  scene.add(currentObject);
+}
+
+function animate3D() {
+  requestAnimationFrame(animate3D);
+  if (currentObject) {
+    currentObject.rotation.y += 0.01;
+    // Parallax logic linked to global mouse positions mx, my
+    const rx_target = (mx / window.innerWidth - 0.5) * 1;
+    const ry_target = (my / window.innerHeight - 0.5) * 1;
+    currentObject.rotation.x += (ry_target - currentObject.rotation.x) * 0.05;
+    currentObject.rotation.z += (rx_target - currentObject.rotation.z) * 0.05;
+  }
+  renderer.render(scene, camera);
+  
+  if (clock && currentObject && currentObject.children.length > 0) {
+    const elapsed = clock.getElapsedTime();
+    currentObject.children.forEach(child => {
+        if (child.material && child.material.uniforms && child.material.uniforms.uTime) {
+            child.material.uniforms.uTime.value = elapsed;
+        }
+    });
+
+    // Pulsing logic (JS-based fallback)
+    const scale = 1.6 + Math.sin(Date.now() * 0.003) * 0.05;
+    currentObject.scale.set(scale, scale, scale);
+  }
+}
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// Run
+init3D();
 </script>
 </body>
 </html>
