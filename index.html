@@ -47,6 +47,7 @@
     backface-visibility: hidden;
     display: flex; align-items: center; justify-content: center;
     overflow: hidden;
+    transition: transform 0.9s cubic-bezier(0.77, 0, 0.18, 1), opacity 0.9s cubic-bezier(0.77, 0, 0.18, 1);
   }
 
   /* Each slide gets its Z position set by JS */
@@ -585,9 +586,10 @@ function positionSlides() {
       scale = Math.max(0.75, 1 - offset * 0.08);
     } else {
       // Slides behind — rotated back and up
-      rotX = 10 * Math.min(-offset, 3);
-      transY = -80 * Math.min(-offset, 3);
-      transZ = -200 * Math.min(-offset, 3);
+      const abs = Math.min(-offset, 3);
+      rotX = 10 * abs;
+      transY = -80 * abs;
+      transZ = -200 * abs;
       opacity = 0;
       scale = 0.9;
     }
