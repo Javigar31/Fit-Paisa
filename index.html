@@ -23,8 +23,6 @@
   /* ── 3D Scene ── */
   #scene {
     position: fixed; inset: 0;
-    perspective: 1400px;
-    perspective-origin: 50% 50%;
     z-index: 2;
   }
   #global-bg {
@@ -36,14 +34,12 @@
 
   #carousel {
     position: absolute; inset: 0;
-    transform-style: preserve-3d;
     transition: transform .9s cubic-bezier(.77,0,.18,1);
   }
 
   /* ── Slide panels ── */
   .slide {
     position: absolute; inset: 0;
-    transform-style: preserve-3d;
     backface-visibility: hidden;
     display: flex; align-items: center; justify-content: center;
     overflow: hidden;
@@ -571,32 +567,19 @@ const progressLine = document.getElementById('progress-line');
 function positionSlides() {
   slides.forEach((s, i) => {
     const offset = i - current;
-    // 3D stack effect: slides behind rotate and recede
-    let rotX = 0, rotY = 0, transZ = 0, transY = 0, opacity = 1, scale = 1;
-
     if (offset === 0) {
-      // Active
-      rotX = 0; rotY = 0; transZ = 0; transY = 0; opacity = 1; scale = 1;
-    } else if (offset > 0) {
-      // Slides ahead — rotated forward and below
-      rotX = -12 * Math.min(offset, 3);
-      transY = 60 * Math.min(offset, 3);
-      transZ = -120 * Math.min(offset, 3);
-      opacity = Math.max(0, 1 - offset * 0.5);
-      scale = Math.max(0.75, 1 - offset * 0.08);
+      // Active slide
+      s.style.transform = 'perspective(1400px) rotateX(0deg) rotateY(0deg) translateY(0px) translateZ(0px) scale(1)';
+      s.style.opacity = '1';
+      s.style.visibility = 'visible';
+      s.style.pointerEvents = 'auto';
     } else {
-      // Slides behind — rotated back and up
-      const abs = Math.min(-offset, 3);
-      rotX = 10 * abs;
-      transY = -80 * abs;
-      transZ = -200 * abs;
-      opacity = 0;
-      scale = 0.9;
+      // All inactive slides — completely hidden, no perspective, no rotation
+      s.style.transform = 'translateY(0px) translateZ(-2000px) scale(0.5)';
+      s.style.opacity = '0';
+      s.style.visibility = 'hidden';
+      s.style.pointerEvents = 'none';
     }
-
-    s.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg) translateY(${transY}px) translateZ(${transZ}px) scale(${scale})`;
-    s.style.opacity = opacity;
-    s.style.pointerEvents = offset === 0 ? 'auto' : 'none';
     s.style.zIndex = TOTAL - Math.abs(offset);
     s.classList.toggle('is-active', offset === 0);
   });
@@ -708,6 +691,10 @@ function animRing() {
 }
 animRing();
 
+// ── Init carousel ─────────────────────
+positionSlides();
+updateUI();
+
 // Hover effect on interactive elements
 document.querySelectorAll('button, .slide-cta, .nav-dot, .arrow-btn').forEach(el => {
   el.addEventListener('mouseenter', () => {
@@ -815,7 +802,7 @@ function setMode(mode) {
     }
     const geom = new THREE.BufferGeometry();
     geom.setAttribute('position', new THREE.BufferAttribute(pts, 3));
-    
+
     // Shader Material for the wavy pulse effect
     const shaderMat = new THREE.ShaderMaterial({
       uniforms: {
@@ -833,7 +820,7 @@ function setMode(mode) {
           float wave = sin(uTime * 3.5 - dist * 1.8) * 0.5 + 0.5;
           pos.yz *= 1.0 + wave * 0.12;
           vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-          gl_PointSize = 8.0 * uPixelRatio * (0.8 + wave * 0.4);
+          gl_PointSize = 4.5 * uPixelRatio * (0.8 + wave * 0.3);
           gl_Position = projectionMatrix * mvPosition;
           vAlpha = (0.3 + wave * 0.5) * 0.9;
         }
@@ -843,8 +830,9 @@ function setMode(mode) {
         varying float vAlpha;
         void main() {
           float d = distance(gl_PointCoord, vec2(0.5));
-          if (d > 0.5) discard;
-          gl_FragColor = vec4(uColor, vAlpha);
+          float strength = smoothstep(0.5, 0.45, d);
+          if (strength < 0.1) discard;
+          gl_FragColor = vec4(uColor, vAlpha * strength);
         }
       `,
       transparent: true,
