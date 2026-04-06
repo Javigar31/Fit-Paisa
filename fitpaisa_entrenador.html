@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FitPaisa — Panel Entrenador/a</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cabinet+Grotesk:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --sw:220px;
+}
+html,body{height:100%;overflow:hidden;background:var(--dark);color:var(--text);font-family:var(--fb);-webkit-font-smoothing:antialiased}
+
+/* sidebar */
+.sidebar{position:fixed;left:0;top:0;width:var(--sw);height:100vh;background:var(--dark2);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100;overflow-y:auto}
+.sb-logo{padding:22px 20px 18px;border-bottom:1px solid var(--border)}
+.sb-logo .mark{font-family:var(--fd);font-size:20px;color:var(--lime);letter-spacing:.05em}
+.sb-logo .sub{font-size:10px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.1em}
+.sb-nav{flex:1;padding:14px 10px;display:flex;flex-direction:column;gap:2px}
+.sb-label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);padding:10px 8px 5px;font-weight:700}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;color:var(--muted);font-size:13px;font-weight:500;cursor:none;transition:all .2s;position:relative}
+.nav-item:hover{background:var(--border);color:var(--text)}
+.nav-item.on{background:var(--limedim);color:var(--lime)}
+.nav-item .ico{width:16px;height:16px;flex-shrink:0;opacity:.7}
+.nav-item.on .ico{opacity:1}
+.nbadge{margin-left:auto;background:var(--lime);color:var(--dark);font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px}
+.sb-user{padding:14px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--limedim);color:var(--lime);display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:13px;flex-shrink:0}
+.uname{font-size:13px;font-weight:600}
+.urole{font-size:10px;color:var(--muted);margin-top:1px}
+
+/* main area with 3D transitions */
+.main{margin-left:var(--sw);height:100vh;position:relative;perspective:1200px;overflow:hidden}
+.section{
+  position:absolute;inset:0;padding:32px 36px;overflow-y:auto;
+  transform-style:preserve-3d;backface-visibility:hidden;
+  transition:opacity .6s cubic-bezier(.4,0,.2,1),transform .6s cubic-bezier(.4,0,.2,1);
+}
+.section.hidden-right{opacity:0;transform:rotateY(-18deg) translateX(60px);pointer-events:none}
+.section.hidden-left {opacity:0;transform:rotateY(18deg)  translateX(-60px);pointer-events:none}
+.section.visible     {opacity:1;transform:rotateY(0deg)   translateX(0);pointer-events:auto}
+
+/* reveal animation within section */
+.section.visible .reveal{animation:riseUp .45s ease both}
+@keyframes riseUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.section.visible .r1{animation-delay:.05s}
+.section.visible .r2{animation-delay:.12s}
+.section.visible .r3{animation-delay:.19s}
+.section.visible .r4{animation-delay:.26s}
+.section.visible .r5{animation-delay:.33s}
+
+/* progress bar top */
+#topbar-prog{position:fixed;top:0;left:var(--sw);right:0;height:2px;background:var(--lime);z-index:200;transition:width .5s ease}
+
+/* layout helpers */
+.page-head{margin-bottom:28px}
+.page-head h1{font-family:var(--fd);font-size:36px;line-height:1}
+.page-head p{font-size:13px;color:var(--muted);margin-top:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.card{background:var(--dark2);border:1px solid var(--border);border-radius:14px;padding:20px;transition:border-color .2s}
+.card:hover{border-color:rgba(255,255,255,.12)}
+.card-title{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--lime);font-weight:700;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+.stat-v{font-family:var(--fd);font-size:34px;color:var(--lime);line-height:1}
+.stat-l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-top:4px}
+.stat-s{font-size:12px;color:var(--muted);margin-top:6px}
+.bar-track{height:5px;background:rgba(255,255,255,.07);border-radius:99px;overflow:hidden;margin-top:8px}
+.bar-fill{height:100%;border-radius:99px;background:var(--lime);transition:width .8s ease}
+
+/* client cards */
+.client-card{background:var(--dark3);border:1px solid var(--border);border-radius:12px;padding:16px;transition:all .2s;cursor:none}
+.client-card:hover{border-color:rgba(255,107,107,.2);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.client-top{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.client-name{font-size:14px;font-weight:700}
+.client-plan{font-size:11px;color:var(--muted);margin-top:1px}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700}
+.b-green{background:rgba(255,138,138,.15);color:var(--success)}
+.b-yellow{background:rgba(255,179,71,.15);color:var(--warn)}
+.b-gray{background:rgba(255,255,255,.07);color:var(--muted)}
+.b-lime{background:var(--limedim);color:var(--lime)}
+
+/* plan table */
+table{width:100%;border-collapse:collapse}
+th{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:9px 12px;text-align:left;border-bottom:1px solid var(--border);font-weight:600}
+td{padding:12px 12px;border-bottom:1px solid var(--border);font-size:13px}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background .2s}
+tbody tr:hover{background:rgba(255,255,255,.02)}
+
+/* chat */
+.bubble{padding:9px 13px;border-radius:14px;font-size:13px;line-height:1.5;margin-bottom:8px;max-width:80%}
+.bubble.in{background:rgba(255,255,255,.06);border-radius:4px 14px 14px 14px;color:var(--muted)}
+.bubble.out{background:var(--lime);color:var(--dark);border-radius:14px 14px 4px 14px;margin-left:auto;font-weight:600}
+
+/* forms */
+.input{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 13px;color:var(--text);font-size:13px;font-family:var(--fb);outline:none;width:100%;transition:border-color .2s}
+.input:focus{border-color:var(--lime)}
+.input::placeholder{color:var(--muted)}
+select.input{cursor:none;appearance:none}
+.label{font-size:11px;color:var(--muted);margin-bottom:5px;display:block}
+.field{display:flex;flex-direction:column;gap:4px}
+.btn-lime{background:var(--lime);color:var(--dark);border:none;border-radius:8px;padding:9px 18px;font-weight:800;font-size:13px;cursor:none;transition:all .2s;font-family:var(--fb)}
+.btn-lime:hover{background:var(--lime2);transform:translateY(-1px)}
+.btn-ghost{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 18px;color:var(--muted);font-size:13px;cursor:none;transition:all .2s;font-family:var(--fb)}
+.btn-ghost:hover{color:var(--text);border-color:rgba(255,255,255,.15)}
+
+/* ═══ Modal overlay ═══ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);z-index:500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+.modal-overlay.open{opacity:1;pointer-events:auto}
+.modal-box{background:var(--dark2);border:1px solid var(--border);border-radius:16px;padding:28px;width:90%;max-width:520px;max-height:85vh;overflow-y:auto;transform:translateY(20px) scale(.97);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+.modal-overlay.open .modal-box{transform:translateY(0) scale(1)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.modal-head h2{font-family:var(--fd);font-size:22px}
+.modal-close{width:32px;height:32px;border-radius:50%;background:var(--border);border:none;color:var(--muted);font-size:16px;cursor:none;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.modal-close:hover{background:var(--lime);color:var(--dark)}
+.modal-body label.label{margin-bottom:6px}
+.modal-body .input{width:100%;margin-bottom:12px}
+.modal-body textarea.input{width:100%;resize:vertical}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+.confirm-body{text-align:center;padding:10px 0}
+.confirm-body .ico-warn{font-size:40px;margin-bottom:12px;display:block}
+.confirm-body p{color:var(--muted);line-height:1.6;font-size:14px;margin-bottom:6px}
+.confirm-body strong{color:var(--text)}
+.confirm-actions{display:flex;gap:10px;justify-content:center;margin-top:20px}
+
+/* scrollbar */
+.section::-webkit-scrollbar{width:4px}
+.section::-webkit-scrollbar-track{background:transparent}
+.section::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+
+.table-wrap{width:100%;overflow-x:auto}
+
+@media (max-width: 1024px){
+  .grid4{grid-template-columns:repeat(2,1fr)}
+  .grid3{grid-template-columns:repeat(2,1fr)}
+  .grid2{grid-template-columns:1fr}
+}
+
+@media (max-width: 768px){
+  html,body{height:auto;overflow:auto}
+  .sidebar{
+    position:relative;
+    width:100%;
+    height:auto;
+    border-right:none;
+    border-bottom:1px solid var(--border);
+  }
+  .sb-nav{
+    overflow-x:auto;
+    flex-direction:row;
+    flex-wrap:nowrap;
+    padding:10px 12px 14px;
+  }
+  .sb-label{display:none}
+  .nav-item{flex:0 0 auto;white-space:nowrap}
+  .sb-user{display:none}
+  .main{
+    margin-left:0;
+    height:auto;
+    min-height:calc(100vh - 132px);
+    overflow:visible;
+  }
+  .section{
+    position:relative;
+    inset:auto;
+    min-height:auto;
+    padding:22px 16px 90px;
+    overflow:visible;
+    transform:none !important;
+  }
+  .section.hidden-right,.section.hidden-left,.section.visible{
+    opacity:1;
+    pointer-events:auto;
+  }
+  #topbar-prog{
+    left:0;
+    right:0;
+  }
+  .page-head h1{font-size:28px}
+  .grid4,.grid3,.grid2{grid-template-columns:1fr}
+  .page-head>div[style*="justify-content:space-between"]{
+    flex-direction:column;
+    align-items:flex-start !important;
+    gap:12px;
+  }
+  #newPlanForm .grid2{grid-template-columns:1fr}
+  #sec-messages .grid2{height:auto !important}
+  #chatMsgs{max-height:300px !important}
+  table{min-width:620px}
+}
+</style>
+</head>
+<body>
+<div id="cur"></div><div id="cur-ring"></div>
+<div id="topbar-prog"></div>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sb-logo">
+    <div class="mark">FITPAISA</div>
+    <div class="sub">Panel Entrenador/a</div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-label">Principal</div>
+    <div class="nav-item on"  onclick="show('dashboard')">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard
+    </div>
+    <div class="nav-item" onclick="show('clients')">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Mis clientes
+    </div>
+    <div class="nav-item" onclick="show('plans')">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>Planes
+    </div>
+    <div class="nav-item" onclick="show('messages')">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Mensajes
+      <span class="nbadge">3</span>
+    </div>
+    <div class="sb-label">Cuenta</div>
+    <div class="nav-item" onclick="show('settings')">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>Ajustes
+    </div>
+  </nav>
+  <div class="sb-user">
+    <div class="avatar">LV</div>
+    <div><div class="uname">Laura Vidal</div><div class="urole">Entrenadora</div></div>
+  </div>
+</aside>
+
+<div class="main">
+
+  <!-- DASHBOARD -->
+  <div class="section visible" id="sec-dashboard">
+    <div class="page-head reveal r1"><h1>DASHBOARD</h1><p>Resumen de tu actividad como entrenadora</p></div>
+    <div class="grid4 reveal r2" style="margin-bottom:20px">
+      <div class="card"><div class="stat-v">4</div><div class="stat-l">Clientes activos</div><div class="stat-s">+1 este mes</div></div>
+      <div class="card"><div class="stat-v">6</div><div class="stat-l">Planes activos</div><div class="stat-s">2 pendientes de aprobación</div></div>
+      <div class="card"><div class="stat-v">3</div><div class="stat-l">Mensajes sin leer</div><div class="stat-s">De 2 clientes</div></div>
+      <div class="card"><div class="stat-v">76%</div><div class="stat-l">Adherencia media</div><div class="stat-s">Últimos 7 días</div></div>
+    </div>
+    <div class="grid2 reveal r3" style="margin-bottom:20px">
+      <div class="card">
+        <div class="card-title">Adherencia por cliente</div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Carlos Méndez</span><strong>78%</strong></div><div class="bar-track"><div class="bar-fill" style="width:78%"></div></div></div>
+          <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Sofía Reyes</span><strong>62%</strong></div><div class="bar-track"><div class="bar-fill" style="width:62%;background:var(--success)"></div></div></div>
+          <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Pablo Torres</span><strong>45%</strong></div><div class="bar-track"><div class="bar-fill" style="width:45%;background:var(--warn)"></div></div></div>
+          <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Ana García</span><strong>91%</strong></div><div class="bar-track"><div class="bar-fill" style="width:91%"></div></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Planes recientes</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+            <div class="avatar" style="font-size:10px;width:28px;height:28px">CM</div>
+            <div style="flex:1"><div style="font-size:13px;font-weight:600">Carlos Méndez</div><div style="font-size:11px;color:var(--muted)">Entrenamiento · Hace 2 días</div></div>
+            <span class="badge b-lime">Activo</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+            <div class="avatar" style="font-size:10px;width:28px;height:28px">SR</div>
+            <div style="flex:1"><div style="font-size:13px;font-weight:600">Sofía Reyes</div><div style="font-size:11px;color:var(--muted)">Nutrición · Hace 1 día</div></div>
+            <span class="badge b-yellow">Pendiente</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 0">
+            <div class="avatar" style="font-size:10px;width:28px;height:28px">PT</div>
+            <div style="flex:1"><div style="font-size:13px;font-weight:600">Pablo Torres</div><div style="font-size:11px;color:var(--muted)">Entrenamiento · Hace 4 días</div></div>
+            <span class="badge b-gray">Borrador</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLIENTES -->
+  <div class="section hidden-right" id="sec-clients">
+    <div class="page-head reveal r1"><h1>MIS CLIENTES</h1><p>Gestiona y supervisa el progreso de cada cliente</p></div>
+    <div class="grid2 reveal r2" id="clientGrid"></div>
+  </div>
+
+  <!-- PLANES -->
+  <div class="section hidden-right" id="sec-plans">
+    <div class="page-head reveal r1">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div><h1>PLANES</h1><p>Crea, edita y aprueba planes de entrenamiento y nutrición</p></div>
+        <button class="btn-lime" onclick="toggleNewPlan()">+ Nuevo plan</button>
+      </div>
+    </div>
+    <!-- New plan form -->
+    <div id="newPlanForm" style="display:none;margin-bottom:20px" class="card reveal">
+      <div class="card-title">Nuevo plan</div>
+      <div class="grid2" style="gap:14px;margin-bottom:14px">
+        <div class="field"><label class="label">Cliente</label>
+          <select class="input"><option>Carlos Méndez</option><option>Sofía Reyes</option><option>Pablo Torres</option><option>Ana García</option></select>
+        </div>
+        <div class="field"><label class="label">Tipo</label>
+          <select class="input"><option>Entrenamiento</option><option>Nutrición</option></select>
+        </div>
+        <div class="field"><label class="label">Objetivo</label><input class="input" placeholder="Ej: Ganar masa muscular"></div>
+        <div class="field"><label class="label">Duración</label>
+          <select class="input"><option>4 semanas</option><option>8 semanas</option><option>12 semanas</option></select>
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:14px"><label class="label">Notas / descripción</label><textarea class="input" rows="3" placeholder="Descripción del plan…" style="resize:vertical"></textarea></div>
+      <div style="display:flex;gap:10px"><button class="btn-lime" onclick="openModal('modal-save-draft');toggleNewPlan()">Guardar borrador</button><button class="btn-ghost" onclick="toggleNewPlan()">Cancelar</button></div>
+    </div>
+    <div class="card reveal r2">
+      <div class="card-title">Todos los planes</div>
+      <div class="table-wrap">
+        <table id="planTable">
+          <thead><tr><th>Cliente</th><th>Tipo</th><th>Estado</th><th>Actualizado</th><th>Acción</th></tr></thead>
+          <tbody id="planBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- MENSAJES -->
+  <div class="section hidden-right" id="sec-messages">
+    <div class="page-head reveal r1"><h1>MENSAJES</h1><p>Comunicación directa con tus clientes</p></div>
+    <div class="grid2 reveal r2" style="height:calc(100vh - 160px)">
+      <div class="card" style="overflow-y:auto">
+        <div class="card-title">Conversaciones</div>
+        <div id="contactList" style="display:flex;flex-direction:column;gap:4px"></div>
+      </div>
+      <div class="card" style="display:flex;flex-direction:column">
+        <div class="card-title" id="chatTitle">Carlos Méndez</div>
+        <div id="chatMsgs" style="flex:1;display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;max-height:400px;margin-bottom:14px"></div>
+        <div style="display:flex;gap:8px">
+          <input class="input" id="coachInput" placeholder="Escribe un mensaje…" onkeydown="if(event.key==='Enter')coachSend()" style="flex:1">
+          <button class="btn-lime" onclick="coachSend()" style="flex-shrink:0;padding:9px 16px">→</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AJUSTES -->
+  <div class="section hidden-right" id="sec-settings">
+    <div class="page-head reveal r1"><h1>AJUSTES</h1><p>Gestiona tu perfil de entrenadora</p></div>
+    <div class="grid2 reveal r2">
+      <div class="card">
+        <div class="card-title">Datos personales</div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="field"><label class="label">Nombre completo</label><input class="input" value="Laura Vidal"></div>
+          <div class="field"><label class="label">Correo electrónico</label><input class="input" value="laura@fitpaisa.com"></div>
+          <div class="field"><label class="label">Especialidad</label><input class="input" value="Fuerza y nutrición deportiva"></div>
+          <div class="field"><label class="label">Nueva contraseña</label><input class="input" type="password" placeholder="••••••••"></div>
+          <button class="btn-lime" onclick="openModal('modal-save-settings')">Guardar cambios</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Notificaciones</div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px">
+            <span>Nuevos mensajes de clientes</span>
+            <div style="width:38px;height:20px;background:var(--lime);border-radius:99px;position:relative"><div style="position:absolute;right:2px;top:2px;width:16px;height:16px;border-radius:50%;background:var(--dark)"></div></div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px">
+            <span>Recordatorios de planes pendientes</span>
+            <div style="width:38px;height:20px;background:var(--lime);border-radius:99px;position:relative"><div style="position:absolute;right:2px;top:2px;width:16px;height:16px;border-radius:50%;background:var(--dark)"></div></div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px">
+            <span>Resumen semanal de clientes</span>
+            <div style="width:38px;height:20px;background:rgba(255,255,255,.1);border-radius:99px;position:relative"><div style="position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:var(--muted)"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ── Custom cursor ─────────────────────
+const cur=document.getElementById('cur'),ring=document.getElementById('cur-ring');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.left=mx+'px';cur.style.top=my+'px'});
+(function anim(){rx+=(mx-rx)*.1;ry+=(my-ry)*.1;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(anim)})();
+document.querySelectorAll('button,.nav-item,.client-card').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{cur.style.width='20px';cur.style.height='20px'});
+  el.addEventListener('mouseleave',()=>{cur.style.width='10px';cur.style.height='10px'});
+});
+
+// ── Section navigation ────────────────
+const sections = ['dashboard','clients','plans','messages','settings'];
+let activeSec = 'dashboard';
+
+function show(id) {
+  if(id===activeSec) return;
+  const prev = document.getElementById('sec-'+activeSec);
+  const next = document.getElementById('sec-'+id);
+  const prevIdx = sections.indexOf(activeSec);
+  const nextIdx = sections.indexOf(id);
+  prev.className = 'section ' + (nextIdx > prevIdx ? 'hidden-left' : 'hidden-right');
+  next.className = 'section visible';
+  // Force reflow for animation
+  void next.offsetWidth;
+  activeSec = id;
+  // update nav
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('on'));
+  event.currentTarget.classList.add('on');
+  // progress bar
+  document.getElementById('topbar-prog').style.width = ((sections.indexOf(id)+1)/sections.length*100)+'%';
+  if(id==='clients') renderClients();
+  if(id==='plans')   renderPlans();
+  if(id==='messages') renderContacts();
+}
+
+// ── Clients ───────────────────────────
+const clients = [
+  {initials:'CM',name:'Carlos Méndez',plan:'Volumen',status:'active', adh:78},
+  {initials:'SR',name:'Sofía Reyes',  plan:'Definición',status:'active', adh:62},
+  {initials:'PT',name:'Pablo Torres', plan:'Fuerza',  status:'pending',adh:45},
+  {initials:'AG',name:'Ana García',   plan:'Cardio',  status:'active', adh:91},
+];
+function stBadge(s){return s==='active'?'<span class="badge b-lime">Activo</span>':'<span class="badge b-yellow">Pendiente</span>'}
+function renderClients(){
+  document.getElementById('clientGrid').innerHTML=clients.map(c=>`
+    <div class="client-card reveal">
+      <div class="client-top">
+        <div class="avatar" style="width:40px;height:40px;font-size:14px">${c.initials}</div>
+        <div><div class="client-name">${c.name}</div><div class="client-plan">Plan: ${c.plan} · ${stBadge(c.status)}</div></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:5px;display:flex;justify-content:space-between"><span>Adherencia</span><span>${c.adh}%</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${c.adh}%"></div></div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn-ghost" style="flex:1;font-size:12px" onclick="openClientProfile('${c.name}');event.stopPropagation()">Ver perfil</button>
+        <button class="btn-ghost" style="flex:1;font-size:12px" onclick="show('messages');event.stopPropagation()">Mensajear</button>
+      </div>
+    </div>`).join('');
+}
+
+// ── Plans ─────────────────────────────
+const plans=[
+  {client:'Carlos Méndez',initials:'CM',type:'Entrenamiento',status:'ACTIVO',   updated:'Hace 2 días'},
+  {client:'Sofía Reyes',  initials:'SR',type:'Nutrición',    status:'PENDIENTE',updated:'Hace 1 día'},
+  {client:'Pablo Torres', initials:'PT',type:'Entrenamiento',status:'BORRADOR', updated:'Hace 4 días'},
+  {client:'Ana García',   initials:'AG',type:'Nutrición',    status:'ACTIVO',   updated:'Hace 1 hora'},
+];
+const stMap={ACTIVO:'b-lime',PENDIENTE:'b-yellow',BORRADOR:'b-gray'};
+function renderPlans(){
+  document.getElementById('planBody').innerHTML=plans.map(p=>`
+    <tr>
+      <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:26px;height:26px;font-size:10px">${p.initials}</div>${p.client}</div></td>
+      <td><span style="font-size:12px;background:rgba(255,255,255,.05);padding:3px 10px;border-radius:99px;color:var(--muted)">${p.type}</span></td>
+      <td><span class="badge ${stMap[p.status]}">${p.status}</span></td>
+      <td style="color:var(--muted)">${p.updated}</td>
+      <td><button class="btn-ghost" style="font-size:12px;padding:6px 12px" onclick="${p.status==='PENDIENTE'?`openApprovePlan('${p.client}')`:`openModal('modal-edit-plan')`}">${p.status==='PENDIENTE'?'✓ Aprobar':'Editar'}</button></td>
+    </tr>`).join('');
+}
+function toggleNewPlan(){
+  const f=document.getElementById('newPlanForm');
+  f.style.display=f.style.display==='none'?'block':'none';
+}
+
+// ── Messages ──────────────────────────
+const conversations={
+  'Carlos Méndez':[
+    {text:'¿Cómo fue el entreno de hoy?',mine:false,time:'10:32'},
+    {text:'¡Muy bien! Superé mi marca en sentadilla.',mine:true,time:'10:35'},
+    {text:'Perfecto 💪 Mañana subimos las cargas.',mine:false,time:'10:36'},
+  ],
+  'Sofía Reyes':[
+    {text:'¿Cuándo me mandas el plan de nutrición?',mine:false,time:'09:10'},
+    {text:'Esta tarde lo tengo listo, Sofía.',mine:false,time:'09:15'},
+  ],
+  'Pablo Torres':[
+    {text:'Me duele el hombro al hacer press.',mine:false,time:'Ayer'},
+    {text:'Vamos a sustituirlo por remo esta semana.',mine:false,time:'Ayer'},
+  ],
+};
+let activeContact='Carlos Méndez';
+function renderContacts(){
+  document.getElementById('contactList').innerHTML=Object.keys(conversations).map(name=>`
+    <div onclick="selectContact('${name}')" style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;cursor:none;transition:all .2s;background:${name===activeContact?'var(--limedim)':'transparent'};border:1px solid ${name===activeContact?'rgba(255,107,107,.2)':'transparent'}">
+      <div class="avatar" style="width:32px;height:32px;font-size:11px">${name.split(' ').map(w=>w[0]).join('')}</div>
+      <div><div style="font-size:13px;font-weight:600">${name}</div><div style="font-size:11px;color:var(--muted)">${conversations[name].slice(-1)[0].text.slice(0,30)}…</div></div>
+    </div>`).join('');
+  renderCoachChat();
+}
+function selectContact(name){activeContact=name;renderContacts()}
+function renderCoachChat(){
+  document.getElementById('chatTitle').textContent=activeContact;
+  const el=document.getElementById('chatMsgs');
+  el.innerHTML=conversations[activeContact].map(m=>`
+    <div class="bubble ${m.mine?'in':'out'}">${m.text}<br><span style="font-size:10px;opacity:.6">${m.time}</span></div>`).join('');
+  el.scrollTop=el.scrollHeight;
+}
+function coachSend(){
+  const inp=document.getElementById('coachInput');
+  const text=inp.value.trim();if(!text)return;
+  const now=new Date();const time=`${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
+  conversations[activeContact].push({text,mine:false,time});
+  inp.value='';renderCoachChat();
+}
+
+// ═══ Modals ═══
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(el){el.closest('.modal-overlay').classList.remove('open')}
+document.querySelectorAll('.modal-overlay').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')})});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'))});
+
+function openClientProfile(name){
+  const client=clients.find(c=>c.name===name);if(!client)return;
+  document.getElementById('cp-title').textContent='Perfil de '+client.name;
+  document.getElementById('cp-body').innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+      <div class="avatar" style="width:48px;height:48px;font-size:16px">${client.initials}</div>
+      <div><div style="font-size:16px;font-weight:700">${client.name}</div><div style="font-size:12px;color:var(--muted)">Plan: ${client.plan} · ${client.status==='active'?'Activo':'Pendiente'}</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:2px">Adherencia: ${client.adh}%</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${client.adh}%"></div></div>
+    </div>
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+      <div style="font-size:13px"><strong>Correo:</strong> <span style="color:var(--muted)">${name.toLowerCase().replace(/ /g,'.')}@mail.com</span></div>
+      <div style="font-size:13px"><strong>Estado:</strong> <span style="color:var(--muted)">${client.status==='active'?'Activo':'Pendiente de registro'}</span></div>
+    </div>`;
+  openModal('modal-client-profile');
+}
+function openApprovePlan(name){
+  document.querySelector('#modal-approve-plan .target-name').textContent=name;
+  openModal('modal-approve-plan');
+}
+</script>
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- Client profile -->
+<div class="modal-overlay" id="modal-client-profile">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-head"><h2 id="cp-title"></h2><button class="modal-close" onclick="closeModal(this)">✕</button></div>
+    <div class="modal-body" id="cp-body"></div>
+    <div class="modal-actions"><button class="btn-ghost" onclick="closeModal(this)">Cerrar</button><button class="btn-lime" onclick="closeModal(this);show('messages')">Mensajear</button></div>
+  </div>
+</div>
+
+<!-- Save draft -->
+<div class="modal-overlay" id="modal-save-draft">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-head"><h2>Plan guardado</h2><button class="modal-close" onclick="closeModal(this)">✕</button></div>
+    <div class="confirm-body"><span class="ico-warn">📋</span><p>El plan se guardó como <strong>borrador</strong> correctamente.</p><p style="font-size:12px">Puedes editarlo y enviarlo para revisión cuando estés listo.</p></div>
+    <div class="confirm-actions"><button class="btn-lime" onclick="closeModal(this)">Entendido</button></div>
+  </div>
+</div>
+
+<!-- Approve plan -->
+<div class="modal-overlay" id="modal-approve-plan">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-head"><h2>Aprobar plan</h2><button class="modal-close" onclick="closeModal(this)">✕</button></div>
+    <div class="confirm-body"><span class="ico-warn">✓</span><p>¿Aprobar el plan de <strong class="target-name">?</strong></p><p style="font-size:12px">El cliente recibirá una notificación de que su plan está activo.</p></div>
+    <div class="confirm-actions"><button class="btn-ghost" onclick="closeModal(this)">Cancelar</button><button class="btn-lime" onclick="closeModal(this)">✓ Aprobar</button></div>
+  </div>
+</div>
+
+<!-- Edit plan -->
+<div class="modal-overlay" id="modal-edit-plan">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-head"><h2>Editar plan</h2><button class="modal-close" onclick="closeModal(this)">✕</button></div>
+    <div class="modal-body">
+      <label class="label">Objetivo</label><input class="input" placeholder="Ej: Ganar masa muscular">
+      <label class="label">Duración</label><select class="input"><option>4 semanas</option><option>8 semanas</option><option>12 semanas</option></select>
+      <label class="label">Notas</label><textarea class="input" rows="3" placeholder="Descripción del plan…" style="resize:vertical"></textarea>
+    </div>
+    <div class="modal-actions"><button class="btn-ghost" onclick="closeModal(this)">Cancelar</button><button class="btn-lime" onclick="closeModal(this)">Guardar</button></div>
+  </div>
+</div>
+
+<!-- Save settings -->
+<div class="modal-overlay" id="modal-save-settings">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-head"><h2>Ajustes guardados</h2><button class="modal-close" onclick="closeModal(this)">✕</button></div>
+    <div class="confirm-body"><span class="ico-warn">✓</span><p>Tus ajustes se guardaron correctamente.</p></div>
+    <div class="confirm-actions"><button class="btn-lime" onclick="closeModal(this)">Entendido</button></div>
+  </div>
+</div>
+
+</body>
+</html>

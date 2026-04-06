@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FitPaisa — Cliente Premium</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cabinet+Grotesk:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:var(--text);font-family:var(--fb);-webkit-font-smoothing:antialiased}
+
+/* scene */
+#scene{position:fixed;inset:0;perspective:1600px;perspective-origin:50% 42%}
+#carousel{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .85s cubic-bezier(.77,0,.18,1)}
+
+.slide{
+  position:absolute;inset:0;transform-style:preserve-3d;
+  backface-visibility:hidden;display:flex;flex-direction:column;
+  overflow:hidden;transition:opacity .85s ease,transform .85s cubic-bezier(.77,0,.18,1);
+}
+.slide::after{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");pointer-events:none;z-index:0}
+
+.s0{background:radial-gradient(ellipse 70% 60% at 25% 50%,#192310 0%,var(--dark) 70%)}
+.s1{background:radial-gradient(ellipse 60% 70% at 75% 35%,#0d1f1a 0%,var(--dark) 65%)}
+.s2{background:radial-gradient(ellipse 70% 60% at 20% 65%,#1a1208 0%,var(--dark) 65%)}
+.s3{background:radial-gradient(ellipse 60% 70% at 80% 55%,#0a0d1a 0%,var(--dark) 65%)}
+.s4{background:radial-gradient(ellipse 70% 60% at 30% 40%,#130a1a 0%,var(--dark) 65%)}
+
+/* topbar */
+.topbar{
+  position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;
+  padding:20px 40px;border-bottom:1px solid var(--border);flex-shrink:0;
+  background:rgba(8,10,15,.6);backdrop-filter:blur(20px);
+}
+.logo{font-family:var(--fd);font-size:22px;color:var(--lime);letter-spacing:.05em}
+.premium-chip{background:var(--limedim);border:1px solid rgba(255,107,107,.3);color:var(--lime);font-size:11px;font-weight:700;padding:4px 12px;border-radius:99px;text-transform:uppercase;letter-spacing:.08em}
+.user-tag{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--limedim);color:var(--lime);display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:14px}
+
+/* slide body */
+.slide-body-wrap{
+  flex:1;overflow:hidden;display:grid;grid-template-columns:1fr 1fr;gap:0;
+  position:relative;z-index:2;
+}
+
+/* left hero */
+.slide-hero{
+  padding:48px 40px;display:flex;flex-direction:column;justify-content:center;
+  border-right:1px solid var(--border);
+}
+.slide-tag{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--lime);margin-bottom:14px;font-weight:700}
+.slide-title{font-family:var(--fd);font-size:clamp(44px,5.5vw,80px);line-height:.92;margin-bottom:18px}
+.slide-title em{color:var(--lime);font-style:normal}
+.slide-desc{font-size:14px;color:var(--muted);line-height:1.75;margin-bottom:28px;max-width:380px}
+
+/* right panel — functional UI */
+.slide-panel{
+  padding:32px 36px;overflow-y:auto;display:flex;flex-direction:column;gap:16px;
+}
+.slide-panel::-webkit-scrollbar{width:4px}
+.slide-panel::-webkit-scrollbar-track{background:transparent}
+.slide-panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+
+/* content reveal */
+.slide-hero>*,.slide-panel>*{
+  transition:opacity .5s ease,transform .5s ease;
+}
+.slide:not(.active) .slide-hero>*,
+.slide:not(.active) .slide-panel>*{opacity:0;transform:translateY(18px)}
+.slide.active .slide-hero>*{opacity:1;transform:translateY(0)}
+.slide.active .slide-hero>*:nth-child(1){transition-delay:.1s}
+.slide.active .slide-hero>*:nth-child(2){transition-delay:.2s}
+.slide.active .slide-hero>*:nth-child(3){transition-delay:.3s}
+.slide.active .slide-hero>*:nth-child(4){transition-delay:.4s}
+.slide.active .slide-panel>*{opacity:1;transform:translateY(0)}
+.slide.active .slide-panel>*:nth-child(1){transition-delay:.15s}
+.slide.active .slide-panel>*:nth-child(2){transition-delay:.25s}
+.slide.active .slide-panel>*:nth-child(3){transition-delay:.35s}
+.slide.active .slide-panel>*:nth-child(4){transition-delay:.45s}
+.slide.active .slide-panel>*:nth-child(5){transition-delay:.55s}
+
+/* nav */
+#nav{
+  position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
+  z-index:200;display:flex;align-items:center;gap:6px;
+  background:rgba(15,18,25,.85);border:1px solid var(--border);
+  border-radius:99px;padding:8px 18px;backdrop-filter:blur(20px);
+}
+.ndot{width:7px;height:7px;border-radius:50%;background:var(--muted);cursor:none;transition:all .3s}
+.ndot.on{background:var(--lime);width:22px;border-radius:4px}
+
+#prog{position:fixed;top:0;left:0;height:2px;background:var(--lime);z-index:300;transition:width .85s cubic-bezier(.77,0,.18,1)}
+
+#arrows{position:fixed;right:28px;top:50%;transform:translateY(-50%);z-index:200;display:flex;flex-direction:column;gap:8px}
+.arw{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:none;transition:all .2s;font-size:14px}
+.arw:hover{background:var(--lime);color:var(--dark);border-color:var(--lime)}
+
+/* ── UI components ── */
+.card{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:14px;padding:18px}
+.card-title{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--lime);font-weight:700;margin-bottom:14px}
+
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.stat-box{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
+.stat-v{font-family:var(--fd);font-size:26px;color:var(--lime)}
+.stat-l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-top:2px}
+
+.bar-row{margin-bottom:12px}
+.bar-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px}
+.bar-labels strong{color:var(--text)}
+.bar-track{height:5px;background:rgba(255,255,255,.07);border-radius:99px;overflow:hidden}
+.bar-fill{height:100%;border-radius:99px}
+
+.ex-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.ex-item:last-child{border-bottom:none}
+.ex-n{width:26px;height:26px;border-radius:6px;background:var(--limedim);color:var(--lime);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0}
+.ex-name{flex:1;font-size:13px;font-weight:600}
+.ex-meta{font-size:11px;color:var(--muted)}
+.check-btn{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:none;transition:all .2s;font-size:10px;flex-shrink:0}
+.check-btn.done{background:var(--lime);border-color:var(--lime);color:var(--dark);font-weight:800}
+.check-btn:hover{border-color:var(--lime)}
+
+.meal-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.meal-item:last-child{border-bottom:none}
+.meal-icon{width:36px;height:36px;border-radius:10px;background:var(--limedim);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.meal-name{flex:1;font-size:13px;font-weight:600}
+.meal-sub{font-size:11px;color:var(--muted)}
+.meal-kcal{font-family:var(--fd);color:var(--lime);font-size:16px}
+
+.bubble{padding:9px 13px;border-radius:14px;font-size:13px;line-height:1.5;margin-bottom:8px;max-width:85%}
+.bubble.in{background:rgba(255,255,255,.06);border-radius:4px 14px 14px 14px;color:var(--muted)}
+.bubble.out{background:var(--lime);color:var(--dark);border-radius:14px 14px 4px 14px;margin-left:auto;font-weight:600}
+
+.week-bars{display:flex;gap:5px;align-items:flex-end;height:60px}
+.wbar{flex:1;border-radius:3px 3px 0 0;background:var(--lime)}
+.wbar.empty{background:rgba(255,107,107,.15)}
+.wday{flex:1;text-align:center;font-size:9px;color:var(--muted);margin-top:4px}
+
+.record-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.record-item:last-child{border-bottom:none}
+.rec-name{flex:1;font-size:13px;font-weight:600}
+.rec-kg{font-family:var(--fd);color:var(--lime);font-size:18px}
+.rec-prev{font-size:11px;color:var(--muted)}
+
+.input{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 13px;color:var(--text);font-size:13px;font-family:var(--fb);outline:none;width:100%;transition:border-color .2s}
+.input:focus{border-color:var(--lime)}
+.input::placeholder{color:var(--muted)}
+.label{font-size:11px;color:var(--muted);margin-bottom:5px;display:block}
+.field{display:flex;flex-direction:column}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-lime{background:var(--lime);color:var(--dark);border:none;border-radius:8px;padding:10px 20px;font-weight:800;font-size:13px;cursor:none;transition:all .2s;font-family:var(--fb)}
+.btn-lime:hover{background:var(--lime2);transform:translateY(-1px)}
+.btn-ghost{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:10px 20px;color:var(--muted);font-size:13px;cursor:none;transition:all .2s;font-family:var(--fb)}
+.btn-danger{background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.3);border-radius:8px;padding:8px 14px;color:var(--danger);font-size:12px;cursor:none;font-family:var(--fb);transition:all .2s}
+.btn-danger:hover{background:rgba(255,77,109,.2)}
+
+/* ═══ Modal overlay ═══ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);z-index:500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+.modal-overlay.open{opacity:1;pointer-events:auto}
+.modal-box{background:var(--dark2);border:1px solid var(--border);border-radius:16px;padding:28px;width:90%;max-width:480px;max-height:80vh;overflow-y:auto;transform:translateY(20px) scale(.97);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+.modal-overlay.open .modal-box{transform:translateY(0) scale(1)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.modal-head h2{font-family:var(--fd);font-size:20px}
+.modal-close{width:30px;height:30px;border-radius:50%;background:var(--border);border:none;color:var(--muted);font-size:16px;cursor:none;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.modal-close:hover{background:var(--lime);color:var(--dark)}
+.modal-body label.label{margin-bottom:6px}
+.modal-body .input{width:100%;margin-bottom:12px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+.btn-ghost:hover{border-color:var(--border);color:var(--text)}
+
+@media(max-width:768px){
+  html,body{height:auto;min-height:100%}
+  .slide-body-wrap{grid-template-columns:1fr}
+  .slide-panel{padding:20px 24px 110px}
+  .slide-hero{border-right:none;padding:32px 24px}
+  .topbar{padding:14px 20px}
+  .topbar{gap:10px;flex-wrap:wrap}
+  .user-tag{width:100%;justify-content:flex-start}
+  .stat-row{grid-template-columns:repeat(2,1fr)}
+  .grid2{grid-template-columns:1fr}
+  #nav{bottom:18px;width:calc(100% - 32px);justify-content:center}
+  #arrows{display:none}
+}
+
+@media(max-width:520px){
+  .slide-title{font-size:clamp(34px,12vw,54px)}
+  .slide-hero,.slide-panel{padding-left:18px;padding-right:18px}
+  .topbar{padding:12px 16px}
+  .stat-row{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<div id="cur"></div><div id="cur-ring"></div>
+<div id="prog"></div>
+
+<div id="arrows">
+  <div class="arw" onclick="go(-1)">↑</div>
+  <div class="arw" onclick="go(1)">↓</div>
+</div>
+
+<div id="scene">
+ <div id="carousel">
+
+  <!-- SLIDE 0 · Dashboard -->
+  <div class="slide s0 active" data-i="0">
+    <div class="topbar">
+      <div class="logo">FITPAISA</div>
+      <div class="premium-chip">⚡ Premium</div>
+      <div class="user-tag"><div class="avatar">CM</div>Carlos Méndez</div>
+    </div>
+    <div class="slide-body-wrap">
+      <div class="slide-hero">
+        <div class="slide-tag">Dashboard · Semana 3</div>
+        <div class="slide-title">HOLA,<br><em>CARLOS.</em></div>
+        <div class="slide-desc">Llevas <strong style="color:var(--lime)">12 días</strong> de racha activa. Tu entrenadora Laura tiene un mensaje nuevo para ti.</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn-lime" onclick="goTo(1)">Ver mi entreno →</button>
+          <button class="btn-ghost" onclick="goTo(3)">Mensajes</button>
+        </div>
+      </div>
+      <div class="slide-panel">
+        <div class="card">
+          <div class="card-title">Hoy · Macros</div>
+          <div class="stat-row">
+            <div class="stat-box"><div class="stat-v">1840</div><div class="stat-l">Kcal</div></div>
+            <div class="stat-box"><div class="stat-v">142g</div><div class="stat-l">Prot.</div></div>
+            <div class="stat-box"><div class="stat-v">198g</div><div class="stat-l">Carbos</div></div>
+            <div class="stat-box"><div class="stat-v">62g</div><div class="stat-l">Grasa</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Actividad semanal</div>
+          <div class="week-bars" id="wbars"></div>
+          <div style="display:flex;gap:5px;margin-top:4px" id="wdays"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Último mensaje · Laura Vidal</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+            <div class="avatar" style="width:32px;height:32px;font-size:12px">LV</div>
+            <div style="font-size:12px;color:var(--muted)">Entrenadora · En línea <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--success);margin-left:4px;vertical-align:middle"></span></div>
+          </div>
+          <div class="bubble in">Perfecto, mañana subimos las cargas 💪</div>
+          <button class="btn-ghost" style="width:100%;margin-top:8px;font-size:12px" onclick="goTo(3)">Abrir chat</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 1 · Entrenamientos -->
+  <div class="slide s1" data-i="1">
+    <div class="topbar">
+      <div class="logo">FITPAISA</div>
+      <div class="premium-chip">🏋️ Entrenamiento</div>
+      <div class="user-tag"><div class="avatar">CM</div>Carlos Méndez</div>
+    </div>
+    <div class="slide-body-wrap">
+      <div class="slide-hero">
+        <div class="slide-tag">Plan activo · Volumen</div>
+        <div class="slide-title">ROMPE<br>TUS<br><em>LÍMITES.</em></div>
+        <div class="slide-desc">Plan diseñado y aprobado por Laura Vidal. Marca cada ejercicio completado y registra tus nuevos récords personales.</div>
+        <div style="margin-top:8px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Progreso de hoy</div>
+          <div style="height:6px;background:rgba(255,255,255,.07);border-radius:99px;overflow:hidden;max-width:300px">
+            <div id="woProgress" style="height:100%;background:var(--lime);border-radius:99px;transition:width .5s ease;width:50%"></div>
+          </div>
+          <div id="woLabel" style="font-size:12px;color:var(--muted);margin-top:6px">2 de 4 completados</div>
+        </div>
+      </div>
+      <div class="slide-panel">
+        <div class="card">
+          <div class="card-title">Ejercicios de hoy</div>
+          <div id="exList"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Añadir ejercicio</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="field"><label class="label">Ejercicio</label><input class="input" id="exName" placeholder="Ej: Press banca"></div>
+            <div class="grid2">
+              <div class="field"><label class="label">Series</label><input class="input" id="exSets" type="number" placeholder="4"></div>
+              <div class="field"><label class="label">Reps</label><input class="input" id="exReps" type="number" placeholder="10"></div>
+            </div>
+            <div class="field"><label class="label">Carga (kg)</label><input class="input" id="exKg" type="number" placeholder="80"></div>
+            <button class="btn-lime" onclick="addEx()">+ Registrar</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Récords personales</div>
+          <div class="record-item"><div class="rec-name">Peso muerto</div><div><div class="rec-kg">120 kg</div><div class="rec-prev">Anterior: 115 kg ▲</div></div></div>
+          <div class="record-item"><div class="rec-name">Sentadilla</div><div><div class="rec-kg">100 kg</div><div class="rec-prev">Anterior: 95 kg ▲</div></div></div>
+          <div class="record-item"><div class="rec-name">Press banca</div><div><div class="rec-kg">82 kg</div><div class="rec-prev">Anterior: 80 kg ▲</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 2 · Nutrición -->
+  <div class="slide s2" data-i="2">
+    <div class="topbar">
+      <div class="logo">FITPAISA</div>
+      <div class="premium-chip">🥗 Nutrición</div>
+      <div class="user-tag"><div class="avatar">CM</div>Carlos Méndez</div>
+    </div>
+    <div class="slide-body-wrap">
+      <div class="slide-hero">
+        <div class="slide-tag">Control nutricional · Hoy</div>
+        <div class="slide-title">COME<br>CON<br><em>DATOS.</em></div>
+        <div class="slide-desc">Macros calculados automáticamente con la fórmula de Mifflin-St Jeor según tu perfil. TMB estimado: <strong style="color:var(--lime)">1.847 kcal</strong>.</div>
+        <div style="display:flex;flex-direction:column;gap:10px;max-width:280px">
+          <div class="bar-row">
+            <div class="bar-labels"><span>Kcal</span><strong>1840 / 2200</strong></div>
+            <div class="bar-track"><div class="bar-fill" style="width:84%;background:var(--lime)"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-labels"><span>Proteína</span><strong>142 / 165g</strong></div>
+            <div class="bar-track"><div class="bar-fill" style="width:86%;background:var(--success)"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-labels"><span>Carbos</span><strong>198 / 240g</strong></div>
+            <div class="bar-track"><div class="bar-fill" style="width:82%;background:var(--warn)"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-labels"><span>Grasa</span><strong>62 / 73g</strong></div>
+            <div class="bar-track"><div class="bar-fill" style="width:85%;background:var(--purple)"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-panel">
+        <div class="card">
+          <div class="card-title">Ingestas de hoy</div>
+          <div id="mealList"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Registrar ingesta</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="field"><label class="label">Alimento</label><input class="input" id="mName" placeholder="Ej: Pechuga a la plancha"></div>
+            <div class="grid2">
+              <div class="field"><label class="label">Kcal</label><input class="input" id="mKcal" type="number" placeholder="290"></div>
+              <div class="field"><label class="label">Proteína (g)</label><input class="input" id="mProt" type="number" placeholder="48"></div>
+            </div>
+            <div class="grid2">
+              <div class="field"><label class="label">Carbos (g)</label><input class="input" id="mCarb" type="number" placeholder="2"></div>
+              <div class="field"><label class="label">Grasa (g)</label><input class="input" id="mFat" type="number" placeholder="6"></div>
+            </div>
+            <button class="btn-lime" onclick="addMeal()">+ Registrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 3 · Mensajería -->
+  <div class="slide s3" data-i="3">
+    <div class="topbar">
+      <div class="logo">FITPAISA</div>
+      <div class="premium-chip">💬 Mensajes</div>
+      <div class="user-tag"><div class="avatar">CM</div>Carlos Méndez</div>
+    </div>
+    <div class="slide-body-wrap">
+      <div class="slide-hero">
+        <div class="slide-tag">Mensajería directa</div>
+        <div class="slide-title">TU ENTRE<br>NADORA<br><em>EN LÍNEA.</em></div>
+        <div class="slide-desc">Comunicación bidireccional directa con Laura Vidal. Ajusta rutinas, resuelve dudas y recibe feedback en tiempo real.</div>
+        <div style="display:flex;align-items:center;gap:10px;padding:14px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;max-width:280px">
+          <div class="avatar" style="width:40px;height:40px;font-size:15px">LV</div>
+          <div>
+            <div style="font-size:14px;font-weight:700">Laura Vidal</div>
+            <div style="font-size:12px;color:var(--success);display:flex;align-items:center;gap:5px">
+              <span style="width:6px;height:6px;border-radius:50%;background:var(--success);display:inline-block"></span>En línea
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-panel">
+        <div class="card" style="flex:1;display:flex;flex-direction:column">
+          <div class="card-title">Chat con Laura Vidal</div>
+          <div id="chatMessages" style="flex:1;display:flex;flex-direction:column;gap:8px;min-height:200px;margin-bottom:14px;overflow-y:auto;max-height:320px"></div>
+          <div style="display:flex;gap:8px">
+            <input class="input" id="chatInput" placeholder="Escribe un mensaje…" onkeydown="if(event.key==='Enter')sendMsg()" style="flex:1">
+            <button class="btn-lime" onclick="sendMsg()" style="padding:10px 16px;flex-shrink:0">→</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 4 · Progreso -->
+  <div class="slide s4" data-i="4">
+    <div class="topbar">
+      <div class="logo">FITPAISA</div>
+      <div class="premium-chip">📈 Progreso</div>
+      <div class="user-tag"><div class="avatar">CM</div>Carlos Méndez</div>
+    </div>
+    <div class="slide-body-wrap">
+      <div class="slide-hero">
+        <div class="slide-tag">Evolución física</div>
+        <div class="slide-title">TU<br>MEJOR<br><em>VERSIÓN.</em></div>
+        <div class="slide-desc">Estadísticas de entrenamiento, nutrición y medidas corporales. Sigue tu evolución semana a semana.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:280px">
+          <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px">
+            <div style="font-family:var(--fd);font-size:28px;color:var(--lime)">74.2</div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Peso (kg)</div>
+            <div style="font-size:11px;color:var(--success);margin-top:4px">▼ 0.8 kg/sem</div>
+          </div>
+          <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px">
+            <div style="font-family:var(--fd);font-size:28px;color:var(--lime)">18.4%</div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">% Grasa</div>
+            <div style="font-size:11px;color:var(--success);margin-top:4px">▼ 0.3%</div>
+          </div>
+          <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px">
+            <div style="font-family:var(--fd);font-size:28px;color:var(--lime)">38.1</div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Cintura (cm)</div>
+            <div style="font-size:11px;color:var(--success);margin-top:4px">▼ 0.5 cm</div>
+          </div>
+          <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px">
+            <div style="font-family:var(--fd);font-size:28px;color:var(--lime)">12</div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Racha (días)</div>
+            <div style="font-size:11px;color:var(--warn);margin-top:4px">🔥 Sigue así</div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-panel">
+        <div class="card">
+          <div class="card-title">Peso semanal (kg)</div>
+          <canvas id="weightChart" height="120" style="width:100%"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-title">Medidas corporales</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Pecho</span><strong>42.3 cm <span style="color:var(--success);font-size:11px">▲ 0.2</span></strong></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Cadera</span><strong>58.7 cm <span style="color:var(--muted);font-size:11px">—</span></strong></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Bíceps</span><strong>36.5 cm <span style="color:var(--success);font-size:11px">▲ 0.4</span></strong></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Muslo</span><strong>58.2 cm <span style="color:var(--success);font-size:11px">▲ 0.6</span></strong></div>
+          </div>
+          <button class="btn-ghost" style="width:100%;margin-top:14px;font-size:12px" onclick="openModal('modal-measures')">+ Registrar medidas</button>
+        </div>
+        <div class="card" onclick="openModal('modal-subscription')" style="cursor:pointer">
+          <div class="card-title">Mi suscripción</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:700">Plan Premium</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">Activo · Renovación: 1 mayo 2026</div>
+            </div>
+            <div style="background:var(--limedim);color:var(--lime);padding:4px 12px;border-radius:99px;font-size:11px;font-weight:700">⚡ Activo</div>
+          </div>
+          <div style="margin-top:12px;font-size:12px;color:var(--muted)">Pago gestionado de forma segura por Stripe · PCI-DSS</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+ </div><!-- /carousel -->
+</div><!-- /scene -->
+
+<div id="nav"></div>
+
+<script>
+// ── State ─────────────────────────────
+const TOTAL = 5;
+let current = 0, busy = false;
+
+const slides = document.querySelectorAll('.slide');
+const prog   = document.getElementById('prog');
+
+// Build nav dots
+const nav = document.getElementById('nav');
+const labels = ['Dashboard','Entrenamiento','Nutrición','Mensajes','Progreso'];
+labels.forEach((l,i) => {
+  const d = document.createElement('div');
+  d.className = 'ndot' + (i===0?' on':'');
+  d.title = l;
+  d.onclick = () => goTo(i);
+  nav.appendChild(d);
+});
+
+// ── 3D Positioning ────────────────────
+function positionSlides() {
+  slides.forEach((s, i) => {
+    const offset = i - current;
+    let rotX = 0, transY = 0, transZ = 0, opacity = 1, scale = 1;
+    if(offset === 0) {
+      rotX=0; transY=0; transZ=0; opacity=1; scale=1;
+    } else if(offset > 0) {
+      const n = Math.min(offset,3);
+      rotX = -14*n; transY = 70*n; transZ = -150*n;
+      opacity = Math.max(0, 1 - offset*0.55); scale = Math.max(0.72, 1-offset*0.09);
+    } else {
+      const n = Math.min(-offset,3);
+      rotX = 10*n; transY = -90*n; transZ = -220*n;
+      opacity = 0; scale = 0.85;
+    }
+    s.style.transform = `rotateX(${rotX}deg) translateY(${transY}px) translateZ(${transZ}px) scale(${scale})`;
+    s.style.opacity = opacity;
+    s.style.pointerEvents = offset===0?'auto':'none';
+    s.style.zIndex = TOTAL - Math.abs(offset);
+    s.classList.toggle('active', offset===0);
+  });
+  document.querySelectorAll('.ndot').forEach((d,i)=>d.classList.toggle('on',i===current));
+  prog.style.width = ((current+1)/TOTAL*100)+'%';
+  if(current===4) drawChart();
+}
+
+function goTo(n) {
+  if(busy||n===current||n<0||n>=TOTAL) return;
+  busy=true; current=n; positionSlides();
+  setTimeout(()=>busy=false, 900);
+}
+function go(d) { goTo(current+d); }
+
+positionSlides();
+
+// ── Week bars ─────────────────────────
+const wData   = [65,72,58,84,77,90,0];
+const wLabels = ['L','M','X','J','V','S','D'];
+document.getElementById('wbars').innerHTML = wData.map(v=>`<div class="wbar${v===0?' empty':''}" style="height:${Math.max(v,10)}%"></div>`).join('');
+document.getElementById('wdays').innerHTML = wLabels.map(l=>`<span class="wday">${l}</span>`).join('');
+
+// ── Exercise list ─────────────────────
+let exercises = [
+  {name:'Press banca',  sets:4,reps:10,kg:80,  done:true},
+  {name:'Sentadilla',   sets:4,reps:8, kg:100, done:true},
+  {name:'Peso muerto',  sets:3,reps:6, kg:120, done:false},
+  {name:'Dominadas',    sets:3,reps:12,kg:0,   done:false},
+];
+function renderEx() {
+  const done = exercises.filter(e=>e.done).length;
+  document.getElementById('woProgress').style.width = (done/exercises.length*100)+'%';
+  document.getElementById('woLabel').textContent = `${done} de ${exercises.length} completados`;
+  document.getElementById('exList').innerHTML = exercises.map((e,i)=>`
+    <div class="ex-item">
+      <div class="ex-n">${String(i+1).padStart(2,'0')}</div>
+      <div><div class="ex-name">${e.name}</div><div class="ex-meta">${e.sets}×${e.reps}${e.kg?' · '+e.kg+' kg':' · PC'}</div></div>
+      <div class="check-btn ${e.done?'done':''}" onclick="toggleEx(${i})">${e.done?'✓':''}</div>
+    </div>`).join('');
+}
+function toggleEx(i) { exercises[i].done=!exercises[i].done; renderEx(); }
+function addEx() {
+  const n=document.getElementById('exName').value.trim();
+  if(!n) return;
+  exercises.push({name:n,sets:+document.getElementById('exSets').value||3,reps:+document.getElementById('exReps').value||10,kg:+document.getElementById('exKg').value||0,done:false});
+  ['exName','exSets','exReps','exKg'].forEach(id=>document.getElementById(id).value='');
+  renderEx();
+}
+renderEx();
+
+// ── Meals ─────────────────────────────
+let meals = [
+  {name:'Avena con plátano',   kcal:380,prot:14,carb:62,fat:8, time:'08:30',icon:'🥣'},
+  {name:'Pechuga a la plancha',kcal:290,prot:48,carb:2, fat:6, time:'13:00',icon:'🍗'},
+  {name:'Batido de proteínas', kcal:220,prot:30,carb:18,fat:4, time:'17:00',icon:'🥤'},
+  {name:'Salmón con arroz',    kcal:480,prot:38,carb:52,fat:14,time:'20:30',icon:'🍽️'},
+];
+function renderMeals() {
+  document.getElementById('mealList').innerHTML = meals.map((m,i)=>`
+    <div class="meal-item">
+      <div class="meal-icon">${m.icon}</div>
+      <div><div class="meal-name">${m.name}</div><div class="meal-sub">${m.time} · P:${m.prot}g C:${m.carb}g G:${m.fat}g</div></div>
+      <div class="meal-kcal">${m.kcal}</div>
+    </div>`).join('');
+}
+function addMeal() {
+  const name=document.getElementById('mName').value.trim(); if(!name) return;
+  const now=new Date();
+  meals.push({name,kcal:+document.getElementById('mKcal').value||0,prot:+document.getElementById('mProt').value||0,carb:+document.getElementById('mCarb').value||0,fat:+document.getElementById('mFat').value||0,time:`${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`,icon:'🍽️'});
+  ['mName','mKcal','mProt','mCarb','mFat'].forEach(id=>document.getElementById(id).value='');
+  renderMeals();
+}
+renderMeals();
+
+// ── Chat ──────────────────────────────
+let messages = [
+  {text:'¿Cómo fue el entreno de hoy?',mine:false,time:'10:32'},
+  {text:'¡Muy bien! Superé mi marca en sentadilla.',mine:true,time:'10:35'},
+  {text:'Perfecto 💪 Mañana subimos las cargas.',mine:false,time:'10:36'},
+];
+function renderChat() {
+  const el = document.getElementById('chatMessages');
+  el.innerHTML = messages.map(m=>`
+    <div class="bubble ${m.mine?'out':'in'}">${m.text}<br><span style="font-size:10px;opacity:.6">${m.time}</span></div>`).join('');
+  el.scrollTop = el.scrollHeight;
+}
+function sendMsg() {
+  const inp = document.getElementById('chatInput');
+  const text = inp.value.trim(); if(!text) return;
+  const now = new Date();
+  const time = `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
+  messages.push({text,mine:true,time});
+  inp.value=''; renderChat();
+  setTimeout(()=>{ messages.push({text:'¡Recibido! Lo tengo en cuenta 👍',mine:false,time}); renderChat(); },1200);
+}
+renderChat();
+
+// ── Weight chart ──────────────────────
+function drawChart() {
+  const canvas = document.getElementById('weightChart');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * devicePixelRatio;
+  canvas.height = 120 * devicePixelRatio;
+  ctx.scale(devicePixelRatio,devicePixelRatio);
+  const W=canvas.offsetWidth, H=120;
+  const data=[75.0,74.8,74.6,74.9,74.5,74.3,74.2];
+  const lbls=['L','M','X','J','V','S','D'];
+  const pad={t:8,r:8,b:24,l:36};
+  const mn=Math.min(...data)*.998, mx=Math.max(...data)*1.002;
+  const sx=i=>pad.l+i*(W-pad.l-pad.r)/(data.length-1);
+  const sy=v=>pad.t+(1-(v-mn)/(mx-mn))*(H-pad.t-pad.b);
+  // grid
+  ctx.strokeStyle='rgba(255,255,255,.05)'; ctx.lineWidth=1;
+  for(let i=0;i<4;i++){const y=pad.t+i*(H-pad.t-pad.b)/3;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();}
+  // area
+  const g=ctx.createLinearGradient(0,pad.t,0,H-pad.b);
+  g.addColorStop(0,'rgba(255,107,107,.25)'); g.addColorStop(1,'rgba(255,107,107,0)');
+  ctx.beginPath(); data.forEach((v,i)=>i===0?ctx.moveTo(sx(i),sy(v)):ctx.lineTo(sx(i),sy(v)));
+  ctx.lineTo(sx(data.length-1),H-pad.b); ctx.lineTo(sx(0),H-pad.b); ctx.closePath();
+  ctx.fillStyle=g; ctx.fill();
+  // line
+  ctx.beginPath(); ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--lime').trim(); ctx.lineWidth=2.5; ctx.lineJoin='round';
+  data.forEach((v,i)=>i===0?ctx.moveTo(sx(i),sy(v)):ctx.lineTo(sx(i),sy(v))); ctx.stroke();
+  // dots + labels
+  lbls.forEach((l,i)=>{
+    ctx.beginPath(); ctx.arc(sx(i),sy(data[i]),3.5,0,Math.PI*2);
+    ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--lime').trim(); ctx.fill();
+    ctx.strokeStyle='#080a0f'; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle='#6b7588'; ctx.font=`10px Cabinet Grotesk,sans-serif`;
+    ctx.textAlign='center'; ctx.fillText(l,sx(i),H-6);
+  });
+}
+
+// ── Input / wheel / keys / touch ──────
+window.addEventListener('wheel',e=>{if(Math.abs(e.deltaY)>30)go(e.deltaY>0?1:-1)},{passive:true});
+window.addEventListener('keydown',e=>{
+  if(e.key==='ArrowDown'||e.key==='ArrowRight')go(1);
+  if(e.key==='ArrowUp'||e.key==='ArrowLeft')go(-1);
+});
+let ty=0;
+window.addEventListener('touchstart',e=>{ty=e.touches[0].clientY},{passive:true});
+window.addEventListener('touchend',e=>{if(Math.abs(ty-e.changedTouches[0].clientY)>50)go(ty>e.changedTouches[0].clientY?1:-1)},{passive:true});
+
+// ── Custom cursor ─────────────────────
+const cur=document.getElementById('cur'),ring=document.getElementById('cur-ring');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.left=mx+'px';cur.style.top=my+'px';});
+(function animRing(){rx+=(mx-rx)*.1;ry+=(my-ry)*.1;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(animRing)})();
+document.querySelectorAll('button,.arw,.ndot,.check-btn').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{cur.style.width='22px';cur.style.height='22px'});
+  el.addEventListener('mouseleave',()=>{cur.style.width='12px';cur.style.height='12px'});
+});
+// Make user tag clickable for profile modal
+document.querySelectorAll('.user-tag').forEach(el=>{el.style.cursor='pointer';el.addEventListener('click',()=>openModal('modal-profile'))});
+
+// ── Parallax ─────────────────────────
+document.addEventListener('mousemove',e=>{
+  const xp=(e.clientX/innerWidth-.5)*2,yp=(e.clientY/innerHeight-.5)*2;
+  document.querySelectorAll('.slide.active .slide-hero').forEach(h=>{h.style.transform=`translate(${xp*6}px,${yp*4}px)`});
+});
+
+// ═══ Modals ═══
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(el){el.closest('.modal-overlay').classList.remove('open')}
+document.querySelectorAll('.modal-overlay').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')})});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'))});
+</script>
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- Registrar medidas -->
+<div class="modal-overlay" id="modal-measures">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-head"><h2>REGISTRAR MEDIDAS</h2><button class="modal-close" onclick="closeModal(this)">✕</button></div>
+    <div class="modal-body">
+      <div class="grid2" style="gap:12px">
+        <div class="field"><label class="label">Peso (kg)</label><input class="input" placeholder="74.2" type="number"></div>
+        <div class="field"><label class="label">% Grasa</label><input class="input" placeholder="18.4" type="number"></div>
+        <div class="field"><label class="label">Cintura (cm)</label><input class="input" placeholder="82.0" type="number"></div>
+        <div class="field"><label class="label">Cadera (cm)</label><input class="input" placeholder="95.0" type="number"></div>
+        <div class="field"><label class="label">Pecho (cm)</label><input class="input" placeholder="98.0" type="number"></div>
+        <div class="field"><label class="label">Bíceps (cm)</label><input class="input" placeholder="36.5" type="number"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal(this)">Cancelar</button>
+      <button class="btn-lime" onclick="closeModal(this)">Guardar medidas</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ver suscripción -->
+<div class="modal-overlay" id="modal-subscription">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-head"><h2>MIS USCRIPCIÓN</h2><button class="modal-close" onclick="closeModal(this)">✕</button></div>
+    <div class="modal-body">
+      <div style="padding:16px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div><div style="font-size:14px;font-weight:700">Plan Premium</div><div style="font-size:12px;color:var(--muted)">Activo · Renovación: 1 mayo 2026</div></div>
+          <div style="background:var(--limedim);color:var(--lime);padding:4px 12px;border-radius:99px;font-size:11px;font-weight:700">⚡ Activo</div>
+        </div>
+        <div style="font-size:13px;color:var(--muted)">9,99€/mes · Sin permanencia</div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6">
+        <strong style="color:var(--text)">Incluido:</strong><br>
+        · Entrenador/a personal asignado/a<br>
+        · Planes personalizados de entrenamiento<br>
+        · Control nutricional avanzado<br>
+        · Mensajería interna directa<br>
+        · Estadísticas y gráficos de evolución
+      </div>
+      <div style="margin-top:14px;font-size:12px;color:var(--muted);padding:10px;background:rgba(255,255,255,.03);border-radius:8px">🔒 Pago gestionado de forma segura por Stripe · PCI-DSS</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal(this)">Cerrar</button>
+      <button class="btn-danger" style="font-size:12px">Cancelar suscripción</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ver perfil -->
+<div class="modal-overlay" id="modal-profile">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-head"><h2>MI PERFIL</h2><button class="modal-close" onclick="closeModal(this)">✕</button></div>
+    <div class="modal-body">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+        <div style="width:56px;height:56px;border-radius:50%;background:var(--limedim);color:var(--lime);display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:22px">CM</div>
+        <div><div style="font-size:16px;font-weight:700">Carlos Méndez</div><div style="font-size:12px;color:var(--muted)">carlos@mail.com · Premium</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Peso</span><strong>74.2 kg</strong></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Altura</span><strong>178 cm</strong></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Edad</span><strong>28 años</strong></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Objetivo</span><strong>Ganar masa muscular</strong></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Actividad</span><strong>Moderada</strong></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Entrenadora</span><strong>Laura Vidal</strong></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal(this)">Cerrar</button>
+      <button class="btn-lime" onclick="closeModal(this)">Editar perfil</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
