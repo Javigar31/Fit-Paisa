@@ -1,0 +1,3715 @@
+--- START OF Documento-DAS_Javier-Andres-Garcia-Vargas.pdf ---
+FitPaisa — Documento de Arquitectura del Software (DAS) v1.0   |   Javier Andrés 
+García Vargas 
+Pág. 1 / 12 
+DOCUMENTO DE ARQUITECTURA DEL SOFTWARE 
+DAS 
+ 
+FitPaisa 
+Plataforma Web de Entrenamiento y Nutrición Personalizada 
+ 
+1. Vista de Alto Nivel 
+FitPaisa se concibe como una plataforma web integral para la gestión del 
+entrenamiento físico y la nutrición personalizada. Visto como caja negra, el sistema 
+recibe datos del usuario (perfil físico, comidas, sesiones de entrenamiento) y devuelve 
+planes adaptados, estadísticas de progreso y comunicación directa con su 
+entrenador. 
+El sistema opera de forma centralizada: el usuario interactúa con un entorno web 
+responsive, los entrenadores supervisan el progreso de sus clientes en tiempo real y 
+el administrador gestiona la plataforma desde un panel con permisos elevados. 
+FitPaisa actúa como asistente activo y dinámico, integrando servicios externos para 
+pagos y notificaciones. 
+ 
+1.1 Actores del sistema 
+Actor 
+Rol 
+Capacidades principales 
+Usuario final 
+Cliente de la 
+plataforma 
+Registrar comidas y entrenamientos · 
+Consultar planes · Ver estadísticas · 
+Suscripción Premium 
+Entrenador 
+Profesional 
+supervisor 
+Crear y aprobar planes · Supervisar 
+progreso · Mensajería con clientes 
+Administrador 
+Gestor de la 
+plataforma 
+Gestionar usuarios, entrenadores y 
+permisos · Supervisar el sistema 
+Sistema 
+externo 
+Pasarelas de pago 
+(Stripe/PayPal) 
+Procesamiento de suscripciones 
+Premium (RF11) 
+Sistema 
+externo 
+Servidor SMTP 
+Envío de notificaciones y recordatorios 
+automáticos (RF9) 
+ 
+1.2 Diagrama de vista de alto nivel 
+FitPaisa — Documento de Arquitectura del Software (DAS) v1.0   |   Javier Andrés 
+García Vargas 
+Pág. 2 / 12 
+ 
+ 
+2. Patrones Arquitectónicos 
+Para FitPaisa se ha definido una arquitectura híbrida que combina el modelo Cliente-
+Servidor con el patrón de diseño Modelo-Vista-Controlador (MVC). Esta decisión se 
+fundamenta en las características del proyecto: equipo unipersonal, entorno 
+académico, requisito de respuesta inferior a 2 segundos y acceso exclusivamente 
+web. 
+ 
+2.1 Evaluación de patrones candidatos 
+Patrón 
+Ventajas para FitPaisa 
+Inconvenientes 
+Decisión 
+Cliente-Servidor 
+Separación clara 
+front/back · Estándar 
+web · Escalable 
+Requiere gestión de 
+API 
+✓ Adoptado 
+MVC 
+Separación 
+datos/lógica/vista · 
+Mantenible · Conocido 
+Mayor estructura 
+inicial 
+✓ Adoptado 
+Microservicios 
+Escalabilidad 
+independiente · 
+Equipos separados 
+Complejidad excesiva 
+para equipo 
+unipersonal 
+✗ 
+Descartado 
+Hexagonal 
+Alta mantenibilidad · 
+Reglas de negocio 
+aisladas 
+Sobreingeniería para 
+el alcance académico 
+del proyecto 
+✗ 
+Descartado 
+Event-Driven 
+Reactivo · Ideal para 
+notificaciones en 
+tiempo real 
+Infraestructura de 
+mensajería compleja 
+(Kafka, RabbitMQ) 
+✗ 
+Descartado 
+ 
+FitPaisa — Documento de Arquitectura del Software (DAS) v1.0   |   Javier Andrés 
+García Vargas 
+Pág. 3 / 12 
+2.2 Arquitectura adoptada: Cliente-Servidor + MVC 
+La arquitectura híbrida seleccionada organiza el sistema en dos grandes bloques y 
+tres capas internas: 
+ 
+A. Estructura Cliente-Servidor 
+Bloque 
+Componente 
+Responsabilidad 
+Cliente 
+(Frontend) 
+Interfaz web 
+responsive 
+Presentación de datos y captura de 
+interacciones del usuario. Se ejecuta en 
+el navegador (Chrome, Firefox, Edge). 
+Servidor 
+(Backend) 
+API REST + 
+Lógica + BD 
+Centraliza la lógica de negocio, el 
+procesamiento de datos y la 
+comunicación con servicios externos 
+(Stripe, PayPal, SMTP). 
+ 
+B. Implementación del patrón MVC 
+Capa MVC 
+Componente en 
+FitPaisa 
+Responsabilidad 
+Modelo 
+Lógica de negocio + 
+Base de datos 
+Gestiona perfiles físicos, planes de 
+entrenamiento, cálculo de 
+macronutrientes e integridad de los 
+datos almacenados. 
+Vista 
+Frontend 
+(HTML5/CSS3/JS) 
+Renderiza el dashboard, gráficos de 
+progreso, formularios de registro 
+(máximo 3 pasos) y el chat de 
+mensajería interna. 
+Controlador 
+Backend API 
+Actúa como intermediario: recibe 
+peticiones de la Vista, aplica las reglas 
+del Modelo y gestiona sesiones, roles y 
+suscripciones. 
+ 
+2.3 Justificación de la decisión 
+• 
+Adecuación al equipo: la arquitectura MVC es manejable por un desarrollador 
+unipersonal sin necesidad de orquestación de servicios. 
+• 
+Cumplimiento de RF12: el patrón MVC facilita flujos de registro de máximo 3 
+pasos mediante controladores dedicados. 
+• 
+Rendimiento: la separación de capas permite optimizar cada nivel de forma 
+independiente para cumplir el requisito de carga en < 2 segundos. 
+• 
+Escalabilidad futura: la separación Cliente-Servidor permite migrar a 
+microservicios en el futuro sin reestructurar la lógica de negocio. 
+ 
+3. Decisiones Tecnológicas 
+FitPaisa — Documento de Arquitectura del Software (DAS) v1.0   |   Javier Andrés 
+García Vargas 
+Pág. 4 / 12 
+Las decisiones tecnológicas de FitPaisa se han tomado priorizando la compatibilidad 
+con el entorno académico, la madurez de las tecnologías y el cumplimiento de los 
+requisitos no funcionales de la ERS. 
+ 
+3.1 Frontend 
+Tecnología 
+Justificación 
+HTML5 
+Estándar web universal. Soporte nativo en todos los 
+navegadores objetivo (Chrome, Firefox, Edge). Estructura 
+semántica de todas las vistas de la aplicación. 
+CSS3 
+Diseño responsive sin dependencias externas. Garantiza 
+usabilidad en cualquier tamaño de pantalla sin frameworks 
+adicionales. 
+JavaScript 
+Lenguaje nativo del navegador. Gestiona la interactividad, 
+la validación de formularios en cliente y las peticiones 
+asíncronas a la API REST del backend. 
+JSP (JavaServer 
+Pages) 
+Tecnología de plantillas Java EE para la generación 
+dinámica de HTML en el servidor. Permite integrar lógica 
+de presentación con los datos del backend Java 
+directamente. 
+Criterio de selección: tecnologías conocidas por el desarrollador (HTML, CSS, JS, 
+JSP) que no generan dependencias de frameworks externos y son compatibles con 
+el entorno Java del backend. 
+ 
+3.2 Backend 
+Área 
+Tecnología 
+Justificación 
+Lenguaje 
+principal 
+Java 
+Lenguaje dominado por el desarrollador. 
+Tipado estático, robusto y con amplio 
+ecosistema para aplicaciones web 
+empresariales. 
+Framework web 
+Java EE / 
+Servlets 
+Tecnología nativa de Java para la gestión 
+de peticiones HTTP. Encaja directamente 
+con JSP para el patrón MVC sin 
+dependencias externas. 
+Scripting 
+auxiliar 
+PHP 
+Utilizado puntualmente para tareas de 
+scripting ligero o integración de 
+componentes web específicos donde 
+resulte más ágil que Java. 
+Scripts de 
+utilidad 
+Python 
+Empleado para scripts de procesamiento 
+de datos, generación de informes o 
+tareas de mantenimiento fuera del flujo 
+principal de la aplicación. 
+FitPaisa — Documento de Arquitectura del Software (DAS) v1.0   |   Javier Andrés 
+García Vargas 
+Pág. 5 / 12 
+Área 
+Tecnología 
+Justificación 
+Autenticación 
+JWT (JSON Web 
+Token) 
+Estándar abierto (RFC 7519) para 
+sesiones sin estado. Implementable 
+desde Java con librerías estándar (jjwt). 
+Expiración configurable. 
+Hash de 
+contraseñas 
+bcrypt 
+Función adaptativa resistente a ataques 
+de fuerza bruta. Disponible en Java 
+mediante librerías estándar. Factor de 
+coste ≥ 12. 
+API 
+REST sobre 
+HTTPS 
+Estilo arquitectónico desacoplado. Las 
+respuestas JSON permiten que el 
+Frontend JS/JSP consuma los datos sin 
+acoplamiento tecnológico. 
+ 
+3.3 Base de datos 
+Tecnología 
+Cuándo se usa 
+Justificación 
+MySQL 
+Datos relacionales 
+principales: usuarios, 
+perfiles, planes, 
+comidas, pagos, 
+mensajes. 
+Sistema relacional conocido por el 
+desarrollador. Transacciones ACID, 
+integridad referencial y soporte nativo 
+en entornos Java (JDBC/JPA). Ideal 
+para datos estructurados con relaciones 
+bien definidas. 
+MongoDB 
+Datos no estructurados 
+o semiestructurados: 
+logs de actividad, 
+registros de 
+estadísticas, histórico 
+de notificaciones. 
+Base de datos documental flexible. 
+Permite almacenar documentos JSON 
+sin esquema fijo, adecuada para 
+colecciones con estructura variable o de 
+alto volumen de escritura. 
+Estrategia de persistencia híbrida: MySQL como base de datos principal para todos 
+los datos transaccionales críticos (usuarios, planes, pagos), y MongoDB como 
+almacén secundario para datos de naturaleza documental o con estructura variable. 
+ 
+3.4 Servicios externos 
+Servicio 
+Proveedor 
+Propósito 
+RF 
+Pasarela de 
+pagos 
+Stripe y/o 
+PayPal 
+Procesamiento seguro de 
+suscripciones Premium. Cumple 
+PCI-DSS. Los datos de tarjeta 
+nunca pasan por los servidores 
+propios. 
+RF11 
+Envío de 
+correos 
+SMTP / Email 
+API 
+Envío de notificaciones 
+automáticas, recordatorios de 
+RF9 
+FitPaisa — Documento de Arquitectura del Software (DAS) v1.0   |   Javier Andrés 
+García Vargas 
+Pág. 6 / 12 
+Servicio 
+Proveedor 
+Propósito 
+RF 
+actividades y emails de 
+recuperación de contraseña. 
+Certificado 
+TLS 
+SSL/TLS 1.2+ 
+Cifrado de todas las 
+comunicaciones entre cliente y 
+servidor. Requerido por la ERS 
+para protección de datos en 
+tránsito. 
+RNF 
+ 
+3.5 Infraestructura de despliegue 
+Componente 
+Tecnología 
+Propósito 
+Servidor de 
+aplicaciones 
+Apache Tomcat 
+Servidor Java EE para despliegue de 
+Servlets y JSP. Entorno nativo para 
+aplicaciones Java web. 
+Base de datos 
+relacional 
+MySQL 
+Persistencia principal con integridad 
+ACID. Soporte nativo en Java mediante 
+JDBC/JPA. 
+Base de datos 
+documental 
+MongoDB 
+Almacén secundario para datos no 
+estructurados (logs, estadísticas, 
+notificaciones). 
+Seguridad TLS 
+Certificado 
+SSL/TLS 
+Cifrado obligatorio de todas las 
+comunicaciones cliente-servidor (TLS 
+1.2 o superior). 
+ 
+4. Restricciones Arquitectónicas 
+ 
+4.1 Restricciones técnicas 
+Restricción 
+Descripción 
+Origen 
+Acceso 
+exclusivamente 
+web 
+El sistema debe ser accesible 
+únicamente a través de navegador 
+web. No se desarrollará aplicación 
+nativa de escritorio ni móvil. 
+ERS — 
+Restricciones de 
+diseño 
+Compatibilidad de 
+navegadores 
+Compatibilidad obligatoria con las 
+versiones actuales de Chrome, Firefox 
+y Edge. 
+ERS — 
+Restricciones de 
+diseño 
+Cifrado en tránsito 
+Toda transmisión de datos debe 
+realizarse bajo protocolos TLS 1.2 o 
+superior. Prohibido el uso de HTTP sin 
+cifrar en producción. 
+ERS — Atributos 
+del sistema 
+FitPaisa — Documento de Arquitectura del Software (DAS) v1.0   |   Javier Andrés 
+García Vargas 
+Pág. 7 / 12 
+Restricción 
+Descripción 
+Origen 
+API REST 
+Toda comunicación Frontend-Backend 
+se realizará mediante API REST sobre 
+HTTPS con respuestas en formato 
+JSON. 
+DAS — Patrón 
+arquitectónico 
+Autenticación sin 
+estado 
+La gestión de sesiones se 
+implementará mediante tokens JWT. 
+No se utilizarán sesiones de servidor 
+(cookies de sesión). 
+DAS — Decisión 
+tecnológica 
+Sin 
+almacenamiento de 
+pagos 
+Los datos de tarjeta de pago nunca se 
+almacenarán ni procesarán en los 
+servidores propios. Se delega 
+íntegramente a Stripe/PayPal. 
+ERS — RF11, 
+Seguridad 
+Tecnologías web 
+estándar 
+El sistema se desarrollará con 
+tecnologías web estándar, sin 
+dependencias de frameworks 
+propietarios, por restricción del 
+entorno académico. 
+ERS — 
+Restricciones de 
+diseño 
+ 
+4.2 Restricciones de negocio 
+Restricción 
+Descripción 
+Métrica 
+Disponibilidad 
+El sistema debe mantener un 99,5% 
+de tiempo de actividad mensual. 
+≤ 3,6 horas de caída 
+al mes 
+Rendimiento 
+El panel principal debe cargarse en 
+menos de 2 segundos bajo 
+condiciones normales de uso. 
+< 2 s en carga del 
+dashboard 
+Usabilidad 
+El flujo de registro y primer acceso 
+no puede superar los tres pasos 
+(RF12). 
+≤ 3 pasos hasta 
+acceso completo 
+Privacidad 
+Cumplimiento de normativas básicas 
+de protección de datos personales y 
+sensibles de salud. 
+Datos de salud 
+cifrados en BD 
+Alcance funcional 
+Las posibles mejoras futuras se 
+limitarán a la ampliación de 
+funcionalidades dentro del entorno 
+web. No se contempla aplicación 
+móvil nativa. 
+Sin app nativa 
+No diagnóstico 
+médico 
+El sistema no sustituye 
+asesoramiento médico ni realiza 
+diagnósticos clínicos. 
+Aviso legal en la 
+plataforma 
+ 
+FitPaisa — Documento de Arquitectura del Software (DAS) v1.0   |   Javier Andrés 
+García Vargas 
+Pág. 8 / 12 
+5. Interfaces Externas 
+FitPaisa se integra con los siguientes sistemas y servicios externos. Todas las 
+comunicaciones se realizan sobre HTTPS con validación de firma en los eventos 
+entrantes (webhooks). 
+ 
+5.1 Interfaz de usuario 
+Aspecto 
+Especificación 
+Tipo de interfaz 
+Aplicación web responsive accesible desde navegador sin 
+instalación. 
+Navegadores 
+soportados 
+Chrome, Firefox y Edge en sus versiones actuales. 
+Criterios de diseño 
+Usabilidad con flujos de máximo 3 pasos (RF12). Tiempo 
+de carga del panel < 2 segundos. 
+Seguridad cliente 
+Token JWT almacenado de forma segura en el cliente. 
+Renovación automática antes de expiración. 
+ 
+5.2 APIs de terceros 
+Sistema 
+externo 
+Tipo de 
+integración 
+Protocolo 
+Descripción 
+Stripe 
+Pasarela de 
+pagos 
+API REST 
+HTTPS + 
+Webhook 
+Generación de sesiones de 
+checkout. Recepción de eventos 
+de confirmación/rechazo de 
+pago mediante webhook con 
+validación de firma HMAC. 
+PayPal 
+Pasarela de 
+pagos 
+API REST 
+HTTPS + 
+Webhook 
+Alternativa a Stripe para 
+procesamiento de 
+suscripciones. Mismo flujo de 
+checkout y webhook. 
+SMTP/API 
+Servicio de 
+correo 
+SMTP / REST 
+Email API 
+Envío de notificaciones, 
+recordatorios de actividades y 
+emails transaccionales 
+(confirmación de pago, 
+bienvenida, recuperación de 
+contraseña). 
+ 
+5.3 Protocolos de comunicación 
+Comunicación 
+Protocolo 
+Cifrado 
+Tipo 
+Frontend ↔ 
+Backend 
+HTTP/REST 
+TLS 1.2+ 
+Síncrona 
+FitPaisa — Documento de Arquitectura del Software (DAS) v1.0   |   Javier Andrés 
+García Vargas 
+Pág. 9 / 12 
+Comunicación 
+Protocolo 
+Cifrado 
+Tipo 
+Backend ↔ Base 
+de datos 
+SQL / TCP 
+Interna 
+Síncrona 
+Backend ↔ 
+Stripe/PayPal 
+REST 
+HTTPS 
+TLS 1.2+ 
+Síncrona (checkout) + 
+Asíncrona (webhook) 
+Backend ↔ SMTP 
+SMTP / API 
+TLS 1.2+ 
+Asíncrona (cola de envío) 
+Pasarela → 
+Backend 
+Webhook 
+HTTP 
+HMAC firma 
+Asíncrona (evento externo) 
+ 
+6. Atributos de Calidad (Requisitos No Funcionales) 
+Los atributos de calidad definen el nivel de excelencia operativa que debe alcanzar 
+FitPaisa. Cada atributo se vincula con los requisitos no funcionales de la ERS y se 
+concreta en estrategias de diseño y métricas verificables. 
+ 
+6.1 Rendimiento 
+Métrica 
+Valor objetivo 
+Estrategia de diseño 
+Carga del panel 
+principal 
+< 2 segundos 
+Separación de capas · Consultas 
+SQL optimizadas con índices · 
+Paginación de resultados 
+Tiempo de respuesta 
+API 
+< 500 ms en el 
+percentil 95 
+Diseño eficiente de endpoints · 
+Sin operaciones bloqueantes en el 
+hilo principal 
+Concurrencia 
+Múltiples usuarios 
+activos simultáneos 
+sin degradación 
+apreciable 
+Arquitectura stateless con JWT · 
+Conexiones a BD gestionadas por 
+pool 
+Cálculo de macros 
+Respuesta 
+inmediata (< 200 
+ms) 
+Algoritmo de Mifflin-St Jeor 
+ejecutado en servidor sin 
+llamadas externas 
+ 
+6.2 Seguridad 
+Área 
+Especificación 
+Implementación 
+Datos en tránsito 
+TLS 1.2 o superior en 
+todas las 
+comunicaciones 
+Certificado SSL/TLS en el servidor 
+web. Redirección automática HTTP 
+→ HTTPS. 
+Autenticación 
+Acceso mediante 
+correo electrónico y 
+contraseña 
+Hash bcrypt con factor de coste ≥ 
+12. Token JWT con expiración de 2 
+horas. 
+FitPaisa — Documento de Arquitectura del Software (DAS) v1.0   |   Javier Andrés 
+García Vargas 
+Pág. 10 / 12 
+Área 
+Especificación 
+Implementación 
+Autorización 
+Control de acceso 
+basado en roles: 
+USER, COACH, 
+ADMIN 
+Middleware de validación de token y 
+rol en cada endpoint protegido del 
+backend. 
+Protección de 
+contraseñas 
+Nunca almacenadas 
+en texto plano 
+bcrypt en cada registro y cambio de 
+contraseña. Nunca en logs ni 
+respuestas API. 
+Datos de pago 
+Nunca almacenados 
+en servidores propios 
+Delegación íntegra a Stripe/PayPal 
+(PCI-DSS). Solo se guarda el ID 
+externo de la transacción. 
+Validación de 
+entradas 
+Sanitización y 
+validación server-side 
+en todos los 
+endpoints 
+Validación de tipos, rangos y 
+formatos antes de cualquier 
+operación sobre la BD. 
+Webhooks de 
+pago 
+Verificación de 
+autenticidad del 
+evento entrante 
+Validación de firma HMAC con 
+clave secreta del proveedor antes 
+de procesar el evento. 
+ 
+6.3 Disponibilidad 
+Métrica 
+Valor objetivo 
+Estrategia 
+Uptime mensual 
+≥ 99,5% 
+Arquitectura web estándar preparada 
+para despliegue en infraestructura de alta 
+disponibilidad. 
+Recuperación 
+ante fallos 
+Sin pérdida de 
+datos 
+Transacciones ACID en operaciones 
+críticas · Backups periódicos de la base 
+de datos. 
+Gestión de 
+errores 
+Degradación 
+controlada 
+Manejo centralizado de excepciones · 
+Respuestas de error estructuradas con 
+código HTTP apropiado. 
+ 
+6.4 Mantenibilidad 
+Atributo 
+Estrategia 
+Separación de 
+responsabilidades 
+Arquitectura MVC estricta. Cada módulo tiene una 
+responsabilidad única y se comunica a través de 
+interfaces definidas. 
+Bajo acoplamiento 
+Los módulos se comunican exclusivamente a través de 
+la API REST y llamadas de servicio internas. Sin 
+dependencias directas entre implementaciones. 
+FitPaisa — Documento de Arquitectura del Software (DAS) v1.0   |   Javier Andrés 
+García Vargas 
+Pág. 11 / 12 
+Atributo 
+Estrategia 
+Documentación 
+Desarrollo basado en el estándar IEEE 830 para facilitar 
+futuras actualizaciones o mantenimiento por otros 
+desarrolladores. 
+Extensibilidad 
+Arquitectura modular que permite la ampliación de 
+funcionalidades dentro del entorno web sin 
+reestructuración mayor del sistema. 
+ 
+6.5 Usabilidad y privacidad 
+Atributo 
+Especificación 
+Referencia ERS 
+Flujo de acceso 
+El proceso de registro y primer acceso 
+no superará los 3 pasos. 
+RF12 
+Diseño 
+responsive 
+La interfaz será funcional en cualquier 
+tamaño de pantalla (escritorio, tablet, 
+móvil). 
+RNF — Usabilidad 
+Privacidad de 
+datos 
+Cumplimiento de normativas básicas 
+de protección de datos personales y 
+sensibles de salud. 
+RNF — Privacidad 
+Sin diagnóstico 
+El sistema no sustituye asesoramiento 
+médico ni realiza diagnósticos clínicos. 
+ERS — Ámbito del 
+sistema 
+ 
+7. Diagrama de Arquitectura 
+El siguiente diagrama muestra la arquitectura híbrida Cliente-Servidor + MVC de 
+FitPaisa, 
+con 
+los 
+tres 
+bloques 
+principales 
+(Frontend/Vista, 
+Backend/Controlador+Modelo, Persistencia) y su relación con los servicios externos. 
+ 
+FitPaisa — Documento de Arquitectura del Software (DAS) v1.0   |   Javier Andrés 
+García Vargas 
+Pág. 12 / 12 
+ 
+
+--- END OF Documento-DAS_Javier-Andres-Garcia-Vargas.pdf ---
+
+--- START OF Documento-DD-LLD_Javier-Andres-Garcia-Vargas.pdf ---
+FitPaisa — Diseño Detallado (LLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 1 / 24 
+ESPECIFICACIÓN DEL DISEÑO DETALLADO 
+LOW-LEVEL DESIGN (LLD) 
+ 
+FitPaisa 
+Plataforma Web de Entrenamiento y Nutrición Personalizada 
+Proyecto 
+FitPaisa 
+Documento 
+Diseño Detallado del Software 
+(DD/LLD) 
+Versión 
+1.0 
+Fecha 
+Marzo 2026 
+Autor 
+Javier Andrés García Vargas 
+Basado en 
+ERS + DAS + HLD (v1.0) 
+Estándar 
+ISO/IEC/IEEE 29148 
+ 
+1. Propósito 
+El presente documento constituye la Especificación del Diseño Detallado (DD/LLD) 
+del sistema FitPaisa, una plataforma web integral para la gestión del entrenamiento 
+físico y la nutrición personalizada. Su objetivo es traducir las decisiones 
+arquitectónicas de alto nivel (HLD) y los requisitos funcionales (ERS) en 
+especificaciones técnicas concretas y directamente implementables. 
+ 
+Este documento define de forma exhaustiva: 
+• 
+Las clases, atributos, métodos y responsabilidades de cada componente de 
+software. 
+• 
+Los algoritmos y flujos internos de procesamiento de datos. 
+• 
+El diseño lógico de la base de datos relacional. 
+• 
+Las interfaces entre los módulos del sistema. 
+• 
+Las estrategias de manejo de errores y consideraciones de seguridad. 
+• 
+La trazabilidad completa desde los requisitos (ERS) hasta el diseño detallado. 
+ 
+Este documento sirve como guía directa para el equipo de desarrollo y como 
+referencia para la validación del sistema. 
+ 
+2. Alcance 
+FitPaisa — Diseño Detallado (LLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 2 / 24 
+El diseño detallado abarca la totalidad de los subsistemas identificados en el 
+Documento de Arquitectura del Software (DAS) y el Diseño de Alto Nivel (HLD), 
+organizados en torno a los ocho módulos funcionales de FitPaisa: 
+ 
+Módulo 
+Descripción 
+RF Cubiertos 
+Gestión de Sesiones y 
+Roles 
+Autenticación, autorización y 
+control de acceso 
+RF1, RF10, 
+RF12 
+Gestión de Perfiles 
+Datos físicos, objetivos y 
+fotografías de progreso 
+RF2, RF8 
+Motor de Nutrición 
+Registro de comidas y cálculo 
+de macronutrientes 
+RF3, RF4 
+Gestión de Entrenamientos 
+Rutinas, ejercicios, series, 
+repeticiones y cargas 
+RF3, RF5, RF6 
+Motor de Estadísticas 
+Tendencias, gráficos y 
+evolución física 
+RF8 
+Mensajería Interna 
+Comunicación usuario-
+entrenador 
+RF7 
+Pasarela de Pagos 
+Suscripciones Premium con 
+Stripe/PayPal 
+RF11 
+Servicio de Notificaciones 
+Correos y alertas automáticas 
+RF9 
+ 
+3. Arquitectura Interna 
+FitPaisa implementa una arquitectura Cliente-Servidor con el patrón MVC (Modelo-
+Vista-Controlador), organizada en capas bien diferenciadas que garantizan la 
+separación de responsabilidades, la mantenibilidad y la escalabilidad del sistema. 
+ 
+3.1 Estructura de Capas 
+Capa 
+Tecnología 
+Responsabilidad 
+Vista (Frontend) 
+HTML5, CSS3, 
+JavaScript 
+Renderizado de UI, captura de 
+eventos, peticiones REST 
+Controlador (Backend 
+API) 
+Lógica de negocio web 
+estándar 
+Gestión de peticiones, 
+validación, coordinación de 
+módulos 
+Modelo (Business 
+Logic) 
+Capa de servicio 
+interna 
+Reglas de negocio, cálculo de 
+macros, lógica de planes 
+Repositorio (Data 
+Access) 
+ORM / SQL 
+Abstracción del acceso a 
+datos, consultas CRUD 
+Base de Datos 
+PostgreSQL / MySQL 
+Persistencia con integridad 
+ACID 
+FitPaisa — Diseño Detallado (LLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 3 / 24 
+ 
+3.2 Flujo de Comunicación 
+El flujo estándar de una petición sigue la secuencia: Frontend → API REST 
+(HTTPS/JSON) → Controlador → Servicio → Repositorio → Base de Datos, con la 
+respuesta recorriendo el camino inverso. Las comunicaciones con servicios externos 
+(Stripe, PayPal, SMTP) se realizan de forma asíncrona desde la capa de Servicio. 
+ 
+4. Diseño Detallado por Subsistema 
+4.1 Subsistema de Gestión de Sesiones y Roles 
+Este subsistema implementa los requisitos RF1, RF10 y RF12 de la ERS, 
+garantizando el acceso seguro a la plataforma mediante autenticación basada en 
+correo electrónico y contraseña, con sesiones gestionadas mediante tokens JWT. 
+ 
+4.1.1 Clase: User 
+Atributo 
+Tipo 
+Descripción 
+Restricción 
+userId 
+Integer 
+Identificador único del 
+usuario 
+PK, Auto-
+increment 
+email 
+String(150) 
+Correo electrónico de 
+acceso 
+Único, NOT NULL 
+passwordHash String(255) 
+Contraseña cifrada (bcrypt) 
+NOT NULL 
+role 
+Enum 
+Rol del usuario: USER, 
+COACH, ADMIN 
+NOT NULL, 
+Default: USER 
+isActive 
+Boolean 
+Estado de la cuenta 
+Default: true 
+createdAt 
+DateTime 
+Fecha de registro 
+NOT NULL 
+ 
+Métodos de la clase User: 
+• 
+login(): Valida credenciales y genera token de sesión JWT. 
+• 
+logout(): Invalida el token activo y cierra la sesión. 
+• 
+register(): Crea la cuenta, cifra la contraseña y valida el formato del correo. 
+• 
+changePassword(oldPwd, newPwd): Verifica la contraseña actual y actualiza 
+el hash. 
+• 
+hasPermission(action): Verifica si el rol del usuario permite ejecutar la acción 
+indicada. 
+ 
+4.1.2 Clase: AuthService 
+Responsabilidad: gestión centralizada de la autenticación y autorización. 
+Método 
+Parámetros 
+Retorno 
+Descripción 
+authenticate() 
+email, password 
+AuthResult 
+Verifica credenciales 
+contra la BD 
+FitPaisa — Diseño Detallado (LLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 4 / 24 
+Método 
+Parámetros 
+Retorno 
+Descripción 
+generateToken() user: User 
+String (JWT) 
+Crea token firmado con 
+expiración 
+validateToken() 
+token: String 
+UserPayload | 
+null 
+Verifica firma y vigencia 
+del token 
+refreshToken() 
+token: String 
+String (JWT) 
+Renueva token antes de 
+expiración 
+assignRole() 
+userId, role 
+Boolean 
+Cambia el rol de un 
+usuario (solo Admin) 
+ 
+4.1.3 Algoritmo de Autenticación (RF1) 
+El proceso de login sigue los siguientes pasos en estricto orden: 
+1. Recibir email y contraseña desde el formulario del Frontend. 
+2. Buscar el usuario en la BD por email. Si no existe → retornar error 401. 
+3. Verificar que isActive = true. Si inactivo → retornar error 403. 
+4. Comparar contraseña recibida con passwordHash usando bcrypt.compare(). 
+5. Si no coincide → incrementar contador de intentos fallidos. Si ≥ 5 → bloquear 
+temporalmente. 
+6. Si coincide → generar token JWT con payload: {userId, email, role, exp: +2h}. 
+7. Registrar timestamp de último acceso y retornar token + datos de sesión. 
+ 
+4.2 Subsistema de Gestión de Perfiles 
+Este subsistema cubre los requisitos RF2 y RF8, permitiendo a los usuarios gestionar 
+su información física y de progreso. 
+ 
+4.2.1 Clase: Profile 
+Atributo 
+Tipo 
+Descripción 
+Restricción 
+profileId 
+Integer 
+Identificador del perfil 
+PK, Auto-
+increment 
+userId 
+Integer (FK) 
+Referencia al usuario 
+propietario 
+FK → Users, 
+Único 
+weight 
+Decimal(5,2) 
+Peso en kilogramos 
+NOT NULL, > 0 
+height 
+Decimal(5,2) 
+Talla en centímetros 
+NOT NULL, > 0 
+age 
+Integer 
+Edad en años 
+NOT NULL, > 0 
+gender 
+Enum 
+MALE, FEMALE, OTHER 
+NOT NULL 
+objective 
+Enum 
+LOSE_WEIGHT, 
+GAIN_MUSCLE, 
+MAINTAIN, 
+IMPROVE_HEALTH 
+NOT NULL 
+FitPaisa — Diseño Detallado (LLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 5 / 24 
+Atributo 
+Tipo 
+Descripción 
+Restricción 
+activityLevel 
+Enum 
+SEDENTARY, LIGHT, 
+MODERATE, ACTIVE, 
+VERY_ACTIVE 
+NOT NULL 
+updatedAt 
+DateTime 
+Última actualización 
+NOT NULL 
+ 
+4.2.2 Clase: ProgressPhoto 
+Atributo 
+Tipo 
+Descripción 
+photoId 
+Integer 
+Identificador de la fotografía (PK) 
+profileId 
+Integer (FK) 
+Referencia al perfil 
+fileUrl 
+String(500) 
+URL de almacenamiento de la imagen 
+uploadedAt 
+DateTime 
+Fecha y hora de subida 
+notes 
+Text 
+Notas opcionales del usuario 
+ 
+4.2.3 Clase: ProfileService 
+Métodos principales: 
+• 
+createProfile(userId, data): Crea el perfil físico inicial del usuario. 
+• 
+updateProfile(profileId, data): Actualiza datos físicos y objetivos. 
+• 
+getProfileStats(profileId): Retorna el historial de peso y medidas. 
+• 
+uploadProgressPhoto(profileId, file): Valida, almacena y registra la fotografía. 
+• 
+calculateBMI(weight, height): Calcula el Índice de Masa Corporal. 
+ 
+4.3 Subsistema del Motor de Nutrición 
+Este subsistema implementa los requisitos RF3 y RF4, gestionando el registro diario 
+de comidas y el cálculo automático de macronutrientes basado en el perfil del usuario. 
+ 
+4.3.1 Clase: FoodEntry 
+Atributo 
+Tipo 
+Descripción 
+Restricción 
+entryId 
+Integer 
+Identificador del registro 
+de comida 
+PK, Auto-
+increment 
+profileId 
+Integer (FK) 
+Perfil del usuario 
+FK → Profiles, 
+NOT NULL 
+foodName 
+String(200) 
+Nombre del alimento 
+registrado 
+NOT NULL 
+portionGrams 
+Decimal(6,2) 
+Cantidad en gramos 
+consumida 
+NOT NULL, > 0 
+calories 
+Decimal(7,2) 
+Calorías calculadas 
+NOT NULL 
+FitPaisa — Diseño Detallado (LLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 6 / 24 
+Atributo 
+Tipo 
+Descripción 
+Restricción 
+protein 
+Decimal(6,2) 
+Proteínas en gramos 
+NOT NULL 
+carbs 
+Decimal(6,2) 
+Carbohidratos en gramos 
+NOT NULL 
+fat 
+Decimal(6,2) 
+Grasas en gramos 
+NOT NULL 
+mealType 
+Enum 
+BREAKFAST, LUNCH, 
+DINNER, SNACK 
+NOT NULL 
+logDate 
+Date 
+Fecha del registro 
+NOT NULL 
+ 
+4.3.2 Clase: NutritionService 
+Método 
+Parámetros 
+Retorno 
+Descripción 
+logFood() 
+profileId, 
+foodData 
+FoodEntry 
+Registra una ingesta y 
+calcula macros 
+getDailyLog() 
+profileId, date 
+FoodEntry[] 
+Obtiene todos los 
+registros del día 
+getDailySummary() profileId, date 
+MacroSummary Suma total de macros 
+del día 
+calculateMacros() 
+food, grams 
+MacroResult 
+Calcula macros 
+proporcionalmente 
+getDailyTarget() 
+profile: Profile 
+MacroTarget 
+Calcula objetivos 
+diarios según perfil 
+getWeeklyTrend() 
+profileId 
+TrendData[] 
+Retorna evolución 
+calórica semanal 
+ 
+4.3.3 Algoritmo de Cálculo de Macronutrientes 
+El motor de macronutrientes calcula los objetivos diarios usando las fórmulas estándar 
+de nutrición deportiva: 
+ 
+Paso 1 — Cálculo del Metabolismo Basal (TMB) con la ecuación de Mifflin-St Jeor: 
+• 
+Hombre: TMB = (10 × peso_kg) + (6.25 × talla_cm) − (5 × edad) + 5 
+• 
+Mujer: TMB = (10 × peso_kg) + (6.25 × talla_cm) − (5 × edad) − 161 
+ 
+Paso 2 — Gasto Energético Total (GET) = TMB × Factor de Actividad: 
+Nivel de Actividad 
+Factor 
+SEDENTARY 
+1.2 
+LIGHT 
+1.375 
+MODERATE 
+1.55 
+ACTIVE 
+1.725 
+FitPaisa — Diseño Detallado (LLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 7 / 24 
+Nivel de Actividad 
+Factor 
+VERY_ACTIVE 
+1.9 
+ 
+Paso 3 — Ajuste por objetivo: LOSE_WEIGHT → GET − 300 kcal | GAIN_MUSCLE 
+→ GET + 300 kcal | MAINTAIN → GET 
+Paso 4 — Distribución de macros: Proteínas 30% | Carbohidratos 45% | Grasas 25% 
+(valores ajustables por entrenador). 
+ 
+4.4 Subsistema de Gestión de Entrenamientos 
+Implementa los requisitos RF3, RF5 y RF6, permitiendo el registro y gestión de rutinas 
+de entrenamiento, tanto por parte del usuario como del entrenador asignado. 
+ 
+4.4.1 Clase: WorkoutPlan 
+Atributo 
+Tipo 
+Descripción 
+Restricción 
+planId 
+Integer 
+Identificador del plan 
+PK, Auto-increment 
+coachId 
+Integer (FK) 
+Entrenador creador del 
+plan 
+FK → 
+Users(role=COACH) 
+userId 
+Integer (FK) 
+Usuario asignado al plan 
+FK → Users 
+name 
+String(200) 
+Nombre descriptivo del 
+plan 
+NOT NULL 
+status 
+Enum 
+DRAFT, 
+PENDING_APPROVAL, 
+ACTIVE, ARCHIVED 
+NOT NULL, Default: 
+DRAFT 
+startDate 
+Date 
+Fecha de inicio del plan 
+NOT NULL 
+endDate 
+Date 
+Fecha de fin prevista 
+Nullable 
+ 
+4.4.2 Clase: Exercise 
+Atributo 
+Tipo 
+Descripción 
+exerciseId 
+Integer 
+Identificador del ejercicio (PK) 
+planId 
+Integer (FK) 
+Plan al que pertenece el ejercicio 
+name 
+String(200) 
+Nombre del ejercicio 
+sets 
+Integer 
+Número de series 
+reps 
+Integer 
+Repeticiones por serie 
+loadKg 
+Decimal(5,2) 
+Carga utilizada en kg (nullable para 
+ejercicios de peso corporal) 
+restSeconds 
+Integer 
+Tiempo de descanso entre series en 
+segundos 
+FitPaisa — Diseño Detallado (LLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 8 / 24 
+Atributo 
+Tipo 
+Descripción 
+dayOfWeek 
+Enum 
+MON, TUE, WED, THU, FRI, SAT, SUN 
+notes 
+Text 
+Instrucciones técnicas del ejercicio 
+ 
+4.4.3 Clase: WorkoutService 
+• 
+createPlan(coachId, userId, planData): Crea un nuevo plan en estado 
+DRAFT. 
+• 
+submitForApproval(planId): Cambia estado a PENDING_APPROVAL y 
+notifica al coach. 
+• 
+approvePlan(planId, coachId): Valida permisos y activa el plan (estado 
+ACTIVE). 
+• 
+addExercise(planId, exerciseData): Agrega un ejercicio al plan. 
+• 
+logWorkoutSession(userId, planId, sessionData): Registra una sesión 
+completada con cargas reales. 
+• 
+getPersonalRecord(userId, exerciseName): Retorna la carga máxima 
+histórica de un ejercicio. 
+• 
+getPlanHistory(userId): Retorna todos los planes del usuario ordenados por 
+fecha. 
+ 
+4.5 Subsistema del Motor de Estadísticas 
+Este subsistema procesa los datos históricos de nutrición, entrenamientos y medidas 
+físicas para generar gráficos y tendencias (RF8). 
+ 
+4.5.1 Clase: BodyLog 
+Atributo 
+Tipo 
+Descripción 
+logId 
+Integer 
+Identificador del registro (PK) 
+profileId 
+Integer (FK) 
+Perfil del usuario 
+weight 
+Decimal(5,2) 
+Peso registrado en kg 
+waist 
+Decimal(5,2) 
+Cintura en cm (nullable) 
+hips 
+Decimal(5,2) 
+Cadera en cm (nullable) 
+chest 
+Decimal(5,2) 
+Pecho en cm (nullable) 
+logDate 
+Date 
+Fecha del registro 
+ 
+4.5.2 Clase: StatsService 
+Método 
+Parámetros 
+Retorno 
+Descripción 
+getWeightTrend() 
+profileId, days 
+DataPoint[] 
+Evolución del 
+peso en el 
+período 
+FitPaisa — Diseño Detallado (LLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 9 / 24 
+Método 
+Parámetros 
+Retorno 
+Descripción 
+getMacroAverage() 
+profileId, days 
+MacroAvg 
+Promedio diario 
+de macros 
+consumidos 
+getWorkoutFrequency() profileId, days 
+FreqData[] 
+Frecuencia de 
+sesiones por 
+semana 
+getProgressSummary() 
+profileId 
+ProgressSummary Resumen integral 
+del progreso 
+compareToTarget() 
+profileId, date 
+ComparisonResult Compara ingesta 
+real vs objetivo 
+ 
+4.6 Subsistema de Mensajería Interna 
+Implementa el requisito RF7, facilitando la comunicación directa y bidireccional entre 
+usuarios y entrenadores dentro de la plataforma. 
+ 
+4.6.1 Clase: Message 
+Atributo 
+Tipo 
+Descripción 
+Restricción 
+messageId 
+Integer 
+Identificador del mensaje 
+PK, Auto-
+increment 
+senderId 
+Integer (FK) 
+Usuario remitente 
+FK → Users, NOT 
+NULL 
+receiverId 
+Integer (FK) 
+Usuario destinatario 
+FK → Users, NOT 
+NULL 
+content 
+Text 
+Contenido del mensaje 
+NOT NULL, Max 
+2000 chars 
+sentAt 
+DateTime 
+Fecha y hora de envío 
+NOT NULL 
+readAt 
+DateTime 
+Fecha y hora de lectura 
+Nullable 
+isDeleted 
+Boolean 
+Eliminación lógica 
+Default: false 
+ 
+4.6.2 Clase: MessagingService 
+• 
+sendMessage(senderId, receiverId, content): Crea y persiste el mensaje. 
+Valida que el par usuario-entrenador sea válido. 
+• 
+getConversation(userId, otherUserId): Retorna el historial de mensajes 
+ordenado por sentAt. 
+• 
+markAsRead(messageId, userId): Actualiza readAt. Solo el destinatario 
+puede marcar como leído. 
+• 
+getUnreadCount(userId): Retorna el número de mensajes no leídos del 
+usuario. 
+FitPaisa — Diseño Detallado (LLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 10 / 24 
+• 
+deleteMessage(messageId, userId): Eliminación lógica (isDeleted = true). 
+Solo el remitente puede eliminar. 
+ 
+4.7 Subsistema de Pasarela de Pagos 
+Implementa el requisito RF11, gestionando las suscripciones Premium mediante 
+integración con Stripe y/o PayPal a través de sus APIs REST externas. 
+ 
+4.7.1 Clase: Subscription 
+Atributo 
+Tipo 
+Descripción 
+Restricción 
+subscriptionId 
+Integer 
+Identificador interno de 
+la suscripción 
+PK, Auto-increment 
+userId 
+Integer (FK) 
+Usuario suscrito 
+FK → Users, NOT 
+NULL 
+planType 
+Enum 
+FREE, 
+PREMIUM_MONTHLY, 
+PREMIUM_ANNUAL 
+NOT NULL 
+status 
+Enum 
+ACTIVE, CANCELLED, 
+EXPIRED, PENDING 
+NOT NULL 
+externalRef 
+String(200) 
+ID de la transacción en 
+Stripe/PayPal 
+Único, NOT NULL 
+startDate 
+Date 
+Fecha de inicio de la 
+suscripción 
+NOT NULL 
+endDate 
+Date 
+Fecha de expiración 
+NOT NULL 
+amount 
+Decimal(8,2) Importe cobrado en la 
+divisa configurada 
+NOT NULL 
+ 
+4.7.2 Clase: PaymentService 
+Método 
+Parámetros 
+Retorno 
+Descripción 
+createCheckout() 
+userId, planType CheckoutURL 
+Genera sesión de 
+pago en 
+Stripe/PayPal 
+handleWebhook() 
+event: 
+PaymentEvent 
+void 
+Procesa callbacks 
+de la pasarela 
+externa 
+activateSubscription() 
+userId, 
+externalRef 
+Subscription 
+Activa suscripción 
+tras pago 
+confirmado 
+cancelSubscription() 
+subscriptionId, 
+userId 
+Boolean 
+Cancela y programa 
+expiración al fin del 
+período 
+FitPaisa — Diseño Detallado (LLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 11 / 24 
+Método 
+Parámetros 
+Retorno 
+Descripción 
+getActiveSubscription() userId 
+Subscription | 
+null 
+Retorna la 
+suscripción vigente 
+del usuario 
+ 
+4.7.3 Algoritmo de Procesamiento de Pago 
+8. El Frontend redirige al usuario a la URL de checkout generada por 
+createCheckout(). 
+9. El usuario completa el pago en la interfaz segura de Stripe/PayPal (PCI-DSS 
+compliant). 
+10. La pasarela envía un webhook al endpoint /api/payments/webhook con el 
+evento de pago. 
+11. handleWebhook() valida la firma del evento usando la clave secreta de la 
+pasarela. 
+12. Si el evento es payment_intent.succeeded o 
+PAYMENT.CAPTURE.COMPLETED → activateSubscription(). 
+13. Si el evento indica fallo → persistir estado CANCELLED y notificar al usuario 
+por email. 
+14. En ambos casos → registrar el evento completo en el log de auditoría. 
+ 
+4.8 Subsistema de Servicio de Notificaciones 
+Implementa el requisito RF9, enviando correos electrónicos automáticos para 
+recordatorios de entrenamientos, alertas de nutrición y confirmaciones de 
+transacciones. 
+ 
+4.8.1 Clase: Notification 
+Atributo 
+Tipo 
+Descripción 
+notificationId 
+Integer 
+Identificador de la notificación (PK) 
+userId 
+Integer (FK) 
+Destinatario de la notificación 
+type 
+Enum 
+WORKOUT_REMINDER, 
+NUTRITION_ALERT, 
+PAYMENT_CONFIRM, PLAN_UPDATE, 
+MESSAGE_RECEIVED 
+channel 
+Enum 
+EMAIL, IN_APP 
+status 
+Enum 
+PENDING, SENT, FAILED 
+sentAt 
+DateTime 
+Fecha y hora de envío efectivo (nullable) 
+payload 
+JSON 
+Datos dinámicos para la plantilla del 
+mensaje 
+ 
+4.8.2 Clase: NotificationService 
+FitPaisa — Diseño Detallado (LLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 12 / 24 
+• 
+scheduleReminder(userId, type, scheduledAt): Programa el envío de un 
+recordatorio. 
+• 
+sendImmediate(userId, type, payload): Envía una notificación de forma 
+inmediata. 
+• 
+sendEmail(to, templateId, data): Llama al servicio SMTP externo con la 
+plantilla correspondiente. 
+• 
+processQueue(): Proceso background que procesa las notificaciones 
+pendientes. 
+• 
+markDelivered(notificationId): Actualiza el estado a SENT con el sentAt 
+actual. 
+ 
+5. Diseño de Base de Datos (Nivel Lógico) 
+El modelo de datos relacional de FitPaisa implementa las entidades definidas en el 
+HLD, con claves foráneas, restricciones de integridad y diseño normalizado (3FN). 
+ 
+5.1 Tablas Principales 
+ 
+USERS — Tabla central del sistema: 
+Campo 
+Tipo 
+Restricciones 
+user_id 
+INT 
+PK, AUTO_INCREMENT 
+email 
+VARCHAR(150) 
+UNIQUE, NOT NULL 
+password_hash 
+VARCHAR(255) 
+NOT NULL 
+role 
+ENUM('USER','COACH','ADMIN') NOT NULL, DEFAULT 
+'USER' 
+is_active 
+BOOLEAN 
+DEFAULT TRUE 
+created_at 
+DATETIME 
+NOT NULL, DEFAULT 
+NOW() 
+last_login 
+DATETIME 
+NULLABLE 
+ 
+PROFILES — Datos físicos del usuario: 
+Campo 
+Tipo 
+Restriccione
+s 
+profile_i
+d 
+INT 
+PK, 
+AUTO_INCRE
+MENT 
+user_id 
+INT 
+FK → 
+users(user_id)
+, UNIQUE 
+weight 
+DECIMAL(5,2) 
+NOT NULL 
+FitPaisa — Diseño Detallado (LLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 13 / 24 
+Campo 
+Tipo 
+Restriccione
+s 
+height 
+DECIMAL(5,2) 
+NOT NULL 
+age 
+INT 
+NOT NULL 
+gender 
+ENUM('MALE','FEMALE','OTHER') 
+NOT NULL 
+objective ENUM('LOSE_WEIGHT','GAIN_MUSCLE','MAINTAIN
+','IMPROVE_HEALTH') 
+NOT NULL 
+activity_l
+evel 
+ENUM('SEDENTARY','LIGHT','MODERATE','ACTIVE'
+,'VERY_ACTIVE') 
+NOT NULL 
+updated
+_at 
+DATETIME 
+NOT NULL 
+ 
+FOOD_ENTRIES — Registro diario de nutrición: 
+Campo 
+Tipo 
+Restricciones 
+entry_id 
+INT 
+PK, 
+AUTO_INCREME
+NT 
+profile_id 
+INT 
+FK → 
+profiles(profile_id) 
+food_name 
+VARCHAR(200) 
+NOT NULL 
+portion_gra
+ms 
+DECIMAL(6,2) 
+NOT NULL 
+calories 
+DECIMAL(7,2) 
+NOT NULL 
+protein 
+DECIMAL(6,2) 
+NOT NULL 
+carbs 
+DECIMAL(6,2) 
+NOT NULL 
+fat 
+DECIMAL(6,2) 
+NOT NULL 
+meal_type 
+ENUM('BREAKFAST','LUNCH','DINNER','SN
+ACK') 
+NOT NULL 
+log_date 
+DATE 
+NOT NULL 
+ 
+WORKOUT_PLANS — Planes de entrenamiento: 
+Campo 
+Tipo 
+Restricciones 
+plan_id 
+INT 
+PK, 
+AUTO_INCREM
+ENT 
+coach_i
+d 
+INT 
+FK → 
+users(user_id) 
+FitPaisa — Diseño Detallado (LLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 14 / 24 
+Campo 
+Tipo 
+Restricciones 
+user_id 
+INT 
+FK → 
+users(user_id) 
+name 
+VARCHAR(200) 
+NOT NULL 
+status 
+ENUM('DRAFT','PENDING_APPROVAL','ACTIVE','
+ARCHIVED') 
+NOT NULL 
+start_da
+te 
+DATE 
+NOT NULL 
+end_dat
+e 
+DATE 
+NULLABLE 
+ 
+EXERCISES — Ejercicios de un plan: 
+Campo 
+Tipo 
+Restricciones 
+exercise_id 
+INT 
+PK, 
+AUTO_INCREMEN
+T 
+plan_id 
+INT 
+FK → 
+workout_plans(plan_
+id) 
+name 
+VARCHAR(200) 
+NOT NULL 
+sets 
+INT 
+NOT NULL 
+reps 
+INT 
+NOT NULL 
+load_kg 
+DECIMAL(5,2) 
+NULLABLE 
+rest_secon
+ds 
+INT 
+NOT NULL 
+day_of_we
+ek 
+ENUM('MON','TUE','WED','THU','FRI','SAT','
+SUN') 
+NOT NULL 
+ 
+MESSAGES — Mensajería interna: 
+Campo 
+Tipo 
+Restricciones 
+message_id 
+INT 
+PK, AUTO_INCREMENT 
+sender_id 
+INT 
+FK → users(user_id) 
+receiver_id 
+INT 
+FK → users(user_id) 
+content 
+TEXT 
+NOT NULL, MAX 2000 chars 
+sent_at 
+DATETIME 
+NOT NULL, DEFAULT NOW() 
+read_at 
+DATETIME 
+NULLABLE 
+FitPaisa — Diseño Detallado (LLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 15 / 24 
+Campo 
+Tipo 
+Restricciones 
+is_deleted 
+BOOLEAN 
+DEFAULT FALSE 
+ 
+SUBSCRIPTIONS — Suscripciones de pago: 
+Campo 
+Tipo 
+Restricciones 
+subscriptio
+n_id 
+INT 
+PK, 
+AUTO_INCREM
+ENT 
+user_id 
+INT 
+FK → 
+users(user_id) 
+plan_type 
+ENUM('FREE','PREMIUM_MONTHLY','PREMIU
+M_ANNUAL') 
+NOT NULL 
+status 
+ENUM('ACTIVE','CANCELLED','EXPIRED','PEN
+DING') 
+NOT NULL 
+external_ref VARCHAR(200) 
+UNIQUE, NOT 
+NULL 
+start_date 
+DATE 
+NOT NULL 
+end_date 
+DATE 
+NOT NULL 
+amount 
+DECIMAL(8,2) 
+NOT NULL 
+ 
+5.2 Diagrama de Relaciones Simplificado 
+Las relaciones principales del modelo son: Users 1:1 Profiles | Profiles 1:N 
+FoodEntries | Profiles 1:N BodyLogs | Users 1:N WorkoutPlans (como COACH) | 
+Users 1:N WorkoutPlans (como USER) | WorkoutPlans 1:N Exercises | Users N:M 
+Messages | Users 1:N Subscriptions | Profiles 1:N ProgressPhotos. 
+ 
+6. Interfaces Internas 
+Origen 
+Destino 
+Tipo 
+Protocolo / 
+Mecanismo 
+Frontend (View) 
+Backend API 
+(Controller) 
+Síncrona 
+HTTPS / REST / 
+JSON 
+AuthService 
+UsersRepository 
+Síncrona 
+ORM (método 
+interno) 
+NutritionService 
+FoodEntriesRepository Síncrona 
+ORM (método 
+interno) 
+WorkoutService 
+PlansRepository 
+Síncrona 
+ORM (método 
+interno) 
+FitPaisa — Diseño Detallado (LLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 16 / 24 
+Origen 
+Destino 
+Tipo 
+Protocolo / 
+Mecanismo 
+StatsService 
+Múltiples Repositories 
+Síncrona 
+Consultas SQL 
+agregadas 
+PaymentService 
+Stripe / PayPal API 
+Síncrona 
+(checkout) / 
+Asíncrona 
+(webhook) 
+REST API 
+HTTPS 
+NotificationService Servidor SMTP 
+Asíncrona 
+(cola) 
+SMTP / Email 
+API 
+MessagingService 
+Frontend (polling) 
+Síncrona 
+periódica 
+REST / JSON 
+ 
+7. Manejo de Errores y Excepciones 
+7.1 Estrategia General 
+Todos los módulos implementan el patrón de manejo centralizado de errores. Las 
+excepciones no controladas se capturan en el middleware global del controlador, que 
+registra el error en el sistema de logs y retorna una respuesta estructurada al cliente 
+con el código HTTP apropiado. 
+ 
+7.2 Catálogo de Errores por Módulo 
+Módulo 
+Escenario de Error 
+Código HTTP 
+Acción del Sistema 
+AuthService 
+Credenciales 
+incorrectas (< 5 
+intentos) 
+401 
+Unauthorized 
+Respuesta genérica, 
+no revelar motivo 
+específico 
+AuthService 
+Cuenta bloqueada 
+por intentos 
+excesivos 
+403 
+Forbidden 
+Mensaje de bloqueo 
+temporal + tiempo 
+restante 
+AuthService 
+Token expirado o 
+inválido 
+401 
+Unauthorized 
+Redirección al login 
+desde el Frontend 
+ProfileService 
+Datos físicos fuera 
+de rango 
+400 Bad 
+Request 
+Lista de campos 
+inválidos devuelta al 
+cliente 
+NutritionService 
+Alimento no 
+encontrado en la BD 
+404 Not 
+Found 
+Sugerencia de 
+registro manual del 
+alimento 
+WorkoutService 
+Plan en estado no 
+editable 
+409 Conflict 
+Mensaje indicando el 
+estado actual del 
+plan 
+FitPaisa — Diseño Detallado (LLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 17 / 24 
+Módulo 
+Escenario de Error 
+Código HTTP 
+Acción del Sistema 
+PaymentService 
+Pago rechazado por 
+la pasarela 
+402 Payment 
+Required 
+Notificación al 
+usuario + log de 
+auditoría 
+PaymentService 
+Webhook con firma 
+inválida 
+400 Bad 
+Request 
+Ignorar evento + 
+alerta al sistema de 
+monitoreo 
+MessagingService Intento de mensaje 
+entre no vinculados 
+403 
+Forbidden 
+Validación de 
+relación usuario-
+entrenador 
+ 
+7.3 Política de Logs 
+• 
+Nivel ERROR: Excepciones no controladas, fallos de pasarela de pago, 
+errores de base de datos. 
+• 
+Nivel WARN: Intentos de autenticación fallidos, accesos denegados por 
+permisos. 
+• 
+Nivel INFO: Transacciones exitosas, cambios de estado de pedidos, 
+suscripciones activadas. 
+• 
+Nivel DEBUG: Solo activo en entorno de desarrollo. Incluye payloads 
+completos de peticiones. 
+ 
+8. Consideraciones de Seguridad 
+Área 
+Implementación 
+Referencia ERS 
+Contraseñas 
+Hash con bcrypt (factor de coste ≥ 
+12). Nunca almacenar en texto 
+plano. 
+RF1, RNF (Seguridad) 
+Tokens de 
+sesión 
+JWT firmados con clave secreta 
+(HS256). Expiración de 2 horas. 
+RF1 
+Transmisión de 
+datos 
+TLS 1.2 o superior en todas las 
+comunicaciones cliente-servidor. 
+RNF (Seguridad) 
+Control de 
+acceso 
+Middleware de autorización valida rol 
+en cada endpoint protegido. 
+RF10 
+Validación de 
+entradas 
+Sanitización y validación server-side 
+en todos los controladores. 
+RNF (Seguridad) 
+Datos de pago 
+Nunca se almacenan datos de 
+tarjeta. Delegado completamente a 
+Stripe/PayPal (PCI-DSS). 
+RF11 
+Protección 
+CSRF 
+Tokens CSRF en formularios de 
+mutación de datos. 
+RNF (Seguridad) 
+FitPaisa — Diseño Detallado (LLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 18 / 24 
+Área 
+Implementación 
+Referencia ERS 
+Rate limiting 
+Límite de 100 peticiones/min por IP. 
+Bloqueo tras 5 intentos de login 
+fallidos. 
+RF1 
+ 
+9. Trazabilidad ERS → DAS → HLD → Diseño Detallado 
+RF (ERS) 
+Módulo HLD 
+Componente DAS 
+Clase/Servicio 
+DD 
+RF1 – Registro y 
+autenticación 
+Gestión de 
+Sesiones y Roles 
+MVC - Controlador 
+User, AuthService 
+RF2 – Perfil 
+físico del usuario 
+Gestión de 
+Perfiles 
+MVC - Modelo 
+Profile, 
+ProfileService 
+RF3 – Consultar 
+plan 
+personalizado 
+Gestión de 
+Entrenamientos / 
+Nutrición 
+MVC - 
+Vista+Modelo 
+WorkoutPlan, 
+FoodEntry 
+RF4 – Registro 
+de comidas y 
+macros 
+Motor de Nutrición MVC - 
+Modelo/Controlador 
+FoodEntry, 
+NutritionService 
+RF5 – Registro 
+de 
+entrenamientos 
+Gestión de 
+Entrenamientos 
+MVC - 
+Modelo/Controlador 
+Exercise, 
+WorkoutService 
+RF6 – Gestión 
+de planes por 
+entrenador 
+Gestión de 
+Entrenamientos 
+MVC - Controlador 
+WorkoutPlan, 
+WorkoutService 
+RF7 – 
+Mensajería 
+usuario-
+entrenador 
+Mensajería 
+Interna 
+MVC - Controlador 
+Message, 
+MessagingService 
+RF8 – Fotos y 
+estadísticas de 
+evolución 
+Motor de 
+Estadísticas / 
+Perfiles 
+MVC - Modelo 
+BodyLog, 
+StatsService, 
+ProgressPhoto 
+RF9 – 
+Notificaciones y 
+recordatorios 
+Servicio de 
+Notificaciones 
+MVC - Controlador 
+(Externo) 
+Notification, 
+NotificationService 
+RF10 – Gestión 
+de usuarios por 
+Admin 
+Gestión de 
+Sesiones y Roles 
+MVC - Controlador 
+AuthService 
+(assignRole) 
+RF11 – 
+Suscripciones de 
+pago 
+Pasarela de 
+Pagos 
+MVC - Controlador 
+(Externo) 
+Subscription, 
+PaymentService 
+FitPaisa — Diseño Detallado (LLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 19 / 24 
+RF (ERS) 
+Módulo HLD 
+Componente DAS 
+Clase/Servicio 
+DD 
+RF12 – Registro 
+en máx. 3 pasos 
+Interfaz de 
+Usuario (Vista) 
+MVC - Vista 
+Frontend UX (flujo 
+controlado) 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+10. Glosario Técnico 
+Término 
+Definición 
+JWT 
+JSON Web Token. Estándar abierto (RFC 7519) para transmitir 
+información de forma segura entre partes como objeto JSON 
+firmado. 
+bcrypt 
+Función criptográfica de hash adaptativa para contraseñas, 
+diseñada para ser computacionalmente costosa y resistente a 
+ataques de fuerza bruta. 
+ORM 
+Object-Relational Mapping. Técnica de programación que 
+convierte datos entre sistemas de tipos incompatibles (objetos y 
+tablas relacionales). 
+REST 
+Representational State Transfer. Estilo arquitectónico para el 
+diseño de servicios web basado en HTTP y recursos 
+identificados por URLs. 
+FitPaisa — Diseño Detallado (LLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 20 / 24 
+Término 
+Definición 
+MVC 
+Modelo-Vista-Controlador. Patrón de diseño que separa la 
+aplicación en tres componentes: datos (Modelo), presentación 
+(Vista) y lógica de control (Controlador). 
+TLS 
+Transport Layer Security. Protocolo criptográfico que 
+proporciona comunicaciones seguras sobre redes informáticas 
+(versión 1.2 o superior requerida). 
+Webhook 
+Mecanismo de comunicación en el que un servicio externo 
+(como Stripe) envía una notificación HTTP a un endpoint 
+predefinido cuando ocurre un evento. 
+TMB 
+Tasa de Metabolismo Basal. Energía mínima que el cuerpo 
+necesita en reposo absoluto para mantener sus funciones 
+vitales. 
+GET 
+Gasto Energético Total. Cálculo de las calorías totales que una 
+persona necesita considerando su nivel de actividad física 
+diaria. 
+PK / FK 
+Primary Key / Foreign Key. Claves primaria y foránea en el 
+modelo relacional para identificar registros y establecer 
+relaciones entre tablas. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+11. Diagramas UML 
+Los siguientes diagramas documentan la arquitectura, estructura de clases, flujos de 
+interacción y ciclos de vida del sistema FitPaisa. 
+ 
+11.1 Diagrama de Clases 
+Representa las clases principales del sistema, sus atributos, métodos y relaciones de 
+asociación entre entidades. 
+ 
+ 
+FitPaisa — Diseño Detallado (LLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 21 / 24 
+ 
+ 
+ 
+ 
+ 
+11.2 Diagrama de Componentes 
+Muestra la arquitectura en capas del sistema (Frontend, Backend API, Lógica de 
+Negocio, Repositorio/BD) y sus dependencias con servicios externos. 
+ 
+ 
+FitPaisa — Diseño Detallado (LLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 22 / 24 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+11.3 Diagrama de Secuencia 
+Ilustra tres flujos principales: autenticación de usuario (login), registro de ingesta con 
+cálculo de macros, y aprobación de plan de entrenamiento por el entrenador. 
+ 
+ 
+FitPaisa — Diseño Detallado (LLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 23 / 24 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+11.4 Diagrama de Estados 
+Describe el ciclo de vida de dos entidades clave: la Suscripción (PENDING → ACTIVE 
+→ EXPIRED/CANCELLED) y el Plan de Entrenamiento (DRAFT → PENDING 
+APPROVAL → ACTIVE → ARCHIVED). 
+ 
+ 
+FitPaisa — Diseño Detallado (LLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 24 / 24 
+ 
+
+--- END OF Documento-DD-LLD_Javier-Andres-Garcia-Vargas.pdf ---
+
+--- START OF Documento-HLD_Javier-Andres-Garcia-Vargas.pdf ---
+FitPaisa — Diseño de Alto Nivel (HLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 1 / 17 
+ESPECIFICACIÓN DEL DISEÑO DE ALTO NIVEL 
+HIGH LEVEL DESIGN (HLD) 
+ 
+FitPaisa 
+Plataforma Web de Entrenamiento y Nutrición Personalizada 
+Proyecto 
+FitPaisa 
+Documento 
+Especificación del Diseño de 
+Alto Nivel (HLD) 
+Versión 
+1.0 
+Fecha 
+17 de marzo de 2026 
+Autor 
+Javier Andrés García Vargas 
+Referencia 
+ERS FitPaisa · DAS FitPaisa 
+Estándar 
+ISO/IEC/IEEE 29148 · IEEE 
+1016 
+ 
+1. Introducción 
+1.1 Propósito 
+El presente documento describe el Diseño de Alto Nivel (High Level Design — HLD) 
+del sistema FitPaisa, una plataforma web integral para la gestión del entrenamiento 
+físico y la nutrición personalizada. Define la estructura modular del sistema, los 
+subsistemas principales, sus responsabilidades funcionales y las interfaces de 
+comunicación entre ellos, transformando los requisitos de la ERS en una organización 
+técnica implementable. 
+Este documento está dirigido al equipo de desarrollo, al arquitecto del sistema y a los 
+evaluadores académicos del proyecto. 
+ 
+1.2 Alcance del Sistema 
+FitPaisa es una aplicación web independiente accesible desde navegadores 
+modernos que proporcionará las siguientes capacidades: 
+• 
+Registro y autenticación segura de usuarios con tres roles: Usuario, 
+Entrenador y Administrador. 
+• 
+Gestión de perfil físico: peso, altura, edad, objetivos y nivel de actividad. 
+• 
+Planes personalizados de entrenamiento y nutrición, asignados y 
+supervisados por entrenadores. 
+• 
+Registro diario de comidas con cálculo automático de macronutrientes. 
+FitPaisa — Diseño de Alto Nivel (HLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 2 / 17 
+• 
+Registro de entrenamientos: ejercicios, series, repeticiones y cargas 
+máximas. 
+• 
+Estadísticas y gráficos de evolución física y nutricional. 
+• 
+Mensajería interna entre usuarios y entrenadores. 
+• 
+Suscripciones Premium mediante pasarelas de pago externas (Stripe / 
+PayPal). 
+• 
+Notificaciones y recordatorios automáticos por correo electrónico. 
+El sistema no sustituye asesoramiento médico ni realiza diagnósticos clínicos. 
+ 
+1.3 Definiciones y Acrónimos 
+Término 
+Definición 
+ERS 
+Especificación de Requisitos Software 
+HLD 
+High Level Design — Diseño de Alto Nivel 
+DAS 
+Documento de Arquitectura del Software 
+MVC 
+Modelo-Vista-Controlador — patrón arquitectónico del sistema 
+API 
+Application Programming Interface — interfaz de programación 
+REST 
+Representational State Transfer — estilo arquitectónico para 
+servicios web 
+JWT 
+JSON Web Token — estándar para tokens de sesión seguros 
+TLS 
+Transport Layer Security — protocolo de cifrado en tránsito 
+(v1.2+) 
+TMB 
+Tasa de Metabolismo Basal — cálculo base de necesidades 
+calóricas 
+GET 
+Gasto Energético Total — calorías necesarias según nivel de 
+actividad 
+RF 
+Requisito Funcional (numerados RF1–RF12 en la ERS) 
+Frontend 
+Capa de presentación visual en el navegador del usuario 
+Backend 
+Servidor con lógica de negocio y API REST 
+ORM 
+Object-Relational Mapping — abstracción del acceso a base de 
+datos 
+SMTP 
+Simple Mail Transfer Protocol — protocolo de envío de correos 
+ 
+1.4 Referencias 
+• 
+ERS FitPaisa — Especificación de Requisitos Software (RF1–RF12, RNF). 
+• 
+DAS FitPaisa — Documento de Arquitectura del Software (patrones MVC y 
+Cliente-Servidor). 
+• 
+ISO/IEC/IEEE 29148:2018 — Systems and software engineering — 
+Requirements engineering. 
+FitPaisa — Diseño de Alto Nivel (HLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 3 / 17 
+• 
+IEEE Std 1016 — Software Design Descriptions. 
+• 
+IEEE Std 830-1998 — Recommended Practice for Software Requirements 
+Specifications. 
+ 
+2. Visión General del Sistema 
+FitPaisa se concibe como una plataforma web integral que opera bajo una 
+arquitectura Cliente-Servidor, estructurada internamente con el patrón de diseño 
+Modelo-Vista-Controlador (MVC). Esta combinación, definida en el DAS, permite una 
+separación estricta entre la interfaz de usuario, la lógica de procesamiento y la gestión 
+de datos, garantizando escalabilidad, mantenibilidad y un tiempo de respuesta inferior 
+a 2 segundos. 
+ 
+2.1 Objetivos del Diseño 
+Objetivo 
+Descripción 
+Referencia ERS 
+Separación de 
+responsabilidades 
+Arquitectura MVC con capas 
+desacopladas: Vista (Frontend), 
+Controlador (Backend API) y Modelo 
+(Lógica + BD). 
+RNF — 
+Mantenibilidad 
+Rendimiento 
+Carga del panel principal en menos de 
+2 segundos. Soporte de múltiples 
+usuarios simultáneos sin degradación. 
+RNF — 
+Rendimiento 
+Seguridad 
+TLS 1.2+ en todas las 
+comunicaciones. Autenticación JWT. 
+Contraseñas cifradas con bcrypt. 
+RNF — Seguridad 
+Usabilidad 
+Flujo de registro y primer acceso en 
+máximo 3 pasos. Interfaz responsive 
+para todos los dispositivos. 
+RF12, RNF — 
+Usabilidad 
+Disponibilidad 
+Arquitectura preparada para 99,5% de 
+uptime mensual con despliegue en 
+infraestructura web estándar. 
+RNF — 
+Disponibilidad 
+Escalabilidad 
+Módulos independientes que permiten 
+ampliar funcionalidades dentro del 
+entorno web sin reestructuración 
+mayor. 
+RNF — 
+Escalabilidad 
+ 
+2.2 Patrón Arquitectónico 
+El sistema implementa una arquitectura híbrida definida en el DAS: 
+Capa MVC 
+Componente 
+Tecnología 
+Responsabilidad 
+Vista 
+Frontend 
+(Cliente Web) 
+HTML5, CSS3, 
+JavaScript 
+Renderizado de UI, 
+captura de eventos, 
+peticiones REST 
+FitPaisa — Diseño de Alto Nivel (HLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 4 / 17 
+Capa MVC 
+Componente 
+Tecnología 
+Responsabilidad 
+Controlador Backend API 
+Framework web 
+estándar 
+Gestión de peticiones, 
+validación, coordinación 
+de módulos 
+Modelo 
+Lógica de 
+negocio 
+Servicios internos 
+Reglas de negocio, 
+cálculo de macros, gestión 
+de planes 
+Modelo 
+Persistencia 
+PostgreSQL / 
+MySQL + ORM 
+Almacenamiento con 
+integridad ACID 
+Externo 
+Stripe / PayPal 
+API REST externa 
+Procesamiento de 
+suscripciones Premium 
+(RF11) 
+Externo 
+Servidor SMTP 
+SMTP / Email API 
+Envío de notificaciones y 
+recordatorios (RF9) 
+ 
+3. Descomposición del Sistema en Subsistemas 
+El sistema FitPaisa se descompone en ocho módulos funcionales. Cada módulo tiene 
+responsabilidad única, expone interfaces documentadas y se corresponde con uno o 
+varios requisitos funcionales de la ERS. 
+ 
+Módulo 
+Responsabilidad 
+MVC 
+RF cubiertos 
+3.1 Interfaz de Usuario 
+Vista 
+RF3, RF4, RF5, RF7, RF8, 
+RF12 
+3.2 Gestión de 
+Sesiones y Roles 
+Controlador 
+RF1, RF10, RF12 
+3.3 Lógica de Nutrición 
+Modelo / 
+Controlador 
+RF3, RF4 
+3.4 Gestión de 
+Entrenamientos 
+Modelo / 
+Controlador 
+RF3, RF5, RF6 
+3.5 Motor de 
+Estadísticas 
+Modelo 
+RF8 
+3.6 Pasarela de Pagos 
+Controlador 
+(Externo) 
+RF11 
+3.7 Servicio de 
+Notificaciones 
+Controlador 
+RF9 
+3.8 Persistencia de 
+Datos 
+Modelo 
+Todos los módulos backend 
+ 
+FitPaisa — Diseño de Alto Nivel (HLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 5 / 17 
+3.1 Módulo de Interfaz de Usuario (Vista) 
+Campo 
+Detalle 
+Responsabilidad 
+(MVC) 
+Vista (MVC) 
+Descripción 
+Proporciona la interfaz gráfica accesible desde 
+navegadores modernos (Chrome, Firefox, Edge). 
+Renderiza la información recibida del backend y captura 
+las interacciones del usuario. Implementa un diseño 
+responsive que garantiza usabilidad en cualquier tamaño 
+de pantalla. 
+ 
+Responsabilidades 
+• 
+Presentación del dashboard con estadísticas y gráficos de progreso. 
+• 
+Formularios de registro en máximo 3 pasos (RF12). 
+• 
+Visualización de planes de entrenamiento y nutrición personalizados (RF3). 
+• 
+Interfaz de mensajería interna usuario-entrenador (RF7). 
+• 
+Subida y visualización de fotografías de progreso (RF8). 
+Funciones principales 
+• 
+Navegación y acceso al panel principal en < 2 segundos. 
+• 
+Formularios de registro de comidas, entrenamientos y perfil físico. 
+• 
+Gráficos de evolución: peso, medidas, macros y cargas de entrenamiento. 
+• 
+Chat de mensajería interna con entrenador. 
+• 
+Gestión de suscripción y acceso a funciones Premium. 
+Entradas / Salidas 
+Entradas 
+Salidas 
+Clics del usuario, datos de formularios, 
+eventos de navegación. 
+Peticiones HTTP/REST al Backend 
+API, actualizaciones de UI. 
+ 
+Interfaces 
+• 
+Backend API — comunicación síncrona mediante HTTPS/JSON. 
+• 
+Módulo de Autenticación — envío de credenciales y recepción de token JWT. 
+ 
+3.2 Módulo de Gestión de Sesiones y Roles 
+Campo 
+Detalle 
+Responsabilidad 
+(MVC) 
+Controlador (MVC) 
+Descripción 
+Gestiona la identidad de los usuarios y el control de 
+acceso al sistema. Implementa el ciclo completo de 
+autenticación y autorización con tres roles diferenciados: 
+Usuario final, Entrenador y Administrador. 
+ 
+FitPaisa — Diseño de Alto Nivel (HLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 6 / 17 
+Responsabilidades 
+• 
+Registro seguro de usuarios con validación de email y contraseña (RF1). 
+• 
+Autenticación mediante JWT con expiración y renovación de sesión. 
+• 
+Gestión de roles y permisos: USER, COACH, ADMIN (RF10). 
+• 
+Control de acceso en cada endpoint del backend según rol. 
+• 
+Bloqueo temporal tras intentos de acceso fallidos. 
+Funciones principales 
+• 
+Registro (signup) con validación de unicidad de email. 
+• 
+Login / Logout con ciclo de vida del token JWT. 
+• 
+Asignación y modificación de roles por el Administrador (RF10). 
+• 
+Validación de permisos en cada petición autenticada. 
+Entradas / Salidas 
+Entradas 
+Salidas 
+Email, contraseña, datos de registro. 
+Token JWT de sesión, permisos 
+asignados, respuesta de error 401/403. 
+ 
+Interfaces 
+• 
+Persistencia de datos — consultas SQL/ORM sobre tabla USERS. 
+• 
+Frontend — entrega del token de sesión tras autenticación exitosa. 
+• 
+Todos los módulos backend — validación del token en cada petición. 
+ 
+3.3 Módulo de Lógica de Nutrición 
+Campo 
+Detalle 
+Responsabilidad 
+(MVC) 
+Modelo / Controlador (MVC) 
+Descripción 
+Gestiona el registro diario de comidas y el cálculo 
+automático de macronutrientes basado en el perfil físico 
+del usuario. Implementa el motor de cálculo nutricional con 
+las fórmulas de Mifflin-St Jeor para TMB y ajuste por nivel 
+de actividad. 
+ 
+Responsabilidades 
+• 
+Registro de ingestas diarias por tipo de comida (RF4). 
+• 
+Cálculo automático de calorías, proteínas, carbohidratos y grasas. 
+• 
+Cálculo de objetivos diarios de macros según perfil y objetivo del usuario. 
+• 
+Provisión de datos nutricionales al Motor de Estadísticas. 
+Funciones principales 
+• 
+Registro de alimentos con cantidad en gramos. 
+• 
+Cálculo de macros proporcional a la cantidad registrada. 
+• 
+Resumen diario y comparativa con el objetivo calórico. 
+• 
+Histórico semanal de ingesta para el motor de estadísticas. 
+Entradas / Salidas 
+FitPaisa — Diseño de Alto Nivel (HLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 7 / 17 
+Entradas 
+Salidas 
+Datos de ingesta (alimento, cantidad, 
+tipo de comida), perfil físico del 
+usuario. 
+Macronutrientes calculados, resumen 
+diario, tendencia semanal. 
+ 
+Interfaces 
+• 
+Persistencia de datos — lectura/escritura en tabla FOOD_ENTRIES. 
+• 
+Módulo de Interfaz de Usuario — provisión de datos para gráficos 
+nutricionales. 
+• 
+Motor de Estadísticas — suministro de datos históricos de nutrición. 
+ 
+3.4 Módulo de Gestión de Entrenamientos 
+Campo 
+Detalle 
+Responsabilidad 
+(MVC) 
+Modelo / Controlador (MVC) 
+Descripción 
+Administra la creación, asignación, aprobación y 
+seguimiento de planes de entrenamiento. Permite al 
+entrenador diseñar rutinas personalizadas y al usuario 
+registrar sus sesiones con cargas reales. 
+ 
+Responsabilidades 
+• 
+Creación y edición de planes de entrenamiento por el entrenador (RF6). 
+• 
+Asignación de planes a usuarios específicos. 
+• 
+Flujo de aprobación: DRAFT → PENDING_APPROVAL → ACTIVE. 
+• 
+Registro de sesiones de entrenamiento con ejercicios, series, repeticiones y 
+cargas (RF5). 
+• 
+Seguimiento de cargas máximas por ejercicio. 
+Funciones principales 
+• 
+Creación y gestión de planes con ejercicios por día de semana. 
+• 
+Consulta del plan personalizado activo (RF3). 
+• 
+Registro de sesión completada con cargas reales. 
+• 
+Historial de entrenamientos y récords personales. 
+• 
+Notificación al usuario cuando el entrenador aprueba un plan. 
+Entradas / Salidas 
+Entradas 
+Salidas 
+Datos del plan (ejercicios, series, reps, 
+cargas), sesión de entrenamiento 
+completada. 
+Plan activo para el usuario, historial de 
+sesiones, récords personales. 
+ 
+Interfaces 
+FitPaisa — Diseño de Alto Nivel (HLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 8 / 17 
+• 
+Persistencia de datos — lectura/escritura en tablas WORKOUT_PLANS y 
+EXERCISES. 
+• 
+Módulo de Interfaz de Usuario — presentación del plan y formulario de 
+registro. 
+• 
+Servicio de Notificaciones — aviso de aprobación de plan al usuario. 
+• 
+Motor de Estadísticas — suministro de datos de progreso en cargas. 
+ 
+3.5 Módulo Motor de Estadísticas 
+Campo 
+Detalle 
+Responsabilidad 
+(MVC) 
+Modelo (MVC) 
+Descripción 
+Procesa los datos históricos de nutrición, entrenamientos y 
+medidas físicas para generar tendencias, promedios y 
+resúmenes de evolución, que se presentan al usuario en 
+forma de gráficos en el dashboard. 
+ 
+Responsabilidades 
+• 
+Cálculo de tendencias de peso y medidas corporales (RF8). 
+• 
+Análisis de cumplimiento nutricional vs. objetivo diario. 
+• 
+Estadísticas de frecuencia y progresión de entrenamientos. 
+• 
+Generación de resumen integral del progreso del usuario. 
+Funciones principales 
+• 
+Gráfico de evolución del peso en un período configurable. 
+• 
+Promedio diario de macros consumidos vs. objetivo. 
+• 
+Frecuencia semanal de sesiones de entrenamiento. 
+• 
+Comparativa de fotografías de progreso con estadísticas asociadas (RF8). 
+Entradas / Salidas 
+Entradas 
+Salidas 
+Datos históricos de nutrición, 
+entrenamientos y medidas corporales. 
+Gráficos y datos de tendencia para el 
+dashboard del Frontend. 
+ 
+Interfaces 
+• 
+Persistencia de datos — consultas agregadas sobre FOOD_ENTRIES, 
+WORKOUT_PLANS y BODY_LOGS. 
+• 
+Módulo de Interfaz de Usuario — provisión de datos para renderizado de 
+gráficos. 
+ 
+3.6 Módulo de Pasarela de Pagos 
+Campo 
+Detalle 
+Responsabilidad 
+(MVC) 
+Controlador Externo (MVC) 
+FitPaisa — Diseño de Alto Nivel (HLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 9 / 17 
+Campo 
+Detalle 
+Descripción 
+Gestiona las suscripciones Premium mediante integración 
+con pasarelas de pago externas certificadas PCI-DSS. No 
+almacena ni procesa datos de tarjeta en los servidores 
+propios. 
+ 
+Responsabilidades 
+• 
+Generación de sesiones de pago en Stripe y/o PayPal (RF11). 
+• 
+Recepción y validación de webhooks de confirmación o rechazo. 
+• 
+Activación o cancelación de la suscripción según resultado del pago. 
+• 
+Registro de auditoría de todas las transacciones. 
+Funciones principales 
+• 
+Creación de checkout seguro y redirección al proveedor externo. 
+• 
+Activación de plan Premium tras pago confirmado. 
+• 
+Cancelación de suscripción con expiración al fin del período. 
+• 
+Consulta del estado de suscripción activa del usuario. 
+Entradas / Salidas 
+Entradas 
+Salidas 
+Datos de cobro (plan, importe, 
+usuario), evento webhook de la 
+pasarela. 
+Confirmación de pago exitoso o 
+notificación de rechazo, suscripción 
+activada. 
+ 
+Interfaces 
+• 
+Stripe / PayPal — API REST externa sobre HTTPS para procesamiento del 
+pago. 
+• 
+Persistencia de datos — escritura en tabla SUBSCRIPTIONS. 
+• 
+Servicio de Notificaciones — envío de confirmación de suscripción al usuario. 
+• 
+Módulo de Interfaz de Usuario — redirección al checkout y retorno tras el 
+pago. 
+ 
+3.7 Módulo de Servicio de Notificaciones 
+Campo 
+Detalle 
+Responsabilidad 
+(MVC) 
+Controlador (MVC) 
+Descripción 
+Gestiona el envío de notificaciones automáticas y 
+recordatorios a los usuarios mediante correo electrónico. 
+Opera de forma asíncrona para no bloquear el flujo 
+principal de la aplicación. 
+ 
+Responsabilidades 
+• 
+Envío de recordatorios de entrenamientos y comidas pendientes (RF9). 
+FitPaisa — Diseño de Alto Nivel (HLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 10 / 17 
+• 
+Notificaciones de aprobación de planes por el entrenador. 
+• 
+Confirmaciones de pago y activación de suscripción. 
+• 
+Alertas de mensajes recibidos de entrenador o usuario. 
+Funciones principales 
+• 
+Programación y envío de recordatorios periódicos según configuración del 
+usuario. 
+• 
+Notificaciones inmediatas ante eventos del sistema (pago, plan aprobado). 
+• 
+Gestión de plantillas de email para cada tipo de notificación. 
+• 
+Registro del estado de entrega de cada notificación. 
+Entradas / Salidas 
+Entradas 
+Salidas 
+Evento del sistema (pago confirmado, 
+plan aprobado, mensaje recibido, 
+recordatorio programado). 
+Email entregado al destinatario, 
+registro de estado en BD. 
+ 
+Interfaces 
+• 
+Servidor SMTP externo — envío de correos mediante API de email o SMTP. 
+• 
+Persistencia de datos — registro de notificaciones enviadas en tabla 
+NOTIFICATIONS. 
+• 
+Módulos de Pagos y Entrenamientos — recepción de eventos para 
+notificación. 
+ 
+3.8 Módulo de Persistencia de Datos 
+Campo 
+Detalle 
+Responsabilidad 
+(MVC) 
+Modelo (MVC) 
+Descripción 
+Gestiona el almacenamiento permanente de todos los 
+datos del sistema mediante una base de datos relacional. 
+Garantiza la integridad referencial, las transacciones ACID 
+y la consistencia de los datos en todas las operaciones. 
+ 
+Responsabilidades 
+• 
+Operaciones CRUD sobre todas las entidades del sistema. 
+• 
+Transacciones atómicas para operaciones críticas (registro de pagos, 
+creación de planes). 
+• 
+Integridad referencial mediante claves foráneas y restricciones. 
+• 
+Control de concurrencia para operaciones simultáneas sobre datos 
+compartidos. 
+Funciones principales 
+• 
+Gestión de consultas SQL optimizadas con índices en campos de búsqueda 
+frecuente. 
+• 
+Abstracción del acceso a datos mediante ORM. 
+FitPaisa — Diseño de Alto Nivel (HLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 11 / 17 
+• 
+Copias de seguridad periódicas y recuperación ante fallos. 
+• 
+Escalabilidad del esquema para soportar el crecimiento de usuarios y datos. 
+Entradas / Salidas 
+Entradas 
+Salidas 
+Consultas SQL / ORM desde todos los 
+módulos backend. 
+Datos almacenados con confirmación 
+de integridad, resultados de consulta. 
+ 
+Interfaces 
+• 
+Todos los módulos backend — acceso exclusivo a través de la capa ORM. 
+• 
+No expone interfaces directas al Frontend ni a servicios externos. 
+ 
+4. Interfaces Entre Módulos 
+La siguiente tabla detalla todas las interfaces de comunicación entre módulos del 
+sistema, especificando el protocolo, el tipo de comunicación y la descripción del 
+intercambio. 
+ 
+Origen 
+Destino 
+Protocolo 
+Tipo 
+Descripción 
+Frontend 
+Backend API 
+HTTPS / 
+JSON 
+Síncrona 
+Todas las 
+peticiones de datos 
+y acciones del 
+usuario 
+Backend API 
+Autenticación 
+Llamada 
+interna 
+Síncrona 
+Validación de token 
+JWT en cada 
+petición protegida 
+Autenticación 
+Persistencia 
+ORM / 
+SQL 
+Síncrona 
+Consulta y escritura 
+de la tabla USERS 
+Nutrición 
+Persistencia 
+ORM / 
+SQL 
+Síncrona 
+Registro y consulta 
+de 
+FOOD_ENTRIES 
+Entrenamientos Persistencia 
+ORM / 
+SQL 
+Síncrona 
+Gestión de 
+WORKOUT_PLANS 
+y EXERCISES 
+Motor de 
+Estadísticas 
+Persistencia 
+ORM / 
+SQL 
+Síncrona 
+Consultas 
+agregadas sobre 
+datos históricos 
+Pagos 
+Stripe / 
+PayPal 
+API REST 
+HTTPS 
+Síncrona 
++ 
+Webhook 
+Checkout y 
+recepción de 
+confirmación de 
+pago 
+Pagos 
+Persistencia 
+ORM / 
+SQL 
+Síncrona 
+Escritura en tabla 
+SUBSCRIPTIONS 
+FitPaisa — Diseño de Alto Nivel (HLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 12 / 17 
+Origen 
+Destino 
+Protocolo 
+Tipo 
+Descripción 
+Notificaciones 
+Servidor 
+SMTP 
+SMTP / 
+Email API 
+Asíncrona 
+Envío de correos 
+automáticos y 
+recordatorios 
+Entrenamientos Notificaciones 
+Evento 
+interno 
+Asíncrona 
+Disparo de 
+notificación al 
+aprobar un plan 
+Pagos 
+Notificaciones 
+Evento 
+interno 
+Asíncrona 
+Disparo de 
+notificación tras 
+confirmación de 
+pago 
+ 
+5. Flujo General de Operación 
+El flujo estándar de operación para los dos casos de uso principales del sistema es el 
+siguiente: 
+ 
+5.1 Registro de comida y cálculo de macros 
+1. El usuario carga la aplicación web en el navegador (Frontend). 
+2. Se verifica la sesión activa mediante el Módulo de Autenticación (token JWT). 
+3. El usuario accede al formulario de registro de comida en el dashboard. 
+4. El usuario introduce el alimento y la cantidad en gramos. 
+5. El Controlador recibe el dato y el Módulo de Nutrición calcula los 
+macronutrientes automáticamente. 
+6. El resultado se persiste en la base de datos (FOOD_ENTRIES). 
+7. El Frontend actualiza el gráfico de progreso nutricional en menos de 2 
+segundos. 
+8. Si se supera el objetivo calórico diario, el Servicio de Notificaciones envía una 
+alerta por email. 
+ 
+5.2 Creación y aprobación de plan de entrenamiento 
+9. El entrenador accede a su panel y crea un nuevo plan de entrenamiento 
+(estado DRAFT). 
+10. Añade ejercicios, series, repeticiones y días de la semana. 
+11. Envía el plan para revisión del usuario (estado PENDING_APPROVAL). 
+12. El usuario revisa el plan propuesto en su dashboard (RF3). 
+13. El entrenador aprueba el plan definitivo (estado ACTIVE). 
+14. El Servicio de Notificaciones envía un email al usuario confirmando la 
+activación del plan (RF9). 
+15. El usuario comienza a registrar sesiones de entrenamiento contra el plan 
+activo (RF5). 
+ 
+6. Modelo de Datos (Esquema de Alto Nivel) 
+FitPaisa — Diseño de Alto Nivel (HLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 13 / 17 
+Tabla 
+Descripción 
+Relaciones principales 
+USERS 
+Credenciales, rol y 
+estado de cuenta 
+1:1 con PROFILES · 1:N con 
+SUBSCRIPTIONS · 1:N con 
+MESSAGES 
+PROFILES 
+Datos físicos: peso, 
+altura, edad, objetivo, 
+actividad 
+N:1 con USERS · 1:N con 
+FOOD_ENTRIES · 1:N con 
+BODY_LOGS 
+FOOD_ENTRIES 
+Registro diario de 
+ingestas con macros 
+calculados 
+N:1 con PROFILES 
+BODY_LOGS 
+Historial de peso y 
+medidas corporales 
+N:1 con PROFILES 
+PROGRESS_PHOTOS Fotografías de progreso 
+del usuario 
+N:1 con PROFILES 
+WORKOUT_PLANS 
+Planes de 
+entrenamiento con 
+estado y fechas 
+N:1 con USERS (coach) · 
+N:1 con USERS (user) · 1:N 
+con EXERCISES 
+EXERCISES 
+Ejercicios individuales 
+dentro de un plan 
+N:1 con WORKOUT_PLANS 
+MESSAGES 
+Mensajes entre usuario 
+y entrenador 
+N:1 con USERS (sender) · 
+N:1 con USERS (receiver) 
+SUBSCRIPTIONS 
+Suscripciones Premium 
+con referencia externa 
+de pago 
+N:1 con USERS 
+NOTIFICATIONS 
+Registro de 
+notificaciones enviadas 
+N:1 con USERS 
+ 
+7. Infraestructura de Despliegue 
+Componente 
+Tecnología 
+sugerida 
+Propósito 
+Servidor web 
+Nginx / Apache 
+Servir el frontend y actuar como proxy 
+inverso hacia el backend 
+Backend API 
+Framework web 
+estándar 
+Ejecutar la lógica de negocio y 
+exponer la API REST 
+Base de datos 
+PostgreSQL / 
+MySQL 
+Persistencia relacional con integridad 
+ACID 
+Seguridad TLS 
+Certificado 
+SSL/TLS 
+Cifrado de todas las comunicaciones 
+(TLS 1.2 o superior) 
+FitPaisa — Diseño de Alto Nivel (HLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 14 / 17 
+Componente 
+Tecnología 
+sugerida 
+Propósito 
+Pasarela de 
+pagos 
+Stripe / PayPal 
+Procesamiento externo de 
+suscripciones Premium (PCI-DSS) 
+Servicio de correo 
+SMTP / Email API 
+Envío de notificaciones y 
+recordatorios automáticos (RF9) 
+ 
+8. Restricciones de Diseño 
+• 
+El sistema debe ser accesible exclusivamente vía web, sin aplicación nativa 
+de escritorio ni móvil. 
+• 
+Compatibilidad obligatoria con Chrome, Firefox y Edge en sus versiones 
+actuales. 
+• 
+Toda transmisión de datos debe realizarse bajo protocolos cifrados TLS 1.2 o 
+superior. 
+• 
+El flujo de registro y primer acceso no puede superar los tres pasos (RF12). 
+• 
+Los datos de pago nunca se almacenarán ni procesarán en los servidores 
+propios; se delegan íntegramente a Stripe/PayPal. 
+• 
+La base de datos debe soportar transacciones ACID para garantizar 
+integridad en pagos y planes. 
+• 
+El desarrollo se realizará con tecnologías web estándar en un entorno 
+académico unipersonal. 
+ 
+9. Consideraciones de Calidad 
+Atributo 
+Estrategia de diseño 
+Métrica objetivo 
+Rendimiento 
+Separación de capas · Consultas 
+optimizadas · Diseño de BD con 
+índices 
+Carga del panel 
+principal < 2 segundos 
+Seguridad 
+TLS 1.2+ · JWT con expiración · 
+bcrypt para contraseñas · Validación 
+server-side 
+0 accesos no 
+autorizados · 
+Contraseñas nunca en 
+texto plano 
+Disponibilidad 
+Arquitectura web estándar preparada 
+para despliegue cloud · Estrategia de 
+backups 
+Uptime ≥ 99,5% 
+mensual 
+Usabilidad 
+Flujos máximo 3 pasos · Interfaz 
+responsive · Tiempos de carga < 2 s 
+Registro completado 
+en ≤ 3 pasos (RF12) 
+Mantenibilidad Arquitectura MVC · Separación de 
+responsabilidades · Módulos 
+independientes 
+Cambios localizados 
+sin efecto cascada 
+entre módulos 
+FitPaisa — Diseño de Alto Nivel (HLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 15 / 17 
+Atributo 
+Estrategia de diseño 
+Métrica objetivo 
+Privacidad 
+Cumplimiento de normativas básicas 
+de protección de datos personales y 
+sensibles 
+Datos de salud 
+almacenados de forma 
+cifrada y segura 
+ 
+10. Gestión de Errores 
+Escenario 
+Módulo 
+afectado 
+Acción del sistema 
+Fallo de red en el 
+cliente 
+Frontend 
+Notificación visual al usuario y 
+reintento automático de la petición 
+Token de sesión 
+expirado 
+Autenticación 
+Redirección automática al 
+formulario de Login 
+Error en el 
+procesamiento del 
+pago 
+Pagos 
+Cancelación del proceso, aviso de 
+'Transacción Fallida' y log de 
+auditoría 
+Webhook de pago con 
+firma inválida 
+Pagos 
+Ignorar el evento y generar alerta al 
+sistema de monitoreo 
+Error de base de datos 
+Persistencia 
+Rollback de la transacción y 
+respuesta de error controlada al 
+cliente 
+Servicio SMTP no 
+disponible 
+Notificaciones 
+Reintentos automáticos con backoff; 
+notificación al administrador si 
+persiste 
+Datos de perfil fuera de 
+rango 
+Nutrición 
+Respuesta HTTP 400 con lista de 
+campos inválidos para corrección 
+en cliente 
+Plan en estado no 
+editable 
+Entrenamientos 
+Respuesta HTTP 409 indicando el 
+estado actual del plan 
+ 
+11. Trazabilidad ERS → Diseño 
+RF 
+(ERS) 
+Descripción 
+Módulo HLD 
+responsable 
+Componente DAS 
+RF1 
+Registro y 
+autenticación segura 
+3.2 Gestión de 
+Sesiones y Roles 
+Controlador MVC 
+RF2 
+Perfil físico del usuario 
+3.8 Persistencia + 3.1 
+Vista 
+Modelo MVC 
+RF3 
+Consultar plan 
+personalizado 
+3.4 Entrenamientos + 
+3.3 Nutrición 
+Vista + Modelo MVC 
+FitPaisa — Diseño de Alto Nivel (HLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 16 / 17 
+RF 
+(ERS) 
+Descripción 
+Módulo HLD 
+responsable 
+Componente DAS 
+RF4 
+Registro de comidas y 
+cálculo de macros 
+3.3 Lógica de Nutrición 
+Modelo / Controlador 
+MVC 
+RF5 
+Registro de 
+entrenamientos 
+3.4 Gestión de 
+Entrenamientos 
+Modelo / Controlador 
+MVC 
+RF6 
+Gestión de planes por 
+el entrenador 
+3.4 Gestión de 
+Entrenamientos 
+Controlador MVC 
+RF7 
+Mensajería usuario-
+entrenador 
+3.1 Interfaz de Usuario 
+Vista + Controlador 
+MVC 
+RF8 
+Fotografías y 
+estadísticas de 
+evolución 
+3.5 Motor de 
+Estadísticas 
+Modelo MVC 
+RF9 
+Notificaciones y 
+recordatorios 
+3.7 Servicio de 
+Notificaciones 
+Controlador externo 
+MVC 
+RF10 
+Gestión de usuarios 
+por Administrador 
+3.2 Gestión de 
+Sesiones y Roles 
+Controlador MVC 
+RF11 
+Suscripciones Premium 
+mediante pasarelas de 
+pago 
+3.6 Pasarela de Pagos 
+Controlador externo 
+MVC 
+RF12 
+Registro en máximo 3 
+pasos 
+3.1 Interfaz de Usuario 
+Vista MVC 
+ 
+12. Diagrama Conceptual de Componentes 
+El siguiente diagrama ilustra la arquitectura MVC del sistema FitPaisa, los ocho 
+módulos funcionales y su relación con los servicios externos. 
+ 
+FitPaisa — Diseño de Alto Nivel (HLD) v1.0   |   Javier Andrés García Vargas 
+Pág. 17 / 17 
+ 
+
+--- END OF Documento-HLD_Javier-Andres-Garcia-Vargas.pdf ---
+
+--- START OF ERS_FitPaisa_Javier-Andres-Garcia-Vargas (3).pdf ---
+ 
+ 
+ 
+ 
+ 
+Especificación de Requisitos Software (ERS) FitPaisa 
+Índice 
+1. Introducción  
+1.1 Propósito 
+1.2 Ámbito del Sistema 
+1.3 Definiciones, Acrónimos y Abreviaturas 
+1.4 Referencias 
+1.5 Visión General del Documento 
+2. Descripción General 
+2.1 Perspectiva del Producto 
+2.2 Funciones del Producto 
+2.3 Características de los Usuarios 
+2.4 Restricciones 
+2.5 Suposiciones y Dependencias 
+2.6 Requisitos Futuros 
+3. Requisitos Específicos 
+3.1 Interfaces Externas 
+3.2 Requisitos Funcionales 
+3.3 Requisitos de Rendimiento 
+3.4 Restricciones de Diseño 
+ 
+ 
+ 
+ 
+ 
+3.5 Atributos del Sistema 
+4. Apéndices 
+ 
+1. Introducción 
+1.1 Propósito 
+El propósito de este documento es describir de forma clara, detallada y 
+estructurada los requisitos del sistema FitPaisa, siguiendo el estándar IEEE 830. 
+Este documento sirve como referencia principal para el desarrollo, validación y 
+evaluación del sistema, y está dirigido a desarrolladores, responsables del 
+proyecto, docentes y futuros mantenedores. 
+1.2 Ámbito del Sistema 
+FitPaisa es una plataforma web orientada a la gestión integral del entrenamiento 
+físico y la nutrición personalizada. El sistema permitirá a los usuarios finales 
+registrar su información física, objetivos personales y hábitos alimenticios, con el 
+fin de recibir planes adaptados a sus necesidades. 
+El sistema proporcionará herramientas para el seguimiento diario de 
+entrenamientos y comidas, permitiendo visualizar la evolución mediante 
+estadísticas y gráficos. Además, facilitará la comunicación directa entre usuarios y 
+entrenadores, mejorando el acompañamiento y la personalización del proceso. 
+El sistema no sustituye asesoramiento médico ni realiza diagnósticos clínicos, 
+limitándose al ámbito del entrenamiento físico y la nutrición general. 
+1.3 Definiciones, Acrónimos y Abreviaturas 
+• ERS: Especificación de Requisitos Software. 
+• RF: Requisito Funcional. 
+ 
+ 
+ 
+ 
+ 
+• NFR: Requisito No Funcional. 
+• Usuario: Persona registrada que utiliza la plataforma para entrenar y 
+registrar su progreso. 
+• Entrenador: Profesional que gestiona planes y seguimiento de usuarios. 
+• Administrador: Usuario con permisos avanzados de gestión del sistema. 
+1.4 Referencias 
+• IEEE Std. 830-1998 – Recommended Practice for Software Requirements 
+Specifications. 
+• Documento de alcance del proyecto FitPaisa. 
+1.5 Visión General del Documento 
+Este documento se divide en cuatro secciones principales: una introducción 
+general, una descripción del contexto del sistema, la especificación detallada de 
+los requisitos y un apartado de apéndices con información complementaria. 
+ 
+2. Descripción General 
+2.1 Perspectiva del Producto 
+FitPaisa es una aplicación web independiente que funcionará a través de 
+navegadores modernos. El sistema se estructura en distintos roles de usuario, 
+cada uno con funcionalidades específicas, y se apoya en servicios externos como 
+pasarelas de pago y sistemas de notificaciones. 
+2.2 Funciones del Producto 
+Las funciones principales del sistema incluyen la gestión de cuentas de usuario, la 
+creación y asignación de planes personalizados de entrenamiento y nutrición, el 
+registro diario de actividades y comidas, la visualización del progreso físico y la 
+comunicación interna entre usuarios y entrenadores. 
+ 
+ 
+ 
+ 
+ 
+2.3 Características de los Usuarios 
+Los usuarios finales tendrán conocimientos básicos en el uso de aplicaciones web. 
+Los entrenadores contarán con experiencia en entrenamiento físico y/o nutrición, 
+mientras que los administradores dispondrán de conocimientos técnicos medios 
+para la gestión del sistema. 
+2.4 Restricciones 
+El sistema deberá ser accesible desde navegadores web compatibles. El uso de 
+pasarelas de pago externas condiciona ciertos procesos del sistema. Además, se 
+deberán cumplir normativas básicas de seguridad y protección de datos. 
+2.5 Suposiciones y Dependencias 
+Se asume que los usuarios disponen de conexión a internet y utilizan navegadores 
+actualizados. El correcto funcionamiento del sistema depende de servicios 
+externos como correo electrónico y pagos. 
+2.6 Requisitos Futuros 
+Como posible mejora futura se contempla únicamente la ampliación de 
+funcionalidades dentro del entorno web. 
+ 
+3. Requisitos Específicos 
+3.1 Interfaces Externas 
+El sistema dispondrá de una interfaz web accesible desde navegadores modernos, 
+diseñada bajo criterios de usabilidad y diseño responsive. Asimismo, se integrará 
+con servicios externos como pasarelas de pago (Stripe y/o PayPal) y servicios de 
+envío de correos electrónicos para notificaciones y recordatorios. 
+3.2 Requisitos Funcionales 
+ 
+ 
+ 
+ 
+ 
+• RF1: El sistema permitirá a los usuarios registrarse mediante correo electrónico 
+y contraseña, así como autenticarse de forma segura. 
+ 
+• RF2: El usuario podrá completar y modificar su perfil físico, incluyendo datos 
+como peso, altura, edad, objetivos y hábitos generales. 
+ 
+• RF3: El sistema permitirá al usuario consultar en cualquier momento su plan 
+personalizado de entrenamiento y nutrición. 
+ 
+• RF4: El usuario podrá registrar diariamente sus comidas, y el sistema calculará 
+los macronutrientes correspondientes. 
+ 
+• RF5: El usuario podrá registrar sus entrenamientos indicando ejercicios, series, 
+repeticiones y cargas utilizadas. 
+ 
+• RF6: El entrenador podrá consultar, editar y aprobar los planes asignados a sus 
+clientes. 
+ 
+• RF7: El sistema permitirá la comunicación directa entre usuarios y entrenadores 
+mediante mensajería interna. 
+ 
+• RF8: El usuario podrá subir fotografías de progreso y visualizar estadísticas de 
+evolución física. 
+ 
+• RF9: El sistema enviará notificaciones y recordatorios relacionados con 
+entrenamientos, comidas y actividades pendientes. 
+ 
+• RF10: El administrador podrá gestionar usuarios, entrenadores, planes y 
+permisos del sistema. 
+ 
+ 
+ 
+ 
+ 
+ 
+• RF11: El usuario podrá suscribirse a planes de pago mediante pasarelas 
+externas. 
+ 
+• RF12: El proceso de registro y primer acceso no deberá superar los tres pasos. 
+3.3 Requisitos de Rendimiento 
+El sistema deberá responder a las solicitudes del usuario en un tiempo inferior a 
+dos segundos en la carga del panel principal. Asimismo, deberá soportar un 
+mínimo de un número reducido de usuarios activos, acorde a un proyecto 
+académico simultáneos sin degradación apreciable del servicio. 
+3.4 Restricciones de Diseño 
+El diseño del sistema estará basado en una arquitectura web estándar. Se deberá 
+garantizar la compatibilidad con los navegadores Chrome, Firefox y Edge en sus 
+versiones actuales. 
+3.5 Atributos del Sistema 
+El sistema deberá garantizar altos niveles de seguridad, disponibilidad y privacidad. 
+Toda la información se transmitirá mediante protocolos cifrados (TLS 1.2 o 
+superior) y los datos sensibles se almacenarán de forma segura. La disponibilidad 
+mínima esperada será del 99,5% mensual. 
+ 
+4. Apéndices 
+• Formatos de entrada y salida de datos: ejemplos de formularios de registro de 
+usuario, carga de entrenamientos, registro de comidas y visualización de 
+listados de progreso y estadísticas. 
+ 
+ 
+ 
+ 
+ 
+ 
+• Resultados de análisis de costes: estimaciones generales del esfuerzo de 
+desarrollo, mantenimiento y uso de servicios externos como pasarelas de pago 
+y envío de notificaciones. 
+ 
+• Restricciones acerca del lenguaje de programación: el sistema se desarrollará 
+utilizando tecnologías web estándar, quedando condicionadas ciertas 
+decisiones técnicas por el entorno académico del proyecto. 
+ 
+
+--- END OF ERS_FitPaisa_Javier-Andres-Garcia-Vargas (3).pdf ---
+
