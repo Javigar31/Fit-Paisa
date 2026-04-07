@@ -16,6 +16,14 @@
     background: var(--dark); color: var(--text);
     font-family: var(--font-b);
     -webkit-font-smoothing: antialiased;
+    cursor: none; /* Desktop default */
+  }
+
+  /* Restore cursor on mobile/touch devices */
+  @media (pointer: coarse) {
+    html, body { cursor: auto !important; }
+    #cursor, #cursor-ring { display: none !important; }
+    button, a, .slide-cta, .nav-dot, .arrow-btn, .role-card, .btn-hover-opacity, .btn-hover-scale { cursor: auto !important; }
   }
 
   /* ── Custom cursor ── */
@@ -88,7 +96,7 @@
     display: inline-flex; align-items: center; gap: 10px;
     background: var(--accent); color: var(--dark); padding: 14px 28px;
     border-radius: 4px; font-weight: 800; font-size: 14px; letter-spacing: .05em;
-    cursor: none; transition: transform .2s, box-shadow .2s;
+    cursor: pointer; transition: transform .2s, box-shadow .2s;
     text-transform: uppercase;
   }
   .slide-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(255,107,107,.3); }
