@@ -297,7 +297,52 @@
     box-shadow: 0 10px 25px rgba(255,59,59,0.15);
   }
 
+  /* ── Form View States ── */
+  .form-view { display: none; flex-direction: column; gap: 12px; }
+  .form-view.is-active { display: flex; animation: fadeIn .3s ease forwards; }
+
+  .register-step { display: none; flex-direction: column; gap: 12px; }
+  .register-step.is-active { display: flex; animation: slideInNext .4s ease forwards; }
+
+  @keyframes slideInNext {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .goal-card {
+    background: rgba(255,255,255,.05); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px; text-align: center;
+    cursor: none; transition: all .2s;
+  }
+  .goal-card:hover { border-color: var(--accent); background: rgba(255,59,59,0.05); }
+  .goal-card.on { border-color: var(--accent); background: rgba(255,59,59,0.1); }
+  .goal-icon { font-size: 20px; margin-bottom: 4px; }
+  .goal-name { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; color: var(--muted); }
+  .goal-card.on .goal-name { color: var(--accent); }
+
+  .invalid-input { border-color: var(--accent) !important; background: rgba(255,59,59,0.05) !important; }
+  .error-msg { font-size: 10px; color: var(--accent); margin-top: 4px; display: none; font-weight: 600; line-height: 1.2; }
+  .error-msg.on { display: block; }
   
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field .label { font-size: 11px; color: var(--muted); margin-bottom: 6px; font-weight: 400; text-transform: none; letter-spacing: normal; }
+
+  
+
+  .input {
+    background: rgba(255,255,255,.05);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 11px 14px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: var(--font-b);
+    outline: none;
+    width: 100%;
+    transition: border-color .2s;
+  }
+  .input:focus { border-color: var(--accent); }
+  .input::placeholder { color: var(--muted); }
 
 </style>
 </head>
@@ -332,8 +377,8 @@
           <button class="slide-cta" onclick="go(1)">Descubre más →</button>
         </div>
         <div class="ui-card">
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--lime);margin-bottom:20px;font-weight:700">Acceso rápido</div>
-          <div style="display:flex;flex-direction:column;gap:12px">
+          <div id="login-view" class="form-view is-active">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-bottom:8px;font-weight:700">Acceso rápido</div>
             <div>
               <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Correo electrónico</div>
               <div style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:11px 14px;font-size:13px;color:var(--muted)">javier@fitpaisa.com</div>
@@ -342,35 +387,143 @@
               <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Contraseña</div>
               <div style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:11px 14px;font-size:13px;color:var(--muted)">••••••••</div>
             </div>
-            <div style="background:var(--accent);color:var(--dark);border-radius:8px;padding:12px;text-align:center;font-weight:800;font-size:13px;margin-top:4px;cursor:none">ENTRAR</div>
-            <div style="text-align:center;font-size:11px;color:var(--muted)">¿Primera vez? Regístrate en 3 pasos</div>
+            <div style="background:var(--accent);color:var(--dark);border-radius:8px;padding:12px;text-align:center;font-weight:800;font-size:13px;margin-top:4px;cursor:none" class="btn-hover-scale" onclick="window.location.href='fitpaisa_cliente.html'">ENTRAR</div>
+            <div style="text-align:center;font-size:11px;color:var(--muted);cursor:none" class="btn-hover-opacity" onclick="toggleForm('register')">¿Primera vez? <span style="color:var(--accent);font-weight:700">Regístrate gratis</span></div>
           </div>
-          
-          <!-- Role Selector -->
-          <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
-            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin-bottom:12px;font-weight:800">Seleccionar Perfil (Modo Demo)</div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
-              <a href="fitpaisa_admin.html" style="text-decoration:none;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center;transition:all .3s;cursor:none" class="role-card">
-                <div style="font-size:20px;margin-bottom:4px">🛡️</div>
-                <div style="font-size:10px;color:var(--text);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Admin</div>
-              </a>
-              <a href="fitpaisa_entrenador.html" style="text-decoration:none;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center;transition:all .3s;cursor:none" class="role-card">
-                <div style="font-size:20px;margin-bottom:4px">⚖️</div>
-                <div style="font-size:10px;color:var(--text);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Coach</div>
-              </a>
-              <a href="fitpaisa_cliente.html" style="text-decoration:none;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center;transition:all .3s;cursor:none" class="role-card">
-                <div style="font-size:20px;margin-bottom:4px">👤</div>
-                <div style="font-size:10px;color:var(--text);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Cliente</div>
-              </a>
+
+          <div id="register-view" class="form-view">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);font-weight:800">Registro Paso <span id="reg-step-label">1</span></div>
+              <div style="font-size:11px;color:var(--muted);cursor:none" class="btn-hover-opacity" onclick="regBack()">Volver</div>
+            </div>
+
+            <!-- Step 1: Account & Identity -->
+            <div class="register-step is-active" id="step-1">
+              <div class="field">
+                <label class="label">Nombre completo</label>
+                <input type="text" id="reg-name" class="input" placeholder="Tu nombre (sin números)">
+                <div class="error-msg" id="err-name">No se permiten números en el nombre.</div>
+              </div>
+              
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div class="field">
+                  <label class="label">Email</label>
+                  <input type="email" id="reg-email" class="input" placeholder="ej@fitpaisa.com">
+                  <div class="error-msg" id="err-email">Formato inválido.</div>
+                </div>
+                <div class="field">
+                  <label class="label">Teléfono</label>
+                  <input type="tel" id="reg-phone" class="input" placeholder="600 000 000">
+                  <div class="error-msg" id="err-phone">Inválido.</div>
+                </div>
+              </div>
+              
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div class="field">
+                  <label class="label">Contraseña</label>
+                  <input type="password" id="reg-pass" class="input" placeholder="********">
+                </div>
+                <div class="field">
+                  <label class="label">Confirmar Contraseña</label>
+                  <input type="password" id="reg-pass-confirm" class="input" placeholder="********">
+                </div>
+              </div>
+              <div class="error-msg" id="err-pass">Debe incluir: Mayúscula, Número y Símbolo.</div>
+              <div class="error-msg" id="err-pass-confirm">Las contraseñas no coinciden.</div>
+              
+              <div style="text-align:center;margin-top:12px">
+                <button class="slide-cta" style="justify-content:center;transition:transform .15s cubic-bezier(.34,1.56,.64,1);position:relative;z-index:10" onmouseenter="if(!validateStep(currentRegStep)) jumpButton(this)" onclick="setStep(2, this)">Continuar →</button>
+              </div>
+            </div>
+
+            <!-- Step 2: Goal & Sex -->
+            <div class="register-step" id="step-2">
+              <div class="field" style="gap:10px">
+                <label class="label">Sexo</label>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+                  <div class="goal-card" onclick="selectGender(this, 'M')">
+                    <div class="goal-icon">👨</div>
+                    <div class="goal-name">Hombre</div>
+                  </div>
+                  <div class="goal-card" onclick="selectGender(this, 'F')">
+                    <div class="goal-icon">👩‍🦰</div>
+                    <div class="goal-name">Mujer</div>
+                  </div>
+                  <div class="goal-card" onclick="selectGender(this, 'O')">
+                    <div class="goal-icon">⚧️</div>
+                    <div class="goal-name">Otro</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="field" style="gap:10px;margin-top:4px">
+                <label class="label">Objetivo</label>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+                  <div class="goal-card on" onclick="selectGoal(this, 'm')">
+                    <div class="goal-icon">💪</div>
+                    <div class="goal-name">Músculo</div>
+                  </div>
+                  <div class="goal-card" onclick="selectGoal(this, 'p')">
+                    <div class="goal-icon">🏃</div>
+                    <div class="goal-name">Perder</div>
+                  </div>
+                  <div class="goal-card" onclick="selectGoal(this, 'k')">
+                    <div class="goal-icon">⚖️</div>
+                    <div class="goal-name">Mantener</div>
+                  </div>
+                </div>
+              </div>
+              <div class="error-msg" id="err-step2" style="text-align:center">Selecciona sexo y objetivo.</div>
+              <div style="text-align:center;margin-top:16px">
+                <button class="slide-cta" style="justify-content:center;transition:transform .15s cubic-bezier(.34,1.56,.64,1);position:relative;z-index:10" onmouseenter="if(!validateStep(currentRegStep)) jumpButton(this)" onclick="setStep(3, this)">Casi listo →</button>
+              </div>
+            </div>
+
+            <!-- Step 3: Metrics -->
+            <div class="register-step" id="step-3">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div class="field">
+                  <label class="label">Peso (kg)</label>
+                  <input type="number" id="reg-weight" class="input" placeholder="70">
+                </div>
+                <div class="field">
+                  <label class="label">Altura (cm)</label>
+                  <input type="number" id="reg-height" class="input" placeholder="175">
+                </div>
+              </div>
+              <div class="error-msg" id="err-step3" style="text-align:center">Introduce valores válidos.</div>
+              <div style="text-align:center;margin-top:16px">
+                <button class="slide-cta" style="justify-content:center;transition:transform .15s cubic-bezier(.34,1.56,.64,1);position:relative;z-index:10" onmouseenter="if(!validateStep(3)) jumpButton(this)" onclick="finishReg(this)">Finalizar registro ✓</button>
+              </div>
+            </div>
+
+            <!-- Progress dots -->
+            <div style="display:flex;gap:6px;margin-top:20px;justify-content:center" id="reg-indicator">
+              <div style="height:4px;flex:1;background:var(--accent);border-radius:99px" class="reg-dot"></div>
+              <div style="height:4px;flex:1;background:rgba(255,255,255,.1);border-radius:99px" class="reg-dot"></div>
+              <div style="height:4px;flex:1;background:rgba(255,255,255,.1);border-radius:99px" class="reg-dot"></div>
             </div>
           </div>
-          <!-- Steps indicator -->
-          <div style="display:flex;gap:6px;margin-top:20px;justify-content:center">
-            <div style="height:4px;flex:1;background:var(--lime);border-radius:99px"></div>
-            <div style="height:4px;flex:1;background:rgba(255,255,255,.1);border-radius:99px"></div>
-            <div style="height:4px;flex:1;background:rgba(255,255,255,.1);border-radius:99px"></div>
+          
+          <div id="demo-selector-wrap">
+            <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin-bottom:12px;font-weight:800">Seleccionar Perfil (Modo Demo)</div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+                <a href="fitpaisa_admin.html" style="text-decoration:none;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center;transition:all .3s;cursor:none" class="role-card">
+                  <div style="font-size:20px;margin-bottom:4px">🛡️</div>
+                  <div style="font-size:10px;color:var(--text);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Admin</div>
+                </a>
+                <a href="fitpaisa_entrenador.html" style="text-decoration:none;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center;transition:all .3s;cursor:none" class="role-card">
+                  <div style="font-size:20px;margin-bottom:4px">⚖️</div>
+                  <div style="font-size:10px;color:var(--text);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Coach</div>
+                </a>
+                <a href="fitpaisa_cliente.html" style="text-decoration:none;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center;transition:all .3s;cursor:none" class="role-card">
+                  <div style="font-size:20px;margin-bottom:4px">👤</div>
+                  <div style="font-size:10px;color:var(--text);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Cliente</div>
+                </a>
+              </div>
+            </div>
           </div>
-          <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:8px">Paso 1 de 3</div>
         </div>
       </div>
     </div>
@@ -818,8 +971,163 @@ animRing();
 positionSlides();
 updateUI();
 
+// ── Selection Logic ─────────────────
+let currentRegStep = 1;
+let userGender = null;
+let userGoal = 'm';
+
+function toggleForm(type) {
+  const loginView = document.getElementById('login-view');
+  const registerView = document.getElementById('register-view');
+  const demoWrap = document.getElementById('demo-selector-wrap');
+
+  if (type === 'register') {
+    loginView.classList.remove('is-active');
+    registerView.classList.add('is-active');
+    demoWrap.style.display = 'none';
+    currentRegStep = 1;
+    setStep(1);
+  } else {
+    registerView.classList.remove('is-active');
+    loginView.classList.add('is-active');
+    demoWrap.style.display = 'block';
+  }
+}
+
+function setStep(step, btn) {
+  if (step > currentRegStep) {
+    if (!validateStep(currentRegStep)) {
+      if (btn) jumpButton(btn);
+      return;
+    }
+  }
+  if (btn) btn.style.transform = 'translate(0,0)';
+
+  currentRegStep = step;
+  document.querySelectorAll('.register-step').forEach(el => el.classList.remove('is-active'));
+  document.getElementById('step-' + step).classList.add('is-active');
+  document.getElementById('reg-step-label').textContent = step;
+
+  const dots = document.querySelectorAll('.reg-dot');
+  dots.forEach((dot, i) => {
+    dot.style.background = (i < step) ? 'var(--accent)' : 'rgba(255,255,255,.1)';
+  });
+}
+
+function regBack() {
+  // Reset any jumping buttons when going back
+  document.querySelectorAll('.slide-cta').forEach(b => b.style.transform = 'translate(0,0)');
+  if (currentRegStep > 1) {
+    setStep(currentRegStep - 1);
+  } else {
+    toggleForm('login');
+  }
+}
+
+function validateStep(n) {
+  let valid = true;
+  document.querySelectorAll('.error-msg').forEach(e => e.classList.remove('on'));
+  document.querySelectorAll('.input').forEach(e => e.classList.remove('invalid-input'));
+
+  if (n === 1) {
+    const name = document.getElementById('reg-name');
+    const email = document.getElementById('reg-email');
+    const pass = document.getElementById('reg-pass');
+    
+    // Name: No numbers
+    if (/[0-9]/.test(name.value) || name.value.trim() === '') {
+      name.classList.add('invalid-input');
+      document.getElementById('err-name').classList.add('on');
+      valid = false;
+    }
+    // Email: Regex
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
+      email.classList.add('invalid-input');
+      document.getElementById('err-email').classList.add('on');
+      valid = false;
+    }
+    // Phone: Digits and spaces only
+    const phone = document.getElementById('reg-phone');
+    if (!/^[0-9\s+]+$/.test(phone.value) || phone.value.trim() === '') {
+      phone.classList.add('invalid-input');
+      document.getElementById('err-phone').classList.add('on');
+      valid = false;
+    }
+    // Pass: At least 1 upper, 1 number, 1 special, min 8
+    const passConf = document.getElementById('reg-pass-confirm');
+    const passRegex = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9])(?=.{8,})/;
+    if (!passRegex.test(pass.value)) {
+      pass.classList.add('invalid-input');
+      document.getElementById('err-pass').classList.add('on');
+      valid = false;
+    }
+    // Match check
+    if (pass.value !== passConf.value || passConf.value === '') {
+      passConf.classList.add('invalid-input');
+      document.getElementById('err-pass-confirm').classList.add('on');
+      valid = false;
+    }
+  }
+
+  if (n === 2) {
+    if (!userGender) {
+      document.getElementById('err-step2').classList.add('on');
+      valid = false;
+    }
+  }
+
+  return valid;
+}
+
+function jumpButton(el) {
+  const x = Math.random() * 260 - 130;
+  const y = Math.random() * 160 - 80;
+  el.style.transform = `translate(${x}px, ${y}px)`;
+}
+
+function finishReg(btn) {
+  const w = document.getElementById('reg-weight');
+  const h = document.getElementById('reg-height');
+  let valid = true;
+  
+  document.querySelectorAll('.error-msg').forEach(e => e.classList.remove('on'));
+  document.querySelectorAll('.input').forEach(e => e.classList.remove('invalid-input'));
+
+  if (!w.value || w.value <= 0) {
+    w.classList.add('invalid-input');
+    valid = false;
+  }
+  if (!h.value || h.value <= 0) {
+    h.classList.add('invalid-input');
+    valid = false;
+  }
+
+  if (!valid) {
+    if (btn) jumpButton(btn);
+    document.getElementById('err-step3').classList.add('on');
+    return;
+  }
+  if (btn) btn.style.transform = 'translate(0,0)';
+  window.location.href = 'fitpaisa_cliente.html';
+}
+
+function selectGoal(el, val) {
+  document.querySelectorAll('#step-2 .goal-card').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+  userGoal = val;
+}
+
+function selectGender(el, val) {
+  // Only target the gender row cards (the first 3)
+  const genderCards = document.querySelectorAll('#step-2 > div:nth-of-type(1) .goal-card');
+  genderCards.forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+  userGender = val;
+  document.getElementById('err-step2').classList.remove('on');
+}
+
 // Hover effect on interactive elements
-document.querySelectorAll('button, .slide-cta, .nav-dot, .arrow-btn, .role-card').forEach(el => {
+document.querySelectorAll('button, .slide-cta, .nav-dot, .arrow-btn, .role-card, .btn-hover-opacity, .goal-card').forEach(el => {
   el.addEventListener('mouseenter', () => {
     cursor.style.width = '24px';
     cursor.style.height = '24px';
