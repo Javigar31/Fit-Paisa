@@ -587,7 +587,7 @@
             </div>
           </div>
           
-          <div id="demo-selector-wrap">
+          <div id="demo-selector-wrap" style="max-width: 50%;">
             <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
               <div style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin-bottom:12px;font-weight:800">Seleccionar Perfil (Modo Demo)</div>
               <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
@@ -1232,55 +1232,16 @@ function jumpButton(el) {
   el.style.transform = `translate(${x}px, ${y}px)`;
 }
 
-async function finishReg(btn) {
+function finishReg(btn) {
   if (!validateStep(4)) {
     if (btn) jumpButton(btn);
     return;
   }
   
-  // Collect all data
-  const payload = {
-    name: document.getElementById('reg-name').value,
-    email: document.getElementById('reg-email').value,
-    password: document.getElementById('reg-pass').value,
-    phone: document.getElementById('reg-phone').value,
-    gender: userGender,
-    goal: userGoal,
-    weight: document.getElementById('reg-weight').value,
-    height: document.getElementById('reg-height').value,
-    payMethod: payMethod
-  };
-
-  try {
-    const response = await fetch('PHP/register.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    const result = await response.json();
-
-    if (result.status === 'success') {
-      if (btn) btn.style.transform = 'translate(0,0)';
-      // Save session
-      localStorage.setItem('fitpaisa_token', result.token);
-      localStorage.setItem('fitpaisa_user', JSON.stringify(result.user));
-      
-      isRegActive = false;
-      window.location.href = 'fitpaisa_cliente.html';
-    } else {
-      if (btn) jumpButton(btn);
-      const errEl = document.getElementById('err-step4');
-      errEl.textContent = result.message || 'Error en el registro';
-      errEl.classList.add('on');
-    }
-  } catch (error) {
-    if (btn) jumpButton(btn);
-    console.error('Registration error:', error);
-    const errEl = document.getElementById('err-step4');
-    errEl.textContent = 'Error de conexión con el servidor';
-    errEl.classList.add('on');
-  }
+  if (btn) btn.style.transform = 'translate(0,0)';
+  isRegActive = false;
+  // Mock success and redirect
+  window.location.href = 'fitpaisa_cliente.html';
 }
 
 function selectGoal(el, val) {
