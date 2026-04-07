@@ -177,14 +177,32 @@
 
   /* ── Arrow hints ── */
   #arrows {
-    position: fixed; top: 50%; right: 32px; transform: translateY(-50%);
-    z-index: 100; display: flex; flex-direction: column; gap: 8px;
+    position: fixed; bottom: 140px; left: 50%; transform: translateX(-50%);
+    z-index: 100; display: flex; flex-direction: row; gap: 16px;
   }
   .arrow-btn {
-    width: 40px; height: 40px; border-radius: 50%;
-    background: rgba(255,255,255,.05); border: 1px solid var(--border);
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(15,18,25,.8); border: 1px solid var(--border);
     color: var(--muted); display: flex; align-items: center; justify-content: center;
-    cursor: none; transition: all .2s; font-size: 16px;
+    cursor: none; transition: all .3s, opacity .4s, visibility .4s; font-size: 18px;
+    backdrop-filter: blur(10px);
+  }
+  .arrow-btn:hover { background: var(--accent); color: var(--dark); border-color: var(--accent); transform: scale(1.1); }
+  
+  .arrow-btn.pulse { 
+    animation: arrowPulse 2s infinite; 
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .arrow-btn.pulse-once { 
+    animation: arrowPulse 2s ease-out; 
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  @keyframes arrowPulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,59,59,0.4); }
+    70% { transform: scale(1.1); box-shadow: 0 0 0 15px rgba(255,59,59,0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,59,59,0); }
   }
   .arrow-btn:hover { background: var(--accent); color: var(--dark); border-color: var(--accent); }
 
@@ -271,6 +289,14 @@
     .stat-grid { grid-template-columns: 1fr; }
   }
 
+  /* ── Interactive role cards ── */
+  .role-card:hover {
+    background: rgba(255,59,59,0.08) !important;
+    border-color: var(--accent) !important;
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(255,59,59,0.15);
+  }
+
   
 
 </style>
@@ -316,8 +342,27 @@
               <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Contraseña</div>
               <div style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:11px 14px;font-size:13px;color:var(--muted)">••••••••</div>
             </div>
-            <div style="background:var(--lime);color:var(--dark);border-radius:8px;padding:12px;text-align:center;font-weight:800;font-size:13px;margin-top:4px">ENTRAR</div>
+            <div style="background:var(--accent);color:var(--dark);border-radius:8px;padding:12px;text-align:center;font-weight:800;font-size:13px;margin-top:4px;cursor:none">ENTRAR</div>
             <div style="text-align:center;font-size:11px;color:var(--muted)">¿Primera vez? Regístrate en 3 pasos</div>
+          </div>
+          
+          <!-- Role Selector -->
+          <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin-bottom:12px;font-weight:800">Seleccionar Perfil (Modo Demo)</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+              <a href="fitpaisa_admin.html" style="text-decoration:none;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center;transition:all .3s;cursor:none" class="role-card">
+                <div style="font-size:20px;margin-bottom:4px">🛡️</div>
+                <div style="font-size:10px;color:var(--text);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Admin</div>
+              </a>
+              <a href="fitpaisa_entrenador.html" style="text-decoration:none;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center;transition:all .3s;cursor:none" class="role-card">
+                <div style="font-size:20px;margin-bottom:4px">⚖️</div>
+                <div style="font-size:10px;color:var(--text);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Coach</div>
+              </a>
+              <a href="fitpaisa_cliente.html" style="text-decoration:none;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center;transition:all .3s;cursor:none" class="role-card">
+                <div style="font-size:20px;margin-bottom:4px">👤</div>
+                <div style="font-size:10px;color:var(--text);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Cliente</div>
+              </a>
+            </div>
           </div>
           <!-- Steps indicator -->
           <div style="display:flex;gap:6px;margin-top:20px;justify-content:center">
@@ -593,6 +638,7 @@
 <script>
 const TOTAL = 7;
 let current = 0;
+let lastCurrent = 0;
 let isAnimating = false;
 
 // ── 3D Carousel ──────────────────────
@@ -637,8 +683,26 @@ const gradients = [
 function updateUI() {
   dots.forEach((d, i) => d.classList.toggle('active', i === current));
   curEl.textContent = String(current + 1).padStart(2, '0');
-  progressLine.style.width = ((current + 1) / TOTAL * 100) + '%';
-  document.getElementById('global-bg').style.background = gradients[current];
+  // Infinite pulse for the hint on the first or last slides
+  const arrowBtns = document.querySelectorAll('.arrow-btn');
+  const arrowUp = arrowBtns[0];
+  const arrowDown = arrowBtns[1];
+  
+  if (arrowUp) {
+    arrowUp.classList.toggle('pulse', current === TOTAL - 1);
+    arrowUp.style.opacity = '1';
+    arrowUp.style.pointerEvents = 'auto';
+    arrowUp.style.visibility = 'visible';
+  }
+  
+  if (arrowDown) {
+    arrowDown.classList.toggle('pulse', current === 0);
+    arrowDown.style.opacity = '1';
+    arrowDown.style.pointerEvents = 'auto';
+    arrowDown.style.visibility = 'visible';
+  }
+  
+  lastCurrent = current;
 }
 
 function goTo(n) {
@@ -755,7 +819,7 @@ positionSlides();
 updateUI();
 
 // Hover effect on interactive elements
-document.querySelectorAll('button, .slide-cta, .nav-dot, .arrow-btn').forEach(el => {
+document.querySelectorAll('button, .slide-cta, .nav-dot, .arrow-btn, .role-card').forEach(el => {
   el.addEventListener('mouseenter', () => {
     cursor.style.width = '24px';
     cursor.style.height = '24px';
