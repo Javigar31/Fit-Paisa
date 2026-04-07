@@ -432,7 +432,7 @@
               <div class="error-msg" id="err-pass-confirm">Las contraseñas no coinciden.</div>
               
               <div style="text-align:center;margin-top:12px">
-                <button class="slide-cta" style="justify-content:center;transition:transform .15s cubic-bezier(.34,1.56,.64,1);position:relative;z-index:10" onmouseenter="if(!validateStep(currentRegStep)) jumpButton(this)" onclick="setStep(2, this)">Continuar →</button>
+                <button class="slide-cta" style="justify-content:center;transition:transform .15s cubic-bezier(.34,1.56,.64,1);position:relative;z-index:10" onmouseenter="if(!validateStep(currentRegStep)) { jumpButton(this); } else { this.style.transform = 'translate(0,0)'; }" onclick="setStep(2, this)">Continuar →</button>
               </div>
             </div>
 
@@ -475,7 +475,7 @@
               </div>
               <div class="error-msg" id="err-step2" style="text-align:center">Selecciona sexo y objetivo.</div>
               <div style="text-align:center;margin-top:16px">
-                <button class="slide-cta" style="justify-content:center;transition:transform .15s cubic-bezier(.34,1.56,.64,1);position:relative;z-index:10" onmouseenter="if(!validateStep(currentRegStep)) jumpButton(this)" onclick="setStep(3, this)">Casi listo →</button>
+                <button class="slide-cta" style="justify-content:center;transition:transform .15s cubic-bezier(.34,1.56,.64,1);position:relative;z-index:10" onmouseenter="if(!validateStep(currentRegStep)) { jumpButton(this); } else { this.style.transform = 'translate(0,0)'; }" onclick="setStep(3, this)">Casi listo →</button>
               </div>
             </div>
 
@@ -493,7 +493,7 @@
               </div>
               <div class="error-msg" id="err-step3" style="text-align:center">Introduce valores válidos.</div>
               <div style="text-align:center;margin-top:16px">
-                <button class="slide-cta" style="justify-content:center;transition:transform .15s cubic-bezier(.34,1.56,.64,1);position:relative;z-index:10" onmouseenter="if(!validateStep(3)) jumpButton(this)" onclick="finishReg(this)">Finalizar registro ✓</button>
+                <button class="slide-cta" style="justify-content:center;transition:transform .15s cubic-bezier(.34,1.56,.64,1);position:relative;z-index:10" onmouseenter="if(validateStep(3)) { this.style.transform = 'translate(0,0)'; } else { jumpButton(this); }" onclick="finishReg(this)">Finalizar registro ✓</button>
               </div>
             </div>
 
