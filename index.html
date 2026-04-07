@@ -205,6 +205,7 @@
     100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,59,59,0); }
   }
   .arrow-btn:hover { background: var(--accent); color: var(--dark); border-color: var(--accent); }
+  .arrow-btn.is-disabled { opacity: 0.1 !important; pointer-events: none !important; }
 
   /* ── Progress line ── */
   #progress-line {
@@ -836,6 +837,17 @@ const gradients = [
 function updateUI() {
   dots.forEach((d, i) => d.classList.toggle('active', i === current));
   curEl.textContent = String(current + 1).padStart(2, '0');
+  
+  const navDots = document.getElementById('nav');
+  const arrowBtnsWrap = document.getElementById('arrows');
+  if (isRegActive) {
+    if (navDots) navDots.style.opacity = '0.3';
+    if (arrowBtnsWrap) arrowBtnsWrap.style.opacity = '0.1';
+  } else {
+    if (navDots) navDots.style.opacity = '1';
+    if (arrowBtnsWrap) arrowBtnsWrap.style.opacity = '1';
+  }
+  
   // Infinite pulse for the hint on the first or last slides
   const arrowBtns = document.querySelectorAll('.arrow-btn');
   const arrowUp = arrowBtns[0];
@@ -858,8 +870,10 @@ function updateUI() {
   lastCurrent = current;
 }
 
+let isRegActive = false;
+
 function goTo(n) {
-  if (isAnimating || n === current) return;
+  if (isAnimating || n === current || isRegActive) return;
   isAnimating = true;
   current = Math.max(0, Math.min(TOTAL - 1, n));
   
@@ -982,15 +996,19 @@ function toggleForm(type) {
   const demoWrap = document.getElementById('demo-selector-wrap');
 
   if (type === 'register') {
+    isRegActive = true;
     loginView.classList.remove('is-active');
     registerView.classList.add('is-active');
     demoWrap.style.display = 'none';
     currentRegStep = 1;
     setStep(1);
+    updateUI();
   } else {
+    isRegActive = false;
     registerView.classList.remove('is-active');
     loginView.classList.add('is-active');
     demoWrap.style.display = 'block';
+    updateUI();
   }
 }
 
@@ -1108,6 +1126,7 @@ function finishReg(btn) {
     return;
   }
   if (btn) btn.style.transform = 'translate(0,0)';
+  isRegActive = false;
   window.location.href = 'fitpaisa_cliente.html';
 }
 
