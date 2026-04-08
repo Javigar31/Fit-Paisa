@@ -49,14 +49,15 @@ $exists = fp_query(
 )->fetch();
 
 if ($exists) {
-    /* Si existe, actualizar el rol */
+    /* Si existe, actualizar el rol Y la contraseña */
+    $newHash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
     fp_query(
-        'UPDATE users SET role = :role WHERE email = :email',
-        [':role' => $role, ':email' => $email]
+        'UPDATE users SET role = :role, password_hash = :hash WHERE email = :email',
+        [':role' => $role, ':hash' => $newHash, ':email' => $email]
     );
 
     fp_success([
-        'message'  => "Usuario existente actualizado a rol {$role}.",
+        'message'  => "Usuario actualizado: rol={$role} y contraseña renovada.",
         'user_id'  => $exists['user_id'],
         'email'    => $email,
         'role'     => $role,
