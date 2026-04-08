@@ -170,12 +170,14 @@ function handle_register(): never
         ]);
 
         /* Crear suscripción inicial */
+        $amount = ($plan === 'FREE') ? 0.0 : 14.99;
         $db->prepare("
-            INSERT INTO subscriptions (user_id, plan_type, status, provider, starts_at)
-            VALUES (:uid, :plan, 'ACTIVE', 'NONE', NOW())
+            INSERT INTO subscriptions (user_id, plan_type, status, start_date, end_date, amount)
+            VALUES (:uid, :plan, 'ACTIVE', CURRENT_DATE, CURRENT_DATE + INTERVAL '1 month', :amount)
         ")->execute([
-            ':uid'  => $user['user_id'],
-            ':plan' => $plan,
+            ':uid'    => $user['user_id'],
+            ':plan'   => $plan,
+            ':amount' => $amount
         ]);
 
         $db->commit();
