@@ -909,21 +909,21 @@
               <div
                 style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-bottom:8px;font-weight:700">
                 Acceso rápido</div>
-              <div>
+              <div class="field">
                 <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Correo electrónico</div>
-                <div
-                  style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:11px 14px;font-size:13px;color:var(--muted)">
-                  javier@fitpaisa.com</div>
+                <input type="email" id="login-email" class="input" placeholder="correo@fitpaisa.com"
+                  autocomplete="email" onkeydown="if(event.key==='Enter') loginUser()">
               </div>
-              <div>
+              <div class="field">
                 <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Contraseña</div>
-                <div
-                  style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:11px 14px;font-size:13px;color:var(--muted)">
-                  ••••••••</div>
+                <input type="password" id="login-password" class="input" placeholder="••••••••"
+                  autocomplete="current-password" onkeydown="if(event.key==='Enter') loginUser()">
               </div>
+              <div id="login-error" class="error-msg" style="text-align:center"></div>
               <div
-                style="background:var(--accent);color:var(--dark);border-radius:8px;padding:12px;text-align:center;font-weight:800;font-size:13px;margin-top:4px;cursor:none"
-                class="btn-hover-scale" onclick="window.location.href='fitpaisa_cliente.html'">ENTRAR</div>
+                id="btn-login"
+                style="background:var(--accent);color:var(--dark);border-radius:8px;padding:12px;text-align:center;font-weight:800;font-size:13px;margin-top:4px;cursor:none;transition:opacity .2s"
+                class="btn-hover-scale" onclick="loginUser()">ENTRAR</div>
               <div style="text-align:center;font-size:11px;color:var(--muted);cursor:none" class="btn-hover-opacity"
                 onclick="toggleForm('register')">¿Primera vez? <span
                   style="color:var(--accent);font-weight:700">Regístrate gratis</span></div>
@@ -1135,39 +1135,7 @@
             </div>
           </div>
 
-          <div id="demo-selector-wrap" style="max-width: 50%;">
-            <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
-              <div
-                style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin-bottom:12px;font-weight:800">
-                Seleccionar Perfil (Modo Demo)</div>
-              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
-                <a href="fitpaisa_admin.html"
-                  style="text-decoration:none;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center;transition:all .3s;cursor:none"
-                  class="role-card">
-                  <div style="font-size:20px;margin-bottom:4px">🛡️</div>
-                  <div
-                    style="font-size:10px;color:var(--text);font-weight:700;text-transform:uppercase;letter-spacing:.05em">
-                    Admin</div>
-                </a>
-                <a href="fitpaisa_entrenador.html"
-                  style="text-decoration:none;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center;transition:all .3s;cursor:none"
-                  class="role-card">
-                  <div style="font-size:20px;margin-bottom:4px">⚖️</div>
-                  <div
-                    style="font-size:10px;color:var(--text);font-weight:700;text-transform:uppercase;letter-spacing:.05em">
-                    Coach</div>
-                </a>
-                <a href="fitpaisa_cliente.html"
-                  style="text-decoration:none;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center;transition:all .3s;cursor:none"
-                  class="role-card">
-                  <div style="font-size:20px;margin-bottom:4px">👤</div>
-                  <div
-                    style="font-size:10px;color:var(--text);font-weight:700;text-transform:uppercase;letter-spacing:.05em">
-                    Cliente</div>
-                </a>
-              </div>
-            </div>
-          </div>
+          <div id="demo-selector-wrap" style="display:none"></div>
         </div>
       </div>
     </div>
@@ -1889,16 +1857,116 @@
       el.style.transform = `translate(${x}px, ${y}px)`;
     }
 
-    function finishReg(btn) {
+    /* ── LOGIN con API real ──────────────────────────────────────── */
+    async function loginUser() {
+      const emailEl = document.getElementById('login-email');
+      const passEl  = document.getElementById('login-password');
+      const errEl   = document.getElementById('login-error');
+      const btnEl   = document.getElementById('btn-login');
+
+      const email    = (emailEl?.value ?? '').trim();
+      const password = passEl?.value ?? '';
+
+      errEl.textContent = '';
+      errEl.classList.remove('on');
+
+      if (!email || !password) {
+        errEl.textContent = 'Completa el correo y la contraseña.';
+        errEl.classList.add('on');
+        return;
+      }
+
+      /* Estado cargando */
+      btnEl.textContent  = 'Entrando…';
+      btnEl.style.opacity = '0.6';
+      btnEl.style.pointerEvents = 'none';
+
+      try {
+        const res  = await fetch('/api/auth.php?action=login', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ email, password }),
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          localStorage.setItem('fp_token', data.token);
+          localStorage.setItem('fp_user',  JSON.stringify(data.user));
+
+          const role = data.user.role;
+          if      (role === 'ADMIN') window.location.href = 'fitpaisa_admin.html';
+          else if (role === 'COACH') window.location.href = 'fitpaisa_entrenador.html';
+          else                       window.location.href = 'fitpaisa_cliente.html';
+        } else {
+          errEl.textContent = data.message || 'Credenciales incorrectas.';
+          errEl.classList.add('on');
+          btnEl.textContent   = 'ENTRAR';
+          btnEl.style.opacity = '1';
+          btnEl.style.pointerEvents = 'auto';
+        }
+      } catch (e) {
+        errEl.textContent = 'Error de conexión. Intenta de nuevo.';
+        errEl.classList.add('on');
+        btnEl.textContent   = 'ENTRAR';
+        btnEl.style.opacity = '1';
+        btnEl.style.pointerEvents = 'auto';
+      }
+    }
+
+    /* ── REGISTRO con API real ───────────────────────────────────── */
+    async function finishReg(btn) {
       if (!validateStep(4)) {
         if (btn) jumpButton(btn);
         return;
       }
 
-      if (btn) btn.style.transform = 'translate(0,0)';
-      isRegActive = false;
-      // Mock success and redirect
-      window.location.href = 'fitpaisa_cliente.html';
+      if (btn) {
+        btn.style.transform = 'translate(0,0)';
+        btn.textContent     = 'Activando…';
+        btn.disabled        = true;
+      }
+
+      /* Mapear selecciones del UI a valores del backend */
+      const goalMap = { m: 'GAIN_MUSCLE', p: 'LOSE_WEIGHT', k: 'MAINTAIN' };
+      const genderMap = { M: 'MALE', F: 'FEMALE', O: 'OTHER' };
+
+      const payload = {
+        name:       document.getElementById('reg-name').value.trim(),
+        email:      document.getElementById('reg-email').value.trim(),
+        phone:      document.getElementById('reg-phone').value.trim(),
+        password:   document.getElementById('reg-pass').value,
+        gender:     genderMap[userGender] || 'OTHER',
+        objective:  goalMap[userGoal]     || 'MAINTAIN',
+        weight:     parseFloat(document.getElementById('reg-weight').value),
+        height:     parseFloat(document.getElementById('reg-height').value),
+        pay_method: payMethod,
+      };
+
+      try {
+        const res  = await fetch('/api/auth.php?action=register', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(payload),
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          localStorage.setItem('fp_token', data.token);
+          localStorage.setItem('fp_user',  JSON.stringify(data.user));
+          isRegActive = false;
+          window.location.href = 'fitpaisa_cliente.html';
+        } else {
+          const errEl = document.getElementById('err-step4');
+          errEl.textContent = data.message || 'Error al registrar. Intenta de nuevo.';
+          errEl.classList.add('on');
+          if (btn) { btn.textContent = 'Activar Plan ✓'; btn.disabled = false; }
+        }
+      } catch (e) {
+        const errEl = document.getElementById('err-step4');
+        errEl.textContent = 'Error de conexión. Intenta de nuevo.';
+        errEl.classList.add('on');
+        if (btn) { btn.textContent = 'Activar Plan ✓'; btn.disabled = false; }
+      }
     }
 
     function selectGoal(el, val) {

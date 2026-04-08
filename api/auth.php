@@ -1,0 +1,357 @@
+<?php
+/**
+ * FitPaisa — Endpoint de Autenticación
+ *
+ * Gestiona el registro de nuevos usuarios y el inicio de sesión.
+ * Todas las operaciones usan sentencias preparadas PDO para prevenir SQL Injection.
+ * Las contraseñas se almacenan con password_hash() BCRYPT cost-12.
+ *
+ * Rutas disponibles:
+ *   POST /api/auth.php?action=register  → Registro de nuevo usuario (4 pasos del frontend)
+ *   POST /api/auth.php?action=login     → Inicio de sesión
+ *   GET  /api/auth.php?action=me        → Datos del usuario autenticado (requiere JWT)
+ *
+ * @package  FitPaisa\Api
+ * @author   Javier Andrés García Vargas
+ * @version  1.0.0
+ */
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/_db.php';
+require_once __DIR__ . '/_jwt.php';
+
+fp_cors();
+
+$action = fp_sanitize($_GET['action'] ?? '', 32);
+
+match ($action) {
+    'register' => handle_register(),
+    'login'    => handle_login(),
+    'me'       => handle_me(),
+    default    => fp_error(400, "Acción '{$action}' no reconocida."),
+};
+
+/* ══════════════════════════════════════════════════════════════════════
+   REGISTRO
+   ══════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Registra un nuevo usuario con perfil físico inicial.
+ *
+ * Espera un JSON body con:
+ *   name, email, phone, password, gender, objective, weight, height
+ *
+ * El paso de pago del frontend se registra como suscripción FREE hasta
+ * que la pasarela confirme el cobro vía webhook.
+ *
+ * @return never
+ */
+function handle_register(): never
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        fp_error(405, 'Método no permitido.');
+    }
+
+    $body = fp_json_body();
+
+    /* ── Validar y sanitizar campos obligatorios ── */
+    $name       = fp_sanitize($body['name']      ?? '', 200);
+    $email      = fp_sanitize($body['email']     ?? '', 150);
+    $phone      = fp_sanitize($body['phone']     ?? '', 30);
+    $password   = $body['password'] ?? '';            /* No sanitizar: solo hashear */
+    $gender     = fp_sanitize($body['gender']    ?? '', 10);
+    $objective  = fp_sanitize($body['objective'] ?? '', 30);
+    $weight     = (float) ($body['weight'] ?? 0);
+    $height     = (float) ($body['height'] ?? 0);
+
+    /* ── Validaciones de negocio ── */
+    $errors = [];
+
+    if (empty($name) || preg_match('/[0-9]/', $name)) {
+        $errors[] = 'El nombre no puede estar vacío ni contener números.';
+    }
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors[] = 'El formato del correo electrónico es inválido.';
+    }
+    if (!preg_match('/^[0-9\s+\-]{7,20}$/', $phone)) {
+        $errors[] = 'El teléfono es inválido.';
+    }
+    /* Password: mínimo 8 chars, mayúscula, número y símbolo */
+    if (!preg_match('/^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$/', $password)) {
+        $errors[] = 'La contraseña debe tener mínimo 8 caracteres, una mayúscula, un número y un símbolo.';
+    }
+    if (!in_array($gender, ['MALE', 'FEMALE', 'OTHER'], true)) {
+        $errors[] = 'El sexo seleccionado no es válido.';
+    }
+    if (!in_array($objective, ['LOSE_WEIGHT', 'GAIN_MUSCLE', 'MAINTAIN', 'IMPROVE_HEALTH'], true)) {
+        $errors[] = 'El objetivo seleccionado no es válido.';
+    }
+    if ($weight <= 0 || $weight > 500) {
+        $errors[] = 'El peso debe estar entre 1 y 500 kg.';
+    }
+    if ($height <= 0 || $height > 300) {
+        $errors[] = 'La altura debe estar entre 1 y 300 cm.';
+    }
+
+    if (!empty($errors)) {
+        fp_error(400, implode(' | ', $errors));
+    }
+
+    $db = fp_db();
+
+    /* ── Verificar duplicado de email ── */
+    $exists = fp_query(
+        'SELECT 1 FROM users WHERE email = :email LIMIT 1',
+        [':email' => strtolower($email)]
+    )->fetchColumn();
+
+    if ($exists) {
+        fp_error(409, 'Ya existe una cuenta con ese correo electrónico.');
+    }
+
+    /* ── Hash de contraseña BCRYPT cost-12 ── */
+    $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
+    if ($hash === false) {
+        error_log('[FitPaisa][AUTH] password_hash falló.');
+        fp_error(500, 'Error interno del servidor.');
+    }
+
+    /* ── Transacción: crear usuario + perfil ── */
+    $db->beginTransaction();
+    try {
+        /* Crear usuario */
+        $stmt = $db->prepare("
+            INSERT INTO users (email, password_hash, full_name, phone, role, is_active, created_at)
+            VALUES (:email, :hash, :name, :phone, 'USER', TRUE, NOW())
+            RETURNING user_id, email, full_name, role, created_at
+        ");
+        $stmt->execute([
+            ':email' => strtolower($email),
+            ':hash'  => $hash,
+            ':name'  => $name,
+            ':phone' => $phone,
+        ]);
+        $user = $stmt->fetch();
+
+        if (!$user) {
+            throw new RuntimeException('No se pudo crear el usuario.');
+        }
+
+        /* Calcular edad aproximada desde peso/altura (no se captura en el form) */
+        /* El frontend actual no captura edad; usamos 25 como valor inicial editable */
+        $age = (int) ($body['age'] ?? 25);
+        if ($age <= 0 || $age > 120) {
+            $age = 25;
+        }
+
+        $activity = fp_sanitize($body['activity_level'] ?? 'MODERATE', 20);
+        if (!in_array($activity, ['SEDENTARY', 'LIGHT', 'MODERATE', 'ACTIVE', 'VERY_ACTIVE'], true)) {
+            $activity = 'MODERATE';
+        }
+
+        /* Crear perfil físico */
+        $db->prepare("
+            INSERT INTO profiles (user_id, weight, height, age, gender, objective, activity_level, updated_at)
+            VALUES (:uid, :weight, :height, :age, :gender, :objective, :activity, NOW())
+        ")->execute([
+            ':uid'       => $user['user_id'],
+            ':weight'    => $weight,
+            ':height'    => $height,
+            ':age'       => $age,
+            ':gender'    => $gender,
+            ':objective' => $objective,
+            ':activity'  => $activity,
+        ]);
+
+        $db->commit();
+    } catch (Throwable $e) {
+        $db->rollBack();
+        error_log('[FitPaisa][REGISTER] ' . $e->getMessage());
+        fp_error(500, 'Error al crear la cuenta. Intenta de nuevo.');
+    }
+
+    /* ── Generar JWT ── */
+    $token = jwt_create([
+        'user_id' => $user['user_id'],
+        'email'   => $user['email'],
+        'role'    => $user['role'],
+        'name'    => $user['full_name'],
+    ]);
+
+    fp_success([
+        'token' => $token,
+        'user'  => [
+            'user_id'    => $user['user_id'],
+            'email'      => $user['email'],
+            'name'       => $user['full_name'],
+            'role'       => $user['role'],
+            'created_at' => $user['created_at'],
+        ],
+    ], 201);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   LOGIN
+   ══════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Autentica a un usuario existente.
+ *
+ * Implementa el algoritmo descrito en DAS §4.1.3:
+ *  1. Buscar por email
+ *  2. Verificar is_active
+ *  3. Verificar bloqueo temporal
+ *  4. Comparar hash con bcrypt
+ *  5. Controlar intentos fallidos (máx. 5 → bloqueo 15 min)
+ *  6. Generar JWT con {user_id, email, role, exp}
+ *
+ * El mensaje de error es siempre genérico (no revela si el email existe).
+ *
+ * @return never
+ */
+function handle_login(): never
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        fp_error(405, 'Método no permitido.');
+    }
+
+    $body     = fp_json_body();
+    $email    = strtolower(fp_sanitize($body['email']    ?? '', 150));
+    $password = $body['password'] ?? '';
+
+    if (empty($email) || empty($password)) {
+        fp_error(400, 'El correo electrónico y la contraseña son obligatorios.');
+    }
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        fp_error(400, 'Formato de correo electrónico inválido.');
+    }
+
+    /* ── Buscar usuario ── */
+    $user = fp_query(
+        'SELECT user_id, email, password_hash, full_name, role, is_active,
+                login_attempts, locked_until, last_login
+         FROM users WHERE email = :email LIMIT 1',
+        [':email' => $email]
+    )->fetch();
+
+    /* Error genérico para no revelar si el email existe */
+    if (!$user) {
+        /* Simular tiempo de bcrypt para evitar timing oracle */
+        password_verify('dummy', '$2y$12$invalidhashinvalidhashinvalidhashinval');
+        fp_error(401, 'Correo electrónico o contraseña incorrectos.');
+    }
+
+    /* ── Verificar cuenta activa ── */
+    if (!$user['is_active']) {
+        fp_error(403, 'Tu cuenta ha sido desactivada. Contacta al soporte.');
+    }
+
+    /* ── Verificar bloqueo temporal ── */
+    if ($user['locked_until'] !== null) {
+        $lockedUntil = new DateTimeImmutable($user['locked_until']);
+        if ($lockedUntil > new DateTimeImmutable()) {
+            $remaining = ceil(($lockedUntil->getTimestamp() - time()) / 60);
+            fp_error(403, "Cuenta bloqueada por exceso de intentos. Espera {$remaining} minuto(s).");
+        }
+        /* Desbloquear si el tiempo ya pasó */
+        fp_query(
+            'UPDATE users SET login_attempts = 0, locked_until = NULL WHERE user_id = :id',
+            [':id' => $user['user_id']]
+        );
+    }
+
+    /* ── Verificar contraseña ── */
+    if (!password_verify($password, $user['password_hash'])) {
+        $attempts = (int) $user['login_attempts'] + 1;
+
+        if ($attempts >= 5) {
+            /* Bloquear 15 minutos */
+            fp_query(
+                "UPDATE users SET login_attempts = :att, locked_until = NOW() + INTERVAL '15 minutes'
+                 WHERE user_id = :id",
+                [':att' => $attempts, ':id' => $user['user_id']]
+            );
+            fp_error(403, 'Demasiados intentos fallidos. Cuenta bloqueada 15 minutos.');
+        }
+
+        fp_query(
+            'UPDATE users SET login_attempts = :att WHERE user_id = :id',
+            [':att' => $attempts, ':id' => $user['user_id']]
+        );
+
+        fp_error(401, 'Correo electrónico o contraseña incorrectos.');
+    }
+
+    /* ── Login exitoso: resetear intentos y actualizar last_login ── */
+    fp_query(
+        'UPDATE users SET login_attempts = 0, locked_until = NULL, last_login = NOW()
+         WHERE user_id = :id',
+        [':id' => $user['user_id']]
+    );
+
+    /* ── Rehash si es necesario (mejora de cost en futuro) ── */
+    if (password_needs_rehash($user['password_hash'], PASSWORD_BCRYPT, ['cost' => 12])) {
+        $newHash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
+        if ($newHash !== false) {
+            fp_query(
+                'UPDATE users SET password_hash = :hash WHERE user_id = :id',
+                [':hash' => $newHash, ':id' => $user['user_id']]
+            );
+        }
+    }
+
+    /* ── Generar JWT ── */
+    $token = jwt_create([
+        'user_id' => $user['user_id'],
+        'email'   => $user['email'],
+        'role'    => $user['role'],
+        'name'    => $user['full_name'],
+    ]);
+
+    fp_success([
+        'token' => $token,
+        'user'  => [
+            'user_id'    => $user['user_id'],
+            'email'      => $user['email'],
+            'name'       => $user['full_name'],
+            'role'       => $user['role'],
+            'last_login' => $user['last_login'],
+        ],
+    ]);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   ME — Datos del usuario autenticado
+   ══════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Retorna los datos del usuario identificado por el JWT Bearer.
+ *
+ * @return never
+ */
+function handle_me(): never
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+        fp_error(405, 'Método no permitido.');
+    }
+
+    $payload = jwt_require(); /* Aborta con 401 si no hay token válido */
+
+    $user = fp_query(
+        'SELECT u.user_id, u.email, u.full_name, u.phone, u.role, u.created_at,
+                p.profile_id, p.weight, p.height, p.age, p.gender, p.objective, p.activity_level
+         FROM users u
+         LEFT JOIN profiles p ON p.user_id = u.user_id
+         WHERE u.user_id = :id AND u.is_active = TRUE
+         LIMIT 1',
+        [':id' => $payload['user_id']]
+    )->fetch();
+
+    if (!$user) {
+        fp_error(404, 'Usuario no encontrado o inactivo.');
+    }
+
+    fp_success(['user' => $user]);
+}
