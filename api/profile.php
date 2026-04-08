@@ -3,14 +3,7 @@
  * FitPaisa — Endpoint de Gestión de Perfiles
  *
  * CRUD del perfil físico del usuario autenticado.
- * Incluye el cálculo de macronutrientes objetivo según la fórmula
- * de Mifflin-St Jeor documentada en el LLD §4.3.3.
- *
- * Rutas:
- *   GET  /api/profile.php?action=get      → Perfil + macros objetivo
- *   PUT  /api/profile.php?action=update   → Actualizar perfil físico
- *   POST /api/profile.php?action=log_body → Registrar medidas del día
- *   GET  /api/profile.php?action=history  → Historial de peso (últimos N días)
+ * Algoritmo de macros estilo Fitia: Déficit/Superávit exacto por peso objetivo.
  *
  * @package  FitPaisa\Api
  * @author   Javier Andrés García Vargas
@@ -27,12 +20,12 @@ $payload = jwt_require(); /* 401 si no autenticado */
 $action  = fp_sanitize($_GET['action'] ?? 'get', 32);
 
 match ($action) {
-    'get'       => handle_get_profile($payload),
+    'get'          => handle_get_profile($payload),
     'update'       => handle_update_profile($payload),
     'setup_macros' => handle_setup_macros($payload),
     'log_body'     => handle_log_body($payload),
     'history'      => handle_body_history($payload),
-    default     => fp_error(400, "Acción '{$action}' no reconocida."),
+    default        => fp_error(400, "Acción '{$action}' no reconocida."),
 };
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -64,9 +57,11 @@ function handle_get_profile(array $payload): never
         (float) $profile['weight'],
         (float) $profile['height'],
         (int)   $profile['age'],
-        $profile['gender'],
-        $profile['objective'],
-        $profile['activity_level']
+        $profile['gender'] ?: 'OTHER',
+        $profile['objective'] ?: 'MAINTAIN',
+        $profile['activity_level'] ?: 'MODERATE',
+        (float) ($profile['target_weight'] ?? 0),
+        (int) ($profile['target_time_weeks'] ?? 0)
     );
 
     fp_success(['profile' => $profile, 'macro_targets' => $macros]);
@@ -89,18 +84,14 @@ function handle_update_profile(array $payload): never
     $gender    = fp_sanitize($body['gender']         ?? '', 10);
     $objective = fp_sanitize($body['objective']      ?? '', 30);
     $activity  = fp_sanitize($body['activity_level'] ?? '', 20);
+    $targetWeight = (float) ($body['target_weight'] ?? $weight);
+    $weeks = (int) ($body['target_time_weeks'] ?? 0);
 
     $errors = [];
     if ($weight <= 0 || $weight > 500) $errors[] = 'Peso inválido.';
     if ($height <= 0 || $height > 300) $errors[] = 'Altura inválida.';
     if ($age    <= 0 || $age    > 120) $errors[] = 'Edad inválida.';
-    if (!in_array($gender, ['MALE', 'FEMALE', 'OTHER'], true))
-        $errors[] = 'Sexo inválido.';
-    if (!in_array($objective, ['LOSE_WEIGHT', 'GAIN_MUSCLE', 'MAINTAIN', 'IMPROVE_HEALTH'], true))
-        $errors[] = 'Objetivo inválido.';
-    if (!in_array($activity, ['SEDENTARY', 'LIGHT', 'MODERATE', 'ACTIVE', 'VERY_ACTIVE'], true))
-        $errors[] = 'Nivel de actividad inválido.';
-
+    
     if (!empty($errors)) {
         fp_error(400, implode(' | ', $errors));
     }
@@ -108,7 +99,8 @@ function handle_update_profile(array $payload): never
     fp_query(
         'UPDATE profiles
          SET weight = :w, height = :h, age = :a, gender = :g,
-             objective = :o, activity_level = :al, updated_at = NOW()
+             objective = :o, activity_level = :al, 
+             target_weight = :tw, target_time_weeks = :ttw, updated_at = NOW()
          WHERE user_id = :uid',
         [
             ':w'   => $weight,
@@ -117,11 +109,13 @@ function handle_update_profile(array $payload): never
             ':g'   => $gender,
             ':o'   => $objective,
             ':al'  => $activity,
+            ':tw'  => $targetWeight,
+            ':ttw' => $weeks,
             ':uid' => $payload['user_id'],
         ]
     );
 
-    $macros = calculate_macros($weight, $height, $age, $gender, $objective, $activity);
+    $macros = calculate_macros($weight, $height, $age, $gender, $objective, $activity, $targetWeight, $weeks);
     fp_success(['message' => 'Perfil actualizado correctamente.', 'macro_targets' => $macros]);
 }
 
@@ -137,44 +131,51 @@ function handle_setup_macros(array $payload): never
     $body   = fp_json_body();
     $weight = (float) ($body['weight'] ?? 0);
     $height = (float) ($body['height'] ?? 0);
+    $age    = (int)   ($body['age'] ?? 0);
     $objective = fp_sanitize($body['objective'] ?? 'MAINTAIN', 30);
+    $targetWeight = (float) ($body['target_weight'] ?? $weight);
+    $weeks = (int) ($body['target_time_weeks'] ?? 0);
 
     if ($weight <= 0 || $weight > 500) fp_error(400, 'Peso inválido.');
     if ($height <= 0 || $height > 300) fp_error(400, 'Altura inválida.');
-    if (!in_array($objective, ['LOSE_WEIGHT', 'GAIN_MUSCLE', 'MAINTAIN', 'IMPROVE_HEALTH'], true)) {
-        fp_error(400, 'Objetivo inválido.');
-    }
+    if ($age <= 0 || $age > 120) fp_error(400, 'Edad inválida.');
 
-    /* Obtener el resto de datos que no piden en el setup (edad, género, actividad) de la BD */
+    /* Obtener género y actividad actuales */
     $current = fp_query(
-        'SELECT age, gender, activity_level FROM profiles WHERE user_id = :uid',
+        'SELECT gender, activity_level FROM profiles WHERE user_id = :uid',
         [':uid' => $payload['user_id']]
     )->fetch();
 
-    $age = $current['age'] > 0 ? (int)$current['age'] : 25;
-    $gender = $current['gender'] ?: 'OTHER';
-    $activity = $current['activity_level'] ?: 'MODERATE';
+    $gender   = ($current['gender'] ?? null) ?: 'OTHER';
+    $activity = ($current['activity_level'] ?? null) ?: 'MODERATE';
 
     fp_query(
         'UPDATE profiles
-         SET weight = :w, height = :h, objective = :o, updated_at = NOW()
+         SET weight = :w, height = :h, age = :a, objective = :o, 
+             target_weight = :tw, target_time_weeks = :ttw, updated_at = NOW()
          WHERE user_id = :uid',
         [
             ':w'   => $weight,
             ':h'   => $height,
+            ':a'   => $age,
             ':o'   => $objective,
+            ':tw'  => $targetWeight,
+            ':ttw' => $weeks,
             ':uid' => $payload['user_id'],
         ]
     );
 
-    $macros = calculate_macros($weight, $height, $age, $gender, $objective, $activity);
+    $macros = calculate_macros($weight, $height, $age, $gender, $objective, $activity, $targetWeight, $weeks);
     
     fp_success([
         'message' => 'Macros configurados correctamente.',
         'profile' => [
             'weight' => $weight,
             'height' => $height,
-            'objective' => $objective
+            'age' => $age,
+            'objective' => $objective,
+            'target_weight' => $targetWeight,
+            'target_time_weeks' => $weeks
         ],
         'macro_targets' => $macros
     ]);
@@ -246,25 +247,8 @@ function handle_body_history(array $payload): never
     fp_success(['history' => $rows, 'days' => $days]);
 }
 
-/* ══════════════════════════════════════════════════════════════════════
-   ALGORITMO DE MACRONUTRIENTES — Mifflin-St Jeor (LLD §4.3.3)
-   ══════════════════════════════════════════════════════════════════════ */
-
 /**
- * Calcula los objetivos diarios de macronutrientes según Mifflin-St Jeor.
- *
- * Paso 1: TMB = (10 × peso_kg) + (6.25 × talla_cm) − (5 × edad) ± constante_género
- * Paso 2: GET = TMB × factor_actividad
- * Paso 3: Ajuste por objetivo (±300 kcal)
- * Paso 4: Distribución: Proteína 30% | Carbos 45% | Grasa 25%
- *
- * @param float  $weight   Peso en kg.
- * @param float  $height   Altura en cm.
- * @param int    $age      Edad en años.
- * @param string $gender   'MALE' | 'FEMALE' | 'OTHER'.
- * @param string $objective 'LOSE_WEIGHT' | 'GAIN_MUSCLE' | 'MAINTAIN' | 'IMPROVE_HEALTH'
- * @param string $activity  Nivel de actividad física.
- * @return array            {calories, protein_g, carbs_g, fat_g, tmb, get}
+ * Calcula los objetivos diarios de macronutrientes según el método de Fitia.
  */
 function calculate_macros(
     float  $weight,
@@ -272,13 +256,15 @@ function calculate_macros(
     int    $age,
     string $gender,
     string $objective,
-    string $activity
+    string $activity,
+    float  $targetWeight = 0.0,
+    int    $weeks = 0
 ): array {
-    /* Paso 1: TMB */
+    /* 1. TMB - Mifflin-St Jeor */
     $genderConst = ($gender === 'FEMALE') ? -161 : 5;
     $tmb = (10 * $weight) + (6.25 * $height) - (5 * $age) + $genderConst;
 
-    /* Paso 2: Factor de actividad */
+    /* 2. Factor de actividad (GET/TDEE) */
     $activityFactors = [
         'SEDENTARY'   => 1.2,
         'LIGHT'       => 1.375,
@@ -287,24 +273,54 @@ function calculate_macros(
         'VERY_ACTIVE' => 1.9,
     ];
     $factor = $activityFactors[$activity] ?? 1.55;
-    $get    = $tmb * $factor;
+    $tdee   = $tmb * $factor;
 
-    /* Paso 3: Ajuste por objetivo */
-    $adjustment = match ($objective) {
-        'LOSE_WEIGHT'    => -300,
-        'GAIN_MUSCLE'    => +300,
-        default          => 0,      /* MAINTAIN, IMPROVE_HEALTH */
+    /* 3. Cálculo de Déficit/Superávit estilo Fitia (Diferencia de peso * 7700 kcal / Total días) */
+    $adjustment = 0;
+    if ($targetWeight > 0 && $weeks > 0 && !in_array($objective, ['MAINTAIN', 'IMPROVE_HEALTH'])) {
+        $weightDiff = $targetWeight - $weight;
+        $totalDays  = $weeks * 7;
+        $adjustment = ($weightDiff * 7700) / $totalDays;
+        
+        // Límites de seguridad para el déficit/superávit (Fitia suele limitar a +/- 1000 kcal)
+        $adjustment = max(-1000, min(1000, $adjustment));
+    }
+
+    $targetCal = $tdee + $adjustment;
+    
+    // Protección absoluta: Mínimo 1200 kcal
+    $targetCal = max(1200, $targetCal);
+
+    /* 4. Distribución de Macros estilo Fitia
+       - Proteína: Prioridad alta (1.8g - 2.2g por kg)
+       - Grasas: 1.0g por kg para salud hormonal
+       - Carbohidratos: El resto
+    */
+    
+    // Factor Proteína según objetivo
+    $protFactor = match($objective) {
+        'LOSE_WEIGHT' => 2.2, // Mayor protección muscular en déficit
+        'GAIN_MUSCLE' => 2.0, // Suficiente para anabolismo
+        default       => 1.8  // Mantenimiento
     };
-    $targetCal = max(1200, $get + $adjustment); /* Mínimo 1200 kcal */
 
-    /* Paso 4: Distribución de macros
-       Proteína 4 kcal/g | Carbos 4 kcal/g | Grasa 9 kcal/g */
+    $protGrams = $weight * $protFactor;
+    $fatGrams  = $weight * 1.0; 
+    
+    // Calorías consumidas por prot y grasas
+    $consumedCal = ($protGrams * 4) + ($fatGrams * 9);
+    
+    // Resto a carbohidratos
+    $carbCal = max(0, $targetCal - $consumedCal);
+    $carbGrams = $carbCal / 4;
+
     return [
-        'calories'  => round($targetCal),
-        'protein_g' => round(($targetCal * 0.30) / 4),
-        'carbs_g'   => round(($targetCal * 0.45) / 4),
-        'fat_g'     => round(($targetCal * 0.25) / 9),
-        'tmb'       => round($tmb),
-        'get'       => round($get),
+        'calories'   => (int)round($targetCal),
+        'protein_g'  => (int)round($protGrams),
+        'carbs_g'    => (int)round($carbGrams),
+        'fat_g'      => (int)round($fatGrams),
+        'tmb'        => (int)round($tmb),
+        'tdee'       => (int)round($tdee),
+        'adjustment' => (int)round($adjustment)
     ];
 }

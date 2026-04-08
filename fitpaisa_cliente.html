@@ -240,10 +240,33 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:va
   .slide-hero,.slide-panel{padding-left:18px;padding-right:18px}
   .topbar{padding:12px 16px}
   .stat-row{grid-template-columns:1fr 1fr}
-}
+}  /* Buscador de alimentos */
+  .suggestions-box {
+    position: absolute;
+    top: 60px;
+    left: 0;
+    right: 0;
+    background: #1a1b1e;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    z-index: 100;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+  }
+  .sugg-info { font-size: 10px; color: var(--muted); }
+  .suggestion-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.2s;
+  }
+  .suggestion-item:hover { background: rgba(255,255,255,.05); }
+  .suggestion-item:last-child { border-bottom: none; }
+  .suggestion-item .s-name { font-weight: 600; font-size: 13px; }
+
 </style>
-</head>
-<body>
+
 <div id="cur"></div><div id="cur-ring"></div>
 <div id="prog"></div>
 
@@ -377,7 +400,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:va
       <div class="slide-hero">
         <div class="slide-tag">Configuración Inicial</div>
         <div class="slide-title">CALCULA<br>TUS<br><em>MACROS.</em></div>
-        <div class="slide-desc">Para poder darte recomendaciones exactas de calorías y macronutrientes, necesitamos conocer tus métricas actuales y tu objetivo.</div>
+        <div class="slide-desc">Para darte recomendaciones exactas como Fitia, necesitamos tus métricas y tu objetivo específico.</div>
       </div>
       <div class="slide-panel">
         <div class="card">
@@ -387,16 +410,21 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:va
               <div class="field"><label class="label">Peso (kg)</label><input class="input" id="setup-weight" type="number" placeholder="70"></div>
               <div class="field"><label class="label">Altura (cm)</label><input class="input" id="setup-height" type="number" placeholder="175"></div>
             </div>
+            <div class="field"><label class="label">Edad (años)</label><input class="input" id="setup-age" type="number" placeholder="25"></div>
             <div class="field">
               <label class="label">Objetivo</label>
-              <select class="input" id="setup-objective" style="appearance:none;background:rgba(255,255,255,.05);color:var(--text)">
+              <select class="input" id="setup-objective" onchange="toggleSetupObjective()" style="appearance:none;background:rgba(255,255,255,.05);color:var(--text)">
                 <option value="GAIN_MUSCLE" style="color:black">Construir masa muscular</option>
                 <option value="LOSE_WEIGHT" style="color:black">Perder peso / Definir</option>
                 <option value="MAINTAIN" style="color:black">Mantener el peso actual</option>
                 <option value="IMPROVE_HEALTH" style="color:black">Mejorar salud general</option>
               </select>
             </div>
-            <button class="btn-lime" onclick="saveDietSetup(this)">Calcular Mis Macros</button>
+            <div id="setup-target-group" class="grid2">
+               <div class="field"><label class="label">Peso Obj. (kg)</label><input class="input" id="setup-target-weight" type="number" placeholder="65"></div>
+               <div class="field"><label class="label">Tiempo (semanas)</label><input class="input" id="setup-weeks" type="number" placeholder="12"></div>
+            </div>
+            <button class="btn-lime" id="btn-save-setup" onclick="saveDietSetup(this)">Calcular Mis Macros</button>
           </div>
         </div>
       </div>
@@ -434,17 +462,24 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:va
         </div>
         <div class="card">
           <div class="card-title">Registrar ingesta</div>
-          <div style="display:flex;flex-direction:column;gap:10px">
-            <div class="field"><label class="label">Alimento</label><input class="input" id="mName" placeholder="Ej: Pechuga a la plancha"></div>
-            <div class="grid2">
-              <div class="field"><label class="label">Kcal</label><input class="input" id="mKcal" type="number" placeholder="290"></div>
-              <div class="field"><label class="label">Proteína (g)</label><input class="input" id="mProt" type="number" placeholder="48"></div>
+          <div style="display:flex;flex-direction:column;gap:10px;position:relative">
+            <div class="field">
+              <label class="label">Buscador de Alimentos</label>
+              <input class="input" id="mSearch" placeholder="Ej: Pollo, Arroz, Avena..." oninput="searchFoodDebounced(this.value)">
+              <div id="food-suggestions" class="suggestions-box"></div>
             </div>
-            <div class="grid2">
-              <div class="field"><label class="label">Carbos (g)</label><input class="input" id="mCarb" type="number" placeholder="2"></div>
-              <div class="field"><label class="label">Grasa (g)</label><input class="input" id="mFat" type="number" placeholder="6"></div>
+            <div id="mManualForm" style="display:flex;flex-direction:column;gap:10px">
+              <div class="grid2">
+                <div class="field"><label class="label">Gramos</label><input class="input" id="mGrams" type="number" placeholder="100" oninput="calcMacrosByGrams()"></div>
+                <div class="field"><label class="label">Kcal</label><input class="input" id="mKcal" type="number" placeholder="0"></div>
+              </div>
+              <div class="grid2">
+                <div class="field"><label class="label">Proteína (g)</label><input class="input" id="mProt" type="number" placeholder="0"></div>
+                <div class="field"><label class="label">Carbos (g)</label><input class="input" id="mCarb" type="number" placeholder="0"></div>
+              </div>
+              <div class="field"><label class="label">Grasa (g)</label><input class="input" id="mFat" type="number" placeholder="0"></div>
+              <button class="btn-lime" id="btn-add-meal" onclick="addMeal()">+ Registrar</button>
             </div>
-            <button class="btn-lime" onclick="addMeal()">+ Registrar</button>
           </div>
         </div>
       </div>
@@ -728,7 +763,15 @@ function populateUI(profile, macros, user) {
   document.getElementById('pm-height').textContent = hasPhysical ? `${parseFloat(profile.height).toFixed(0)} cm` : '—';
   document.getElementById('pm-age').textContent = profile?.age > 0 ? `${profile.age} años` : '—';
   document.getElementById('pm-objective').textContent = OBJECTIVE_LABELS[profile?.objective] || '—';
+  
+  const isMaintain = profile?.objective === 'MAINTAIN' || profile?.objective === 'IMPROVE_HEALTH';
+  document.getElementById('pm-target-row').style.display = isMaintain ? 'none' : 'flex';
+  document.getElementById('pm-weeks-row').style.display = isMaintain ? 'none' : 'flex';
+  document.getElementById('pm-target-weight').textContent = profile?.target_weight ? `${parseFloat(profile.target_weight).toFixed(1)} kg` : '—';
+  document.getElementById('pm-weeks').textContent = profile?.target_time_weeks ? `${profile.target_time_weeks} sems` : '—';
+
   document.getElementById('pm-activity').textContent = ACTIVITY_LABELS[profile?.activity_level] || '—';
+
 
   // ── Card de suscripción en Preferencias
   const subCard = document.getElementById('sub-info');
@@ -810,6 +853,12 @@ function logOut() {
 }
 
 // ── Edición de perfil ─────────────────
+function toggleEditObjective() {
+  const o = document.getElementById('edit-objective').value;
+  const group = document.getElementById('edit-target-group');
+  group.style.display = (o === 'MAINTAIN' || o === 'IMPROVE_HEALTH') ? 'none' : 'grid';
+}
+
 function openEditProfile() {
   const p = appState.profile;
   if (p) {
@@ -818,6 +867,9 @@ function openEditProfile() {
     document.getElementById('edit-age').value = p.age > 0 ? p.age : '';
     document.getElementById('edit-objective').value = p.objective || 'MAINTAIN';
     document.getElementById('edit-activity').value = p.activity_level || 'MODERATE';
+    document.getElementById('edit-target-weight').value = p.target_weight || '';
+    document.getElementById('edit-weeks').value = p.target_time_weeks || '';
+    toggleEditObjective();
   }
   document.getElementById('profile-view').style.display = 'none';
   document.getElementById('profile-edit').style.display = 'flex';
@@ -839,6 +891,9 @@ async function saveProfile(btn) {
   const age    = parseInt(document.getElementById('edit-age').value);
   const objective = document.getElementById('edit-objective').value;
   const activity  = document.getElementById('edit-activity').value;
+  const targetWeight = parseFloat(document.getElementById('edit-target-weight').value) || weight;
+  const targetWeeks = parseInt(document.getElementById('edit-weeks').value) || 0;
+  
   const errEl = document.getElementById('edit-error');
 
   if (!weight || weight <= 0 || !height || height <= 0 || !age || age <= 0) {
@@ -856,16 +911,23 @@ async function saveProfile(btn) {
     const res = await fetch('/api/profile.php?action=update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ weight, height, age, gender: appState.profile?.gender || 'OTHER', objective, activity_level: activity })
+      body: JSON.stringify({ 
+        weight, height, age, 
+        gender: appState.profile?.gender || 'OTHER', 
+        objective, 
+        activity_level: activity,
+        target_weight: targetWeight,
+        target_time_weeks: targetWeeks
+      })
     });
     const data = await res.json();
 
     if (data.success) {
-      // Actualizar appState con nuevos datos
-      appState.profile = { ...appState.profile, weight, height, age, objective, activity_level: activity };
+      appState.profile = { ...appState.profile, weight, height, age, objective, activity_level: activity, target_weight: targetWeight, target_time_weeks: targetWeeks };
       appState.macros  = data.data.macro_targets;
       const user = JSON.parse(localStorage.getItem('fp_user') || '{}');
       populateUI(appState.profile, appState.macros, user);
+      loadDailySummary();
       cancelEditProfile();
     } else {
       errEl.textContent = data.message || 'Error al guardar. Inténtalo de nuevo.';
@@ -881,15 +943,28 @@ async function saveProfile(btn) {
 }
 
 // ── Diet Setup ────────────────────────
+function toggleSetupObjective() {
+  const o = document.getElementById('setup-objective').value;
+  const targetGroup = document.getElementById('setup-target-group');
+  if (o === 'MAINTAIN' || o === 'IMPROVE_HEALTH') {
+    targetGroup.style.display = 'none';
+  } else {
+    targetGroup.style.display = 'grid';
+  }
+}
+
 async function saveDietSetup(btn) {
   const w = parseFloat(document.getElementById('setup-weight').value);
   const h = parseFloat(document.getElementById('setup-height').value);
+  const a = parseInt(document.getElementById('setup-age').value);
   const o = document.getElementById('setup-objective').value;
+  const tw = parseFloat(document.getElementById('setup-target-weight').value) || w;
+  const weeks = parseInt(document.getElementById('setup-weeks').value) || 0;
 
-  if (!w || !h || w <= 0 || h <= 0) {
-    alert("Introduce valores válidos de peso y altura.");
-    return;
+  if (!w || !h || !a || w <= 0 || h <= 0 || a <= 0) {
+    alert("Introduce valores válidos."); return;
   }
+  
   btn.textContent = 'Calculando...';
   btn.style.opacity = '0.6';
   btn.style.pointerEvents = 'none';
@@ -899,17 +974,18 @@ async function saveDietSetup(btn) {
     const res = await fetch('/api/profile.php?action=setup_macros', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ weight: w, height: h, objective: o })
+      body: JSON.stringify({ weight: w, height: h, age: a, objective: o, target_weight: tw, target_time_weeks: weeks })
     });
     const data = await res.json();
 
     if (data.success) {
-      appState.profile = { ...appState.profile, weight: w, height: h, objective: o };
-      appState.macros  = data.data?.macro_targets || null;
+      appState.profile = data.data.profile;
+      appState.macros  = data.data.macro_targets;
       const user = JSON.parse(localStorage.getItem('fp_user') || '{}');
       populateUI(appState.profile, appState.macros, user);
+      loadDailySummary(); // Cargar datos reales de nutrición
     } else {
-      alert(data.message || 'Hubo un error al guardar los datos.');
+      alert(data.message || 'Error.');
       btn.textContent = 'Calcular Mis Macros';
       btn.style.opacity = '1';
       btn.style.pointerEvents = 'auto';
@@ -921,6 +997,153 @@ async function saveDietSetup(btn) {
     btn.style.pointerEvents = 'auto';
   }
 }
+
+// ── Nutrición Real ────────────────────
+let selectedFood = null;
+let searchTimer;
+
+function searchFoodDebounced(q) {
+  clearTimeout(searchTimer);
+  if (!q || q.length < 2) {
+    document.getElementById('food-suggestions').style.display = 'none';
+    return;
+  }
+  searchTimer = setTimeout(() => fetchFood(q), 300);
+}
+
+async function fetchFood(q) {
+  const token = localStorage.getItem('fp_token');
+  try {
+    const res = await fetch(`/api/food.php?action=search&q=${encodeURIComponent(q)}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (data.success && data.data.results.length > 0) {
+      renderSuggestions(data.data.results);
+    } else {
+      document.getElementById('food-suggestions').style.display = 'none';
+    }
+  } catch(e) {}
+}
+
+function renderSuggestions(list) {
+  const box = document.getElementById('food-suggestions');
+  box.innerHTML = list.map(f => `
+    <div class="suggestion-item" onclick='selectFood(${JSON.stringify(f).replace(/'/g, "&apos;")})'>
+      <div class="s-name">${f.name}</div>
+      <div class="sugg-info">100g: ${Math.round(f.calories_100g)} kcal | P:${f.protein_100g} C:${f.carbs_100g} G:${f.fat_100g}</div>
+    </div>
+  `).join('');
+  box.style.display = 'block';
+}
+
+function selectFood(f) {
+  selectedFood = f;
+  document.getElementById('mSearch').value = f.name;
+  document.getElementById('food-suggestions').style.display = 'none';
+  document.getElementById('mGrams').value = 100;
+  calcMacrosByGrams();
+}
+
+function calcMacrosByGrams() {
+  if (!selectedFood) return;
+  const grams = parseFloat(document.getElementById('mGrams').value) || 0;
+  const factor = grams / 100;
+  document.getElementById('mKcal').value = Math.round(selectedFood.calories_100g * factor);
+  document.getElementById('mProt').value = (selectedFood.protein_100g * factor).toFixed(1);
+  document.getElementById('mCarb').value = (selectedFood.carbs_100g * factor).toFixed(1);
+  document.getElementById('mFat').value  = (selectedFood.fat_100g * factor).toFixed(1);
+}
+
+async function addMeal() {
+  const name = document.getElementById('mSearch').value.trim();
+  const grams = parseFloat(document.getElementById('mGrams').value);
+  const kcal = parseFloat(document.getElementById('mKcal').value);
+  const prot = parseFloat(document.getElementById('mProt').value);
+  const carb = parseFloat(document.getElementById('mCarb').value);
+  const fat = parseFloat(document.getElementById('mFat').value);
+
+  if (!name || !grams || grams <= 0) { alert('Datos inválidos'); return; }
+
+  const btn = document.getElementById('btn-add-meal');
+  btn.disabled = true;
+
+  try {
+    const token = localStorage.getItem('fp_token');
+    const res = await fetch('/api/nutrition.php?action=log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ food_name: name, portion_grams: grams, calories: kcal, protein: prot, carbs: carb, fat: fat, meal_type: 'SNACK' })
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('mSearch').value = '';
+      document.getElementById('mGrams').value = '';
+      document.getElementById('mKcal').value = '';
+      document.getElementById('mProt').value = '';
+      document.getElementById('mCarb').value = '';
+      document.getElementById('mFat').value = '';
+      selectedFood = null;
+      loadDailySummary();
+    }
+  } catch(e) {}
+  btn.disabled = false;
+}
+
+async function loadDailySummary() {
+  const token = localStorage.getItem('fp_token');
+  try {
+    // Cargar ingestas
+    const resLog = await fetch('/api/nutrition.php?action=daily', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const dataLog = await resLog.json();
+    if (dataLog.success) {
+      renderMealsReal(dataLog.data.entries);
+    }
+
+    // Cargar resumen vs objetivos
+    const resSum = await fetch('/api/nutrition.php?action=summary', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const dataSum = await resSum.json();
+    if (dataSum.success) {
+      const { totals, targets } = dataSum.data;
+      if (targets) {
+        setMacroBar('bar-kcal', totals.total_calories, targets.calories, 'var(--lime)');
+        setMacroBar('bar-prot', totals.total_protein, targets.protein_g, 'var(--success)');
+        setMacroBar('bar-carb', totals.total_carbs, targets.carbs_g, 'var(--warn)');
+        setMacroBar('bar-fat',  totals.total_fat, targets.fat_g, 'var(--purple)');
+
+        setMacroLabel('lbl-kcal', Math.round(totals.total_calories), targets.calories);
+        setMacroLabel('lbl-prot', Math.round(totals.total_protein), targets.protein_g, 'g');
+        setMacroLabel('lbl-carb', Math.round(totals.total_carbs), targets.carbs_g, 'g');
+        setMacroLabel('lbl-fat',  Math.round(totals.total_fat), targets.fat_g, 'g');
+      }
+    }
+  } catch(e) {}
+}
+
+function renderMealsReal(list) {
+  const el = document.getElementById('mealList');
+  if (list.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">No hay registros hoy</div>';
+    return;
+  }
+  el.innerHTML = list.map(m => `
+    <div class="meal-item">
+      <div class="meal-icon">🍽️</div>
+      <div><div class="meal-name">${m.food_name}</div><div class="meal-sub">${m.portion_grams}g · P:${Math.round(m.protein)}g C:${Math.round(m.carbs)}g G:${Math.round(m.fat)}g</div></div>
+      <div class="meal-kcal">${Math.round(m.calories)}</div>
+    </div>
+  `).join('');
+}
+
+// Llamar al cargar
+window.addEventListener('load', () => {
+  setTimeout(loadDailySummary, 500);
+});
+
 
 // ── Week bars ─────────────────────────
 const wData   = [65,72,58,84,77,90,0];
@@ -1158,6 +1381,8 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelect
           <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Altura</span><strong id="pm-height">—</strong></div>
           <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Edad</span><strong id="pm-age">—</strong></div>
           <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Objetivo</span><strong id="pm-objective">—</strong></div>
+          <div id="pm-target-row" style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Peso Obj.</span><strong id="pm-target-weight">—</strong></div>
+          <div id="pm-weeks-row" style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Tiempo</span><strong id="pm-weeks">—</strong></div>
           <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Actividad</span><strong id="pm-activity">—</strong></div>
         </div>
       </div>
@@ -1171,12 +1396,16 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelect
         <div class="field"><label class="label">Edad</label><input class="input" id="edit-age" type="number" placeholder="25" min="10" max="120"></div>
         <div class="field">
           <label class="label">Objetivo</label>
-          <select class="input" id="edit-objective" style="appearance:none;background:rgba(255,255,255,.05);color:var(--text)">
+          <select class="input" id="edit-objective" onchange="toggleEditObjective()" style="appearance:none;background:rgba(255,255,255,.05);color:var(--text)">
             <option value="GAIN_MUSCLE" style="color:black">Construir masa muscular</option>
             <option value="LOSE_WEIGHT" style="color:black">Perder peso / Definir</option>
             <option value="MAINTAIN" style="color:black">Mantener el peso actual</option>
             <option value="IMPROVE_HEALTH" style="color:black">Mejorar salud general</option>
           </select>
+        </div>
+        <div id="edit-target-group" class="grid2">
+           <div class="field"><label class="label">Peso Obj. (kg)</label><input class="input" id="edit-target-weight" type="number" placeholder="65" step="0.1"></div>
+           <div class="field"><label class="label">Tiempo (sems)</label><input class="input" id="edit-weeks" type="number" placeholder="12"></div>
         </div>
         <div class="field">
           <label class="label">Nivel de actividad</label>
