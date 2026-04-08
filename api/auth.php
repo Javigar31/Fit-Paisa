@@ -126,25 +126,28 @@ function handle_register(): never
     $db->beginTransaction();
     try {
         /* Crear usuario */
-        $stmt = $db->prepare("
-            INSERT INTO users (email, password_hash, full_name, phone, role, is_active, created_at)
-            VALUES (:email, :hash, :name, :phone, 'USER', TRUE, NOW())
-            RETURNING user_id, email, full_name, role, created_at
-        ");
-        $stmt->execute([
-            ':email' => strtolower($email),
-            ':hash'  => $hash,
-            ':name'  => $name,
-            ':phone' => $phone,
-        ]);
-        $user = $stmt->fetch();
+        try {
+            $stmt = $db->prepare("
+                INSERT INTO users (email, password_hash, full_name, phone, role, is_active, created_at)
+                VALUES (:email, :hash, :name, :phone, 'USER', TRUE, NOW())
+                RETURNING user_id, email, full_name, role, created_at
+            ");
+            $stmt->execute([
+                ':email' => strtolower($email),
+                ':hash'  => $hash,
+                ':name'  => $name,
+                ':phone' => $phone,
+            ]);
+            $user = $stmt->fetch();
+        } catch (Exception $e) {
+            throw new Exception("Error inserting user: " . $e->getMessage());
+        }
 
         if (!$user) {
             throw new RuntimeException('No se pudo crear el usuario.');
         }
 
         /* Calcular edad aproximada desde peso/altura (no se captura en el form) */
-        /* El frontend actual no captura edad; usamos 25 como valor inicial editable */
         $age = (int) ($body['age'] ?? 25);
         if ($age <= 0 || $age > 120) {
             $age = 25;
@@ -159,29 +162,37 @@ function handle_register(): never
         $weightToSave = ($weight <= 0) ? 0.01 : $weight;
         $heightToSave = ($height <= 0) ? 0.01 : $height;
 
-        $db->prepare("
-            INSERT INTO profiles (user_id, weight, height, age, gender, objective, activity_level, updated_at)
-            VALUES (:uid, :weight, :height, :age, :gender, :objective, :activity, NOW())
-        ")->execute([
-            ':uid'       => $user['user_id'],
-            ':weight'    => $weightToSave,
-            ':height'    => $heightToSave,
-            ':age'       => $age,
-            ':gender'    => $gender,
-            ':objective' => $objective,
-            ':activity'  => $activity,
-        ]);
+        try {
+            $db->prepare("
+                INSERT INTO profiles (user_id, weight, height, age, gender, objective, activity_level, updated_at)
+                VALUES (:uid, :weight, :height, :age, :gender, :objective, :activity, NOW())
+            ")->execute([
+                ':uid'       => $user['user_id'],
+                ':weight'    => $weightToSave,
+                ':height'    => $heightToSave,
+                ':age'       => $age,
+                ':gender'    => $gender,
+                ':objective' => $objective,
+                ':activity'  => $activity,
+            ]);
+        } catch (Exception $e) {
+            throw new Exception("Error inserting profile: " . $e->getMessage());
+        }
 
         /* Crear suscripción inicial */
         $amount = ($plan === 'FREE') ? 0.0 : 14.99;
-        $db->prepare("
-            INSERT INTO subscriptions (user_id, plan_type, status, start_date, end_date, amount)
-            VALUES (:uid, :plan, 'ACTIVE', CURRENT_DATE, CURRENT_DATE + INTERVAL '1 month', :amount)
-        ")->execute([
-            ':uid'    => $user['user_id'],
-            ':plan'   => $plan,
-            ':amount' => $amount
-        ]);
+        try {
+            $db->prepare("
+                INSERT INTO subscriptions (user_id, plan_type, status, start_date, end_date, amount)
+                VALUES (:uid, :plan, 'ACTIVE', CURRENT_DATE, CURRENT_DATE + INTERVAL '1 month', :amount)
+            ")->execute([
+                ':uid'    => $user['user_id'],
+                ':plan'   => $plan,
+                ':amount' => $amount
+            ]);
+        } catch (Exception $e) {
+            throw new Exception("Error inserting subscription: " . $e->getMessage());
+        }
 
         $db->commit();
     } catch (PDOException $e) {
