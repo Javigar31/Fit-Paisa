@@ -41,10 +41,18 @@ match ($action) {
 function handle_get_profile(array $payload): never
 {
     $profile = fp_query(
-        'SELECT p.*, u.full_name, u.email, u.phone
+        'SELECT p.*,
+                u.full_name, u.email, u.phone,
+                s.plan_type AS subscription_plan,
+                s.status    AS subscription_status,
+                s.end_date  AS subscription_end_date
          FROM profiles p
          JOIN users u ON u.user_id = p.user_id
-         WHERE p.user_id = :uid',
+         LEFT JOIN subscriptions s
+           ON s.user_id = p.user_id AND s.status = \'ACTIVE\'
+         WHERE p.user_id = :uid
+         ORDER BY s.created_at DESC
+         LIMIT 1',
         [':uid' => $payload['user_id']]
     )->fetch();
 

@@ -276,9 +276,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:va
     </div>
     <div class="slide-body-wrap">
       <div class="slide-hero">
-        <div class="slide-tag">Dashboard · Semana 3</div>
-        <div class="slide-title">HOLA,<br><em>JAVIER.</em></div>
-        <div class="slide-desc">Llevas <strong style="color:var(--lime)">12 días</strong> de racha activa. Tu entrenadora Laura tiene un mensaje nuevo para ti.</div>
+        <div class="slide-tag">Dashboard · Bienvenida</div>
+        <div class="slide-title" id="dash-hero-name">HOLA,<br><em id="dash-hero-name-em">USUARIO.</em></div>
+        <div class="slide-desc">Configura tu perfil en la sección de Dieta para ver tus macros personalizados.</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button class="btn-lime" onclick="show('training', null)">Ver mi entreno →</button>
           <button class="btn-ghost" onclick="show('messages', null)">Mensajes</button>
@@ -288,10 +288,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:va
         <div class="card">
           <div class="card-title">Hoy · Macros</div>
           <div class="stat-row">
-            <div class="stat-box"><div class="stat-v">1840</div><div class="stat-l">Kcal</div></div>
-            <div class="stat-box"><div class="stat-v">142g</div><div class="stat-l">Prot.</div></div>
-            <div class="stat-box"><div class="stat-v">198g</div><div class="stat-l">Carbos</div></div>
-            <div class="stat-box"><div class="stat-v">62g</div><div class="stat-l">Grasa</div></div>
+            <div class="stat-box"><div class="stat-v" id="dash-kcal">—</div><div class="stat-l">Kcal</div></div>
+            <div class="stat-box"><div class="stat-v" id="dash-prot">—</div><div class="stat-l">Prot.</div></div>
+            <div class="stat-box"><div class="stat-v" id="dash-carb">—</div><div class="stat-l">Carbos</div></div>
+            <div class="stat-box"><div class="stat-v" id="dash-fat">—</div><div class="stat-l">Grasa</div></div>
           </div>
         </div>
         <div class="card">
@@ -551,11 +551,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:va
         <div class="card" onclick="openModal('modal-subscription')" style="cursor:pointer">
           <div class="card-title">Mi suscripción</div>
           <div style="display:flex;align-items:center;gap:10px">
-            <div style="flex:1">
-              <div style="font-size:13px;font-weight:700">Plan Premium</div>
-              <div style="font-size:11px;color:var(--muted);margin-top:2px">Activo · Renovación: 1 mayo 2026</div>
+            <div style="flex:1" id="sub-info">
+              <div style="font-size:13px;font-weight:700">—</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">Cargando...</div>
             </div>
-            <div style="background:var(--limedim);color:var(--lime);padding:4px 12px;border-radius:99px;font-size:11px;font-weight:700">⚡ Activo</div>
+            <div id="sub-badge" style="background:rgba(255,255,255,.05);color:var(--muted);padding:4px 12px;border-radius:99px;font-size:11px;font-weight:700">—</div>
           </div>
           <div style="margin-top:12px;font-size:12px;color:var(--muted)">Pago gestionado de forma segura por Stripe · PCI-DSS</div>
         </div>
@@ -607,7 +607,24 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:va
 const secs = ['dashboard', 'training', 'diet', 'messages', 'progress', 'support'];
 let active = 'dashboard';
 const prog = document.getElementById('prog');
+let appState = { profile: null, macros: null }; // datos reales del backend
 
+// ── Helpers de traducción ──────────────
+const OBJECTIVE_LABELS = {
+  LOSE_WEIGHT: 'Perder peso / Definir',
+  GAIN_MUSCLE: 'Construir masa muscular',
+  MAINTAIN: 'Mantener peso',
+  IMPROVE_HEALTH: 'Mejorar salud general',
+};
+const ACTIVITY_LABELS = {
+  SEDENTARY: 'Sedentario',
+  LIGHT: 'Ligero',
+  MODERATE: 'Moderado',
+  ACTIVE: 'Activo',
+  VERY_ACTIVE: 'Muy activo',
+};
+
+// ── Navegación ────────────────────────
 function show(id, el) {
   if (id === active) return;
   const prev = document.getElementById('sec-' + active);
@@ -624,13 +641,11 @@ function show(id, el) {
     return;
   }
 
-  // Desktop transitions
   if (prev) prev.className = 'section ' + (ni > pi ? 'hidden-left' : 'hidden-right');
   if (next) {
     next.className = 'section visible';
-    void next.offsetWidth; // trigger reflow
+    void next.offsetWidth;
   }
-  
   active = id;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('on'));
   if (el) el.classList.add('on');
@@ -638,48 +653,232 @@ function show(id, el) {
   if (id === 'progress') drawChart();
 }
 
-// ── Initialization ────────────────────
-let userProfile = null;
-window.addEventListener('load', () => {
+// ── Inicialización con datos reales ───
+window.addEventListener('load', async () => {
   const token = localStorage.getItem('fp_token');
   if (!token) { window.location.href = 'index.html'; return; }
-  
-  const user = JSON.parse(localStorage.getItem('fp_user'));
+
+  const user = JSON.parse(localStorage.getItem('fp_user') || 'null');
   if (!user || user.role !== 'USER') { window.location.href = 'index.html'; return; }
-  
-  userProfile = user;
-  const plan = user.subscription_plan || 'FREE';
-  
-  // Set user names
-  const initials = user.name.substring(0, 2).toUpperCase();
+
+  try {
+    const res = await fetch('/api/profile.php?action=get', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      // Si el perfil no existe aún, usamos datos básicos del localStorage
+      populateUI(null, null, user);
+      return;
+    }
+
+    appState.profile = data.data.profile;
+    appState.macros  = data.data.macro_targets;
+    populateUI(appState.profile, appState.macros, user);
+
+  } catch (e) {
+    // Fallback: al menos mostrar el nombre desde localStorage
+    populateUI(null, null, user);
+  }
+
+  prog.style.width = (1 / secs.length * 100) + '%';
+});
+
+// ── Poblar toda la UI con datos reales ─
+function populateUI(profile, macros, user) {
+  const name = profile?.full_name || user?.name || 'Usuario';
+  const email = profile?.email || user?.email || '';
+  const plan = profile?.subscription_plan || user?.subscription_plan || 'FREE';
+  const isPremium = plan !== 'FREE';
+  const initials = name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+  const planLabel = isPremium ? '⚡ Premium' : '🌱 Básico';
+
+  // ── Nombre e iniciales en toda la UI
   document.querySelectorAll('.user-tag, .sb-user-tag').forEach(t => {
-    t.innerHTML = `<div class="avatar">${initials}</div>${user.name}`;
+    t.innerHTML = `<div class="avatar">${initials}</div>${name}`;
   });
-  
-  // Apply Paywall logic
-  if (plan === 'FREE') {
-    document.querySelectorAll('.premium-chip').forEach(c => {
-      c.innerHTML = '🌱 Básico';
+
+  // ── Chip de plan en todos los topbars
+  document.querySelectorAll('.premium-chip').forEach(c => {
+    if (isPremium) {
+      c.innerHTML = planLabel;
+      c.style.cssText = '';
+    } else {
+      c.innerHTML = planLabel;
       c.style.background = 'rgba(255,255,255,.05)';
       c.style.color = 'var(--text)';
       c.style.borderColor = 'var(--border)';
-    });
+    }
+  });
+
+  // ── Paywall (solo para FREE)
+  if (!isPremium) {
     document.getElementById('sec-training').querySelector('.paywall-overlay').classList.add('on');
     document.getElementById('sec-messages').querySelector('.paywall-overlay').classList.add('on');
     document.getElementById('sec-progress').querySelector('.paywall-overlay').classList.add('on');
   }
 
-  // Diet UI toggle (weight < 1 prevents issues with 0.01 fallback)
-  if (!userProfile.weight || userProfile.weight < 1) {
+  // ── Modal de perfil
+  document.getElementById('pm-avatar').textContent = initials;
+  document.getElementById('pm-name').textContent = name;
+  const hasPhysical = profile && parseFloat(profile.weight) > 1;
+  document.getElementById('pm-email-plan').textContent = `${email} · ${isPremium ? 'Premium' : 'Básico'}`;
+  document.getElementById('pm-weight').textContent = hasPhysical ? `${parseFloat(profile.weight).toFixed(1)} kg` : '—';
+  document.getElementById('pm-height').textContent = hasPhysical ? `${parseFloat(profile.height).toFixed(0)} cm` : '—';
+  document.getElementById('pm-age').textContent = profile?.age > 0 ? `${profile.age} años` : '—';
+  document.getElementById('pm-objective').textContent = OBJECTIVE_LABELS[profile?.objective] || '—';
+  document.getElementById('pm-activity').textContent = ACTIVITY_LABELS[profile?.activity_level] || '—';
+
+  // ── Card de suscripción en Preferencias
+  const subCard = document.getElementById('sub-info');
+  if (subCard) {
+    if (isPremium && profile?.subscription_end_date) {
+      const endDate = new Date(profile.subscription_end_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+      subCard.innerHTML = `
+        <div style="font-size:13px;font-weight:700">Plan Premium</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Activo · Renovación: ${endDate}</div>`;
+    } else {
+      subCard.innerHTML = `
+        <div style="font-size:13px;font-weight:700">Plan Básico</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Gratuito · Sin renovación</div>`;
+    }
+  }
+  const subBadge = document.getElementById('sub-badge');
+  if (subBadge) {
+    subBadge.textContent = isPremium ? '⚡ Activo' : '🌱 Básico';
+    subBadge.style.background = isPremium ? 'var(--limedim)' : 'rgba(255,255,255,.05)';
+    subBadge.style.color = isPremium ? 'var(--lime)' : 'var(--muted)';
+  }
+
+  // ── Dashboard macros
+  if (macros) {
+    const dot = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    dot('dash-kcal',  Math.round(macros.calories));
+    dot('dash-prot',  Math.round(macros.protein_g) + 'g');
+    dot('dash-carb',  Math.round(macros.carbs_g) + 'g');
+    dot('dash-fat',   Math.round(macros.fat_g) + 'g');
+  }
+
+  // ── Dieta: mostrar setup o macros según peso
+  if (!hasPhysical) {
     document.getElementById('diet-content').style.display = 'none';
     document.getElementById('diet-setup').style.display = 'grid';
   } else {
     document.getElementById('diet-setup').style.display = 'none';
     document.getElementById('diet-content').style.display = 'grid';
+    // Actualizar TMB y barras de macros en la sección dieta
+    if (macros) {
+      const tmbEl = document.getElementById('diet-tmb');
+      if (tmbEl) tmbEl.textContent = `${Math.round(macros.tmb)} kcal`;
+      setMacroBar('bar-kcal', 0, macros.calories, 'var(--lime)');
+      setMacroBar('bar-prot', 0, macros.protein_g, 'var(--success)');
+      setMacroBar('bar-carb', 0, macros.carbs_g, 'var(--warn)');
+      setMacroBar('bar-fat',  0, macros.fat_g, 'var(--purple)');
+      // Labels
+      setMacroLabel('lbl-kcal', 0, Math.round(macros.calories));
+      setMacroLabel('lbl-prot', 0, Math.round(macros.protein_g), 'g');
+      setMacroLabel('lbl-carb', 0, Math.round(macros.carbs_g), 'g');
+      setMacroLabel('lbl-fat',  0, Math.round(macros.fat_g), 'g');
+    }
   }
 
-  prog.style.width = (1 / secs.length * 100) + '%';
-});
+  // ── Dashboard hero texto
+  const heroName = document.getElementById('dash-hero-name');
+  if (heroName) heroName.textContent = `HOLA,`;
+  const heroNameEm = document.getElementById('dash-hero-name-em');
+  if (heroNameEm) heroNameEm.textContent = name.split(' ')[0].toUpperCase() + '.';
+}
+
+function setMacroBar(id, consumed, target, color) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const pct = target > 0 ? Math.min(Math.round(consumed / target * 100), 100) : 0;
+  el.style.width = pct + '%';
+  el.style.background = color;
+}
+function setMacroLabel(id, consumed, target, unit = '') {
+  const el = document.getElementById(id);
+  if (el) el.textContent = `${consumed}${unit} / ${target}${unit}`;
+}
+
+// ── Cerrar sesión ─────────────────────
+function logOut() {
+  localStorage.removeItem('fp_token');
+  localStorage.removeItem('fp_user');
+  window.location.href = 'index.html';
+}
+
+// ── Edición de perfil ─────────────────
+function openEditProfile() {
+  const p = appState.profile;
+  if (p) {
+    document.getElementById('edit-weight').value = parseFloat(p.weight) > 1 ? parseFloat(p.weight).toFixed(1) : '';
+    document.getElementById('edit-height').value = parseFloat(p.height) > 1 ? parseFloat(p.height).toFixed(0) : '';
+    document.getElementById('edit-age').value = p.age > 0 ? p.age : '';
+    document.getElementById('edit-objective').value = p.objective || 'MAINTAIN';
+    document.getElementById('edit-activity').value = p.activity_level || 'MODERATE';
+  }
+  document.getElementById('profile-view').style.display = 'none';
+  document.getElementById('profile-edit').style.display = 'flex';
+  document.getElementById('profile-actions-view').style.display = 'none';
+  document.getElementById('profile-actions-edit').style.display = 'flex';
+  document.getElementById('edit-error').style.display = 'none';
+}
+
+function cancelEditProfile() {
+  document.getElementById('profile-view').style.display = 'block';
+  document.getElementById('profile-edit').style.display = 'none';
+  document.getElementById('profile-actions-view').style.display = 'flex';
+  document.getElementById('profile-actions-edit').style.display = 'none';
+}
+
+async function saveProfile(btn) {
+  const weight = parseFloat(document.getElementById('edit-weight').value);
+  const height = parseFloat(document.getElementById('edit-height').value);
+  const age    = parseInt(document.getElementById('edit-age').value);
+  const objective = document.getElementById('edit-objective').value;
+  const activity  = document.getElementById('edit-activity').value;
+  const errEl = document.getElementById('edit-error');
+
+  if (!weight || weight <= 0 || !height || height <= 0 || !age || age <= 0) {
+    errEl.textContent = 'Rellena todos los campos con valores válidos.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.textContent = 'Guardando...';
+  btn.disabled = true;
+  errEl.style.display = 'none';
+
+  try {
+    const token = localStorage.getItem('fp_token');
+    const res = await fetch('/api/profile.php?action=update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ weight, height, age, gender: appState.profile?.gender || 'OTHER', objective, activity_level: activity })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      // Actualizar appState con nuevos datos
+      appState.profile = { ...appState.profile, weight, height, age, objective, activity_level: activity };
+      appState.macros  = data.data.macro_targets;
+      const user = JSON.parse(localStorage.getItem('fp_user') || '{}');
+      populateUI(appState.profile, appState.macros, user);
+      cancelEditProfile();
+    } else {
+      errEl.textContent = data.message || 'Error al guardar. Inténtalo de nuevo.';
+      errEl.style.display = 'block';
+    }
+  } catch(e) {
+    errEl.textContent = 'Error de conexión. Inténtalo de nuevo.';
+    errEl.style.display = 'block';
+  }
+
+  btn.textContent = 'Guardar cambios';
+  btn.disabled = false;
+}
 
 // ── Diet Setup ────────────────────────
 async function saveDietSetup(btn) {
@@ -699,25 +898,16 @@ async function saveDietSetup(btn) {
     const token = localStorage.getItem('fp_token');
     const res = await fetch('/api/profile.php?action=setup_macros', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ weight: w, height: h, objective: o })
     });
-    
     const data = await res.json();
-    
-    if (data.success) {
-      // Guardar en la sesión visual
-      userProfile.weight = w;
-      userProfile.height = h;
-      userProfile.objective = o;
-      localStorage.setItem('fp_user', JSON.stringify(userProfile));
 
-      // Mostrar vista principal
-      document.getElementById('diet-setup').style.display = 'none';
-      document.getElementById('diet-content').style.display = 'grid';
+    if (data.success) {
+      appState.profile = { ...appState.profile, weight: w, height: h, objective: o };
+      appState.macros  = data.data?.macro_targets || null;
+      const user = JSON.parse(localStorage.getItem('fp_user') || '{}');
+      populateUI(appState.profile, appState.macros, user);
     } else {
       alert(data.message || 'Hubo un error al guardar los datos.');
       btn.textContent = 'Calcular Mis Macros';
@@ -828,19 +1018,15 @@ function drawChart() {
   const mn=Math.min(...data)*.998, mx=Math.max(...data)*1.002;
   const sx=i=>pad.l+i*(W-pad.l-pad.r)/(data.length-1);
   const sy=v=>pad.t+(1-(v-mn)/(mx-mn))*(H-pad.t-pad.b);
-  // grid
   ctx.strokeStyle='rgba(255,255,255,.05)'; ctx.lineWidth=1;
   for(let i=0;i<4;i++){const y=pad.t+i*(H-pad.t-pad.b)/3;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();}
-  // area
   const g=ctx.createLinearGradient(0,pad.t,0,H-pad.b);
   g.addColorStop(0,'rgba(255,107,107,.25)'); g.addColorStop(1,'rgba(255,107,107,0)');
   ctx.beginPath(); data.forEach((v,i)=>i===0?ctx.moveTo(sx(i),sy(v)):ctx.lineTo(sx(i),sy(v)));
   ctx.lineTo(sx(data.length-1),H-pad.b); ctx.lineTo(sx(0),H-pad.b); ctx.closePath();
   ctx.fillStyle=g; ctx.fill();
-  // line
   ctx.beginPath(); ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--lime').trim(); ctx.lineWidth=2.5; ctx.lineJoin='round';
   data.forEach((v,i)=>i===0?ctx.moveTo(sx(i),sy(v)):ctx.lineTo(sx(i),sy(v))); ctx.stroke();
-  // dots + labels
   lbls.forEach((l,i)=>{
     ctx.beginPath(); ctx.arc(sx(i),sy(data[i]),3.5,0,Math.PI*2);
     ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--lime').trim(); ctx.fill();
@@ -850,10 +1036,7 @@ function drawChart() {
   });
 }
 
-// Remove old wheel/key/touch listeners for 3D carousel
-// (Standard scrolling or show() logic is preferred)
-
-// ── Mobile native scroll bindings ─────
+// ── Mobile scroll ─────────────────────
 if (window.innerWidth <= 768) {
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
@@ -870,42 +1053,27 @@ if (window.innerWidth <= 768) {
       }
     });
   }, { threshold: 0.3 });
-  
   document.querySelectorAll('.section').forEach(s => observer.observe(s));
 }
 
-// ── Input & Effects ───────────────────
+// ── Cursor FX ─────────────────────────
 const cur=document.getElementById('cur'),ring=document.getElementById('cur-ring');
 let mx=0,my=0,rx=0,ry=0;
-
-document.addEventListener('mousemove', e => {
-  mx = e.clientX;
-  my = e.clientY;
-  cur.style.transform = `translate3d(${mx}px, ${my}px, 0)`;
-});
-
+document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; cur.style.transform = `translate3d(${mx}px, ${my}px, 0)`; });
 (function animFX() {
-  // Cursor ring animation (snappier factor 0.2)
-  rx += (mx - rx) * 0.2;
-  ry += (my - ry) * 0.2;
+  rx += (mx - rx) * 0.2; ry += (my - ry) * 0.2;
   ring.style.transform = `translate3d(${rx}px, ${ry}px, 0)`;
-
-  // Throttled Parallax (only for Desktop)
   if (window.innerWidth > 768) {
-    const xp = (mx / innerWidth - 0.5) * 2;
-    const yp = (my / innerHeight - 0.5) * 2;
+    const xp = (mx / innerWidth - 0.5) * 2, yp = (my / innerHeight - 0.5) * 2;
     const hero = document.querySelector('.section.visible .slide-hero');
     if (hero) hero.style.transform = `translate3d(${xp * 8}px, ${yp * 5}px, 0)`;
   }
-  
   requestAnimationFrame(animFX);
 })();
-
 document.querySelectorAll('button,.arw,.ndot,.check-btn').forEach(el => {
   el.addEventListener('mouseenter', () => { cur.style.width = '22px'; cur.style.height = '22px' });
   el.addEventListener('mouseleave', () => { cur.style.width = '12px'; cur.style.height = '12px' });
 });
-
 document.querySelectorAll('.user-tag').forEach(el => {
   el.style.cursor = 'pointer';
   el.addEventListener('click', () => openModal('modal-profile'));
@@ -917,6 +1085,7 @@ function closeModal(el){el.closest('.modal-overlay').classList.remove('open')}
 document.querySelectorAll('.modal-overlay').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')})});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'))});
 </script>
+
 
 <!-- ═══ MODALS ═══ -->
 
@@ -975,22 +1144,64 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelect
   <div class="modal-box" onclick="event.stopPropagation()">
     <div class="modal-head"><h2>MI PERFIL</h2><button class="modal-close" onclick="closeModal(this)">✕</button></div>
     <div class="modal-body">
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)">
-        <div style="width:56px;height:56px;border-radius:50%;background:var(--limedim);color:var(--lime);display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:22px">JG</div>
-        <div><div style="font-size:16px;font-weight:700">Javier García</div><div style="font-size:12px;color:var(--muted)">javier@mail.com · Premium</div></div>
+      <!-- Vista lectura (default) -->
+      <div id="profile-view">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+          <div id="pm-avatar" style="width:56px;height:56px;border-radius:50%;background:var(--limedim);color:var(--lime);display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:22px">?</div>
+          <div>
+            <div id="pm-name" style="font-size:16px;font-weight:700">—</div>
+            <div id="pm-email-plan" style="font-size:12px;color:var(--muted)">—</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Peso</span><strong id="pm-weight">—</strong></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Altura</span><strong id="pm-height">—</strong></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Edad</span><strong id="pm-age">—</strong></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Objetivo</span><strong id="pm-objective">—</strong></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Actividad</span><strong id="pm-activity">—</strong></div>
+        </div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Peso</span><strong>74.2 kg</strong></div>
-        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Altura</span><strong>178 cm</strong></div>
-        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Edad</span><strong>28 años</strong></div>
-        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Objetivo</span><strong>Ganar masa muscular</strong></div>
-        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Actividad</span><strong>Moderada</strong></div>
-        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Entrenadora</span><strong>Laura Vidal</strong></div>
+
+      <!-- Vista edición (oculta por defecto) -->
+      <div id="profile-edit" style="display:none;flex-direction:column;gap:12px">
+        <div class="grid2">
+          <div class="field"><label class="label">Peso (kg)</label><input class="input" id="edit-weight" type="number" placeholder="70" min="10" max="500" step="0.1"></div>
+          <div class="field"><label class="label">Altura (cm)</label><input class="input" id="edit-height" type="number" placeholder="175" min="50" max="300"></div>
+        </div>
+        <div class="field"><label class="label">Edad</label><input class="input" id="edit-age" type="number" placeholder="25" min="10" max="120"></div>
+        <div class="field">
+          <label class="label">Objetivo</label>
+          <select class="input" id="edit-objective" style="appearance:none;background:rgba(255,255,255,.05);color:var(--text)">
+            <option value="GAIN_MUSCLE" style="color:black">Construir masa muscular</option>
+            <option value="LOSE_WEIGHT" style="color:black">Perder peso / Definir</option>
+            <option value="MAINTAIN" style="color:black">Mantener el peso actual</option>
+            <option value="IMPROVE_HEALTH" style="color:black">Mejorar salud general</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="label">Nivel de actividad</label>
+          <select class="input" id="edit-activity" style="appearance:none;background:rgba(255,255,255,.05);color:var(--text)">
+            <option value="SEDENTARY" style="color:black">Sedentario (poco/ningún ejercicio)</option>
+            <option value="LIGHT" style="color:black">Ligero (1–3 días/sem)</option>
+            <option value="MODERATE" style="color:black">Moderado (3–5 días/sem)</option>
+            <option value="ACTIVE" style="color:black">Activo (6–7 días/sem)</option>
+            <option value="VERY_ACTIVE" style="color:black">Muy activo (2x/día)</option>
+          </select>
+        </div>
+        <div id="edit-error" style="display:none;color:var(--danger);font-size:12px;padding:8px;background:rgba(255,77,109,.08);border-radius:6px;border:1px solid rgba(255,77,109,.2)"></div>
       </div>
     </div>
-    <div class="modal-actions">
+
+    <!-- Acciones: Vista lectura -->
+    <div class="modal-actions" id="profile-actions-view">
+      <button class="btn-danger" onclick="logOut()" style="margin-right:auto">↩ Cerrar sesión</button>
       <button class="btn-ghost" onclick="closeModal(this)">Cerrar</button>
-      <button class="btn-lime" onclick="closeModal(this)">Editar perfil</button>
+      <button class="btn-lime" onclick="openEditProfile()">Editar perfil</button>
+    </div>
+    <!-- Acciones: Vista edición -->
+    <div class="modal-actions" id="profile-actions-edit" style="display:none">
+      <button class="btn-ghost" onclick="cancelEditProfile()">Cancelar</button>
+      <button class="btn-lime" id="btn-save-profile" onclick="saveProfile(this)">Guardar cambios</button>
     </div>
   </div>
 </div>
