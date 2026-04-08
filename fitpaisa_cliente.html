@@ -669,8 +669,8 @@ window.addEventListener('load', () => {
     document.getElementById('sec-progress').querySelector('.paywall-overlay').classList.add('on');
   }
 
-  // Diet UI toggle
-  if (!userProfile.weight || userProfile.weight <= 0) {
+  // Diet UI toggle (weight < 1 prevents issues with 0.01 fallback)
+  if (!userProfile.weight || userProfile.weight < 1) {
     document.getElementById('diet-content').style.display = 'none';
     document.getElementById('diet-setup').style.display = 'grid';
   } else {

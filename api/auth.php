@@ -156,13 +156,16 @@ function handle_register(): never
         }
 
         /* Crear perfil físico */
+        $weightToSave = ($weight <= 0) ? 0.01 : $weight;
+        $heightToSave = ($height <= 0) ? 0.01 : $height;
+
         $db->prepare("
             INSERT INTO profiles (user_id, weight, height, age, gender, objective, activity_level, updated_at)
             VALUES (:uid, :weight, :height, :age, :gender, :objective, :activity, NOW())
         ")->execute([
             ':uid'       => $user['user_id'],
-            ':weight'    => $weight,
-            ':height'    => $height,
+            ':weight'    => $weightToSave,
+            ':height'    => $heightToSave,
             ':age'       => $age,
             ':gender'    => $gender,
             ':objective' => $objective,
@@ -181,10 +184,15 @@ function handle_register(): never
         ]);
 
         $db->commit();
-    } catch (Throwable $e) {
+    } catch (PDOException $e) {
         $db->rollBack();
-        error_log('[FitPaisa][REGISTER] ' . $e->getMessage());
-        fp_error(500, 'Error al crear la cuenta. Intenta de nuevo.');
+        error_log('[FitPaisa][AUTH] Error SQL en handle_register: ' . $e->getMessage());
+        $messageForUser = 'Error en base de datos: ' . $e->getMessage();
+        fp_error(500, $messageForUser);
+    } catch (Exception $e) {
+        $db->rollBack();
+        error_log('[FitPaisa][AUTH] Exception en handle_register: ' . $e->getMessage());
+        fp_error(500, $e->getMessage());
     }
 
     /* ── Generar JWT ── */
