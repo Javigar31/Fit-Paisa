@@ -175,7 +175,7 @@ function handle_register(): never
         try {
             $stmtProf = $db->prepare("
                 INSERT INTO profiles (user_id, weight, height, age, gender, objective, activity_level, updated_at)
-                VALUES (:uid, :weight, :height, :age, :gender, :objective, :activity, NOW())
+                VALUES (:uid, :weight, :height, :age, :gender::gender_type, :objective::objective_type, :activity::activity_level, NOW())
             ");
             if (!$stmtProf->execute([
                 ':uid'       => $user['user_id'],
@@ -203,7 +203,7 @@ function handle_register(): never
         try {
             $stmtSub = $db->prepare("
                 INSERT INTO subscriptions (user_id, plan_type, status, start_date, end_date, amount)
-                VALUES (:uid, :plan, 'ACTIVE', CURRENT_DATE, CURRENT_DATE + INTERVAL '1 month', :amount)
+                VALUES (:uid, :plan::subscription_plan, 'ACTIVE', CURRENT_DATE, CURRENT_DATE + INTERVAL '1 month', :amount)
             ");
             if (!$stmtSub->execute([
                 ':uid'    => $user['user_id'],
