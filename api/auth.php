@@ -206,18 +206,26 @@ function handle_register(): never
 
             // Construir el INSERT lo más tonto posible (todo parametrizado y parseado desde PHP)
             // Bypass complete of PDO prepare bindings to dodge PgBouncer Parse bugs
-            $sql = sprintf(
-                "INSERT INTO subscriptions (user_id, plan_type, status, start_date, end_date, amount) 
-                 VALUES (%d, '%s', 'ACTIVE', CURRENT_DATE, '%s', %F)",
-                (int)$user['user_id'],
-                $plan,
-                $endDate,
-                $amount
-            );
+            $stmtSub = $db->prepare("
+                INSERT INTO subscriptions (user_id, plan_type, status, start_date, end_date, amount)
+                VALUES (
+                    CAST(:uid AS integer),
+                    CAST(:plan AS subscription_plan),
+                    'ACTIVE',
+                    CURRENT_DATE,
+                    CAST(:end_date AS date),
+                    CAST(:amount AS numeric)
+                )
+            ");
 
-            if ($db->exec($sql) === false) {
-                $err = $db->errorInfo();
-                throw new Exception("Silent fail in subscriptions exec: " . json_encode($err));
+            if (!$stmtSub->execute([
+                ':uid'      => $user['user_id'],
+                ':plan'     => $plan,
+                ':end_date' => $endDate,
+                ':amount'   => $amount,
+            ])) {
+                $err = $stmtSub->errorInfo();
+                throw new Exception("Silent fail in subscriptions: " . json_encode($err));
             }
         } catch (Exception $e) {
             throw new Exception("Error inserting subscription: " . $e->getMessage() . " | Debug Info: user_id=" . $user['user_id'] . " plan=" . $plan);

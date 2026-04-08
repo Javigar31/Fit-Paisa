@@ -55,7 +55,8 @@ function fp_db(): PDO
         $_fp_pdo = new PDO($dsn, $user, $pass, [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES   => false,   /* Prepara en servidor real */
+            /* Neon pooler/PgBouncer no se lleva bien con server-side prepares en flujos transaccionales. */
+            PDO::ATTR_EMULATE_PREPARES   => true,
             PDO::ATTR_TIMEOUT            => 10,
         ]);
     } catch (PDOException $e) {
