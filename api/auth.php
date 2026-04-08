@@ -90,25 +90,23 @@ function handle_register(): never
         $errors[] = 'El sexo seleccionado no es válido.';
     }
 
-    /* ── Valores por defecto para cuenta GRATUITA ── */
+    /* ── Valores por defecto para registro en 2 pasos ── */
+    /* Tanto Free como Premium configuran su peso/altura después de registrarse. */
     $objective = 'MAINTAIN';
     $weight    = 0.01;
     $height    = 0.01;
 
-    if ($plan !== 'FREE') {
-        /* Plan de pago: requiere datos físicos completos */
-        if (!in_array($objectiveInput, ['LOSE_WEIGHT', 'GAIN_MUSCLE', 'MAINTAIN', 'IMPROVE_HEALTH'], true)) {
-            $errors[] = 'El objetivo seleccionado no es válido.';
-        }
-        if ($rawWeight <= 0 || $rawWeight > 500) {
-            $errors[] = 'El peso debe estar entre 0 y 500 kg.';
-        }
-        if ($rawHeight <= 0 || $rawHeight > 300) {
-            $errors[] = 'La altura debe estar entre 0 y 300 cm.';
-        }
+    // Solo validamos si por alguna razón logran enviarlos (post-registro o manual)
+    if ($rawWeight > 0) {
+        if ($rawWeight > 500) $errors[] = 'El peso debe ser menor a 500 kg.';
+        else $weight = $rawWeight;
+    }
+    if ($rawHeight > 0) {
+        if ($rawHeight > 300) $errors[] = 'La altura debe ser menor a 300 cm.';
+        else $height = $rawHeight;
+    }
+    if (!empty($objectiveInput) && in_array($objectiveInput, ['LOSE_WEIGHT', 'GAIN_MUSCLE', 'MAINTAIN', 'IMPROVE_HEALTH'], true)) {
         $objective = $objectiveInput;
-        $weight    = $rawWeight;
-        $height    = $rawHeight;
     }
 
     if (!empty($errors)) {
