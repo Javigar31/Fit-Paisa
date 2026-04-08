@@ -30,6 +30,7 @@ match ($action) {
     'users'           => handle_users(),
     'coaches'         => handle_coaches(),
     'recent_activity' => handle_recent_activity(),
+    'subscriptions'   => handle_subscriptions(),
     'update_user'     => handle_update_user($payload),
     default           => fp_error(400, "Acción '{$action}' no reconocida."),
 };
@@ -142,9 +143,48 @@ function handle_recent_activity(): never
     fp_success(['recent' => $recent]);
 }
 
-/* ══════════════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════════════════
+   SUBSCRIPTIONS — Estadísticas y lista de suscripciones
+   ══════════════════════════════════════════════════════════════════ */
+function handle_subscriptions(): never
+{
+    $stats = fp_query("
+        SELECT
+            COUNT(*) FILTER (WHERE status = 'ACTIVE')                                        AS active,
+            COUNT(*) FILTER (WHERE status = 'PENDING')                                       AS pending,
+            COUNT(*) FILTER (WHERE status = 'CANCELLED'
+                AND updated_at >= date_trunc('month', NOW()))                                AS cancelled_month,
+            COUNT(*) FILTER (WHERE plan_type = 'PREMIUM_MONTHLY' AND status = 'ACTIVE') * 9  AS mrr_monthly,
+            COUNT(*) FILTER (WHERE plan_type = 'PREMIUM_ANNUAL'  AND status = 'ACTIVE') * 1  AS mrr_annual
+        FROM subscriptions
+    ")->fetch();
+
+    $mrrEstimate = ($stats['mrr_monthly'] ?? 0) + ($stats['mrr_annual'] ?? 0);
+
+    $subscriptions = fp_query("
+        SELECT s.subscription_id, s.plan_type, s.status, s.provider,
+               s.starts_at, s.ends_at,
+               u.full_name, u.email
+        FROM subscriptions s
+        JOIN users u ON u.user_id = s.user_id
+        ORDER BY s.starts_at DESC
+        LIMIT 50
+    ")->fetchAll();
+
+    fp_success([
+        'stats'         => [
+            'active'          => (int) ($stats['active']          ?? 0),
+            'pending'         => (int) ($stats['pending']         ?? 0),
+            'cancelled_month' => (int) ($stats['cancelled_month'] ?? 0),
+            'mrr_estimate'    => number_format($mrrEstimate, 2, '.', ''),
+        ],
+        'subscriptions' => $subscriptions,
+    ]);
+}
+
+/* ══════════════════════════════════════════════════════════════════
    UPDATE USER — Cambiar rol o estado (ADMIN no puede auto-modificarse)
-   ══════════════════════════════════════════════════════════════════════ */
+   ══════════════════════════════════════════════════════════════════ */
 function handle_update_user(array $adminPayload): never
 {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

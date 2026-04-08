@@ -328,53 +328,47 @@ select.input{appearance:none;cursor:none}
 
   <!-- SUSCRIPCIONES -->
   <div class="section hidden-right" id="sec-subs">
-    <div class="page-head r r1"><div><h1>SUSCRIPCIONES</h1><p>Control de pagos y planes Premium — Stripe / PayPal</p></div></div>
+    <div class="page-head r r1"><div><h1>SUSCRIPCIONES</h1><p>Control de planes activos en la plataforma</p></div></div>
     <div class="grid4 r r2" style="margin-bottom:16px">
-      <div class="card"><div class="stat-v" style="color:var(--lime)">89</div><div class="stat-l">Activas</div></div>
-      <div class="card"><div class="stat-v" style="color:var(--warn)">4</div><div class="stat-l">Pendientes de pago</div></div>
-      <div class="card"><div class="stat-v" style="color:var(--danger)">2</div><div class="stat-l">Canceladas este mes</div></div>
-      <div class="card"><div class="stat-v" style="color:var(--success)">889€</div><div class="stat-l">MRR (ingresos/mes)</div></div>
+      <div class="card"><div class="stat-v" style="color:var(--lime)" id="sub-active">…</div><div class="stat-l">Activas</div></div>
+      <div class="card"><div class="stat-v" style="color:var(--warn)" id="sub-pending">…</div><div class="stat-l">Pendientes</div></div>
+      <div class="card"><div class="stat-v" style="color:var(--danger)" id="sub-cancelled">…</div><div class="stat-l">Canceladas este mes</div></div>
+      <div class="card"><div class="stat-v" style="color:var(--success)" id="sub-mrr">…</div><div class="stat-l">MRR estimado</div></div>
     </div>
     <div class="card r r3">
-      <div class="card-title">Suscripciones recientes</div>
+      <div class="card-title">Suscripciones activas</div>
       <div class="table-wrap">
       <table>
         <thead><tr><th>Usuario</th><th>Plan</th><th>Proveedor</th><th>Inicio</th><th>Renovación</th><th>Estado</th></tr></thead>
-        <tbody>
-          <tr><td>Javier García</td><td><span class="badge b-lime">Premium</span></td><td>Stripe</td><td style="color:var(--muted)">01/04/2026</td><td style="color:var(--muted)">01/05/2026</td><td><span class="badge b-green">Activa</span></td></tr>
-          <tr><td>Sofía Reyes</td><td><span class="badge b-lime">Premium</span></td><td>PayPal</td><td style="color:var(--muted)">15/03/2026</td><td style="color:var(--muted)">15/04/2026</td><td><span class="badge b-green">Activa</span></td></tr>
-          <tr><td>Ana García</td><td><span class="badge b-lime">Premium</span></td><td>Stripe</td><td style="color:var(--muted)">20/03/2026</td><td style="color:var(--muted)">20/04/2026</td><td><span class="badge b-green">Activa</span></td></tr>
-          <tr><td>Luis Moreno</td><td><span class="badge b-gray">Básico</span></td><td>—</td><td style="color:var(--muted)">—</td><td style="color:var(--muted)">—</td><td><span class="badge b-warn">Pendiente</span></td></tr>
+        <tbody id="subs-tbody">
+          <tr><td colspan="6" style="text-align:center;color:var(--muted)">Cargando…</td></tr>
         </tbody>
       </table>
       </div>
-      <div style="margin-top:14px;padding:12px;background:rgba(255,255,255,.03);border-radius:10px;font-size:12px;color:var(--muted)">🔒 Los datos de tarjeta son gestionados íntegramente por Stripe/PayPal (PCI-DSS). FitPaisa solo almacena el ID externo de la transacción.</div>
+      <div style="margin-top:14px;padding:12px;background:rgba(255,255,255,.03);border-radius:10px;font-size:12px;color:var(--muted)">🔒 Pasarela de pagos pendiente de integración (Stripe / PayPal). Los datos financieros aquí son los registrados en la BD interna.</div>
     </div>
   </div>
 
   <!-- LOGS -->
   <div class="section hidden-right" id="sec-logs">
-    <div class="page-head r r1"><div><h1>LOGS DEL SISTEMA</h1><p>Registros de actividad — MongoDB</p></div></div>
+    <div class="page-head r r1"><div><h1>LOGS DEL SISTEMA</h1><p>Registros de actividad en tiempo real</p></div></div>
     <div class="grid2 r r2" style="margin-bottom:16px">
       <div class="card">
-        <div class="card-title">Logs de seguridad</div>
-        <div id="secLogs"></div>
+        <div class="card-title">Usuarios recientes</div>
+        <div id="secLogs"><div style="color:var(--muted);font-size:12px">Ir a la sección para cargar…</div></div>
       </div>
       <div class="card">
-        <div class="card-title">Logs de actividad</div>
-        <div id="actLogs"></div>
+        <div class="card-title">Actividad de suscripciones</div>
+        <div id="actLogs"><div style="color:var(--muted);font-size:12px;padding:8px 0">Sin suscripciones activas aún. Los eventos aparecerán aquí cuando los usuarios activen planes.</div></div>
       </div>
     </div>
     <div class="card r r3">
-      <div class="card-title">Logs de notificaciones SMTP</div>
+      <div class="card-title">Últimos logins registrados</div>
       <div class="table-wrap">
       <table>
-        <thead><tr><th>Destinatario</th><th>Tipo</th><th>Estado</th><th>Enviado</th></tr></thead>
-        <tbody>
-          <tr><td>javier@mail.com</td><td>Confirmación de pago</td><td><span class="badge b-green">Enviado</span></td><td style="color:var(--muted)">Hoy 10:33</td></tr>
-          <tr><td>sofia@mail.com</td><td>Restablecimiento de contraseña</td><td><span class="badge b-green">Enviado</span></td><td style="color:var(--muted)">Hoy 09:16</td></tr>
-          <tr><td>nuevo@mail.com</td><td>Bienvenida</td><td><span class="badge b-green">Enviado</span></td><td style="color:var(--muted)">Ayer 17:31</td></tr>
-          <tr><td>test@null.com</td><td>Recordatorio actividad</td><td><span class="badge b-red">Error</span></td><td style="color:var(--muted)">Ayer 12:00</td></tr>
+        <thead><tr><th>Usuario</th><th>Email</th><th>Último acceso</th><th>Estado</th></tr></thead>
+        <tbody id="login-logs-tbody">
+          <tr><td colspan="4" style="text-align:center;color:var(--muted)">Cargando…</td></tr>
         </tbody>
       </table>
       </div>
@@ -693,6 +687,68 @@ function openViewCoach(name,email,spec,clients){
   document.getElementById('vc-detail').innerHTML=`<div style="display:flex;flex-direction:column;gap:10px"><div style="font-size:13px"><strong>Correo:</strong> <span style="color:var(--muted)">${email}</span></div><div style="font-size:13px"><strong>Clientes activos:</strong> <span style="color:var(--muted)">${clients}</span></div></div>`;
   openModal('modal-view-coach');
 }
+
+// ══ LOAD SUBSCRIPTIONS ══
+async function loadSubscriptions(){
+  try{
+    const res  = await fetch('/api/admin.php?action=subscriptions', {headers:fpHeaders()});
+    const data = await res.json();
+    if (!data.success) return;
+    const s = data.stats;
+    document.getElementById('sub-active').textContent    = s.active;
+    document.getElementById('sub-pending').textContent   = s.pending;
+    document.getElementById('sub-cancelled').textContent = s.cancelled_month;
+    document.getElementById('sub-mrr').textContent       = s.active === 0 ? '0 €' : s.mrr_estimate + ' €';
+    const tbody = document.getElementById('subs-tbody');
+    if (data.subscriptions.length === 0){
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted)">No hay suscripciones activas todavía.</td></tr>';
+    } else {
+      const planLabel={PREMIUM_MONTHLY:'Premium',PREMIUM_ANNUAL:'Anual',FREE:'Free'};
+      const statusLabel={ACTIVE:'Activa',CANCELLED:'Cancelada',PENDING:'Pendiente',EXPIRED:'Expirada'};
+      const statusClass={ACTIVE:'b-green',CANCELLED:'b-red',PENDING:'b-yellow',EXPIRED:'b-gray'};
+      tbody.innerHTML = data.subscriptions.map(s=>`<tr>
+        <td>${s.full_name}</td>
+        <td><span class="badge b-lime">${planLabel[s.plan_type]||s.plan_type}</span></td>
+        <td>${s.provider||'—'}</td>
+        <td style="color:var(--muted)">${fmtDate(s.starts_at)}</td>
+        <td style="color:var(--muted)">${fmtDate(s.ends_at)}</td>
+        <td><span class="badge ${statusClass[s.status]||'b-gray'}">${statusLabel[s.status]||s.status}</span></td>
+      </tr>`).join('');
+    }
+  } catch(e){ console.error(e); }
+}
+
+// ══ LOAD LOGS ══
+async function loadLogs(){
+  try{
+    const res  = await fetch('/api/admin.php?action=recent_activity', {headers:fpHeaders()});
+    const data = await res.json();
+    if (!data.success) return;
+    document.getElementById('secLogs').innerHTML = data.recent.slice(0,5).map(u=>`
+      <div class="log-item">
+        <div class="log-dot" style="background:${u.is_active?'var(--lime)':'var(--danger)'}"></div>
+        <div class="log-time">${fmtDate(u.created_at).split(' ')[1]||'—'}</div>
+        <div style="flex:1;color:var(--muted);font-size:12px">Registro — ${u.full_name}</div>
+      </div>`).join('') || '<div style="color:var(--muted);font-size:12px">Sin registros.</div>';
+    // Login logs table
+    document.getElementById('login-logs-tbody').innerHTML = data.recent.map(u=>`<tr>
+      <td>${u.full_name}</td>
+      <td style="color:var(--muted)">${u.email}</td>
+      <td style="color:var(--muted)">${u.last_login ? fmtDate(u.last_login) : 'Nunca'}</td>
+      <td>${statusBadge(u.is_active)}</td>
+    </tr>`).join('');
+  } catch(e){ console.error(e); }
+}
+
+// ══ HOOK show() — cargar datos lazy al navegar ══
+const _origShowFn = show;
+window.show = function(id, el){
+  _origShowFn(id, el);
+  if (id === 'users')   loadUsers(currentPage, currentSearch);
+  if (id === 'coaches') loadCoaches();
+  if (id === 'subs')    loadSubscriptions();
+  if (id === 'logs')    loadLogs();
+};
 
 // ══ INIT ══
 loadStats();
