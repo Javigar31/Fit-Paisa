@@ -207,7 +207,14 @@ function handle_register(): never
             // Construir el INSERT lo más tonto posible (todo parametrizado y parseado desde PHP)
             $stmtSub = $db->prepare("
                 INSERT INTO subscriptions (user_id, plan_type, status, start_date, end_date, amount)
-                VALUES (:uid, :plan::subscription_plan, 'ACTIVE', CURRENT_DATE, :end_date::date, :amount::numeric)
+                VALUES (
+                    CAST(:uid AS integer),
+                    CAST(:plan AS subscription_plan),
+                    'ACTIVE',
+                    CURRENT_DATE,
+                    CAST(:end_date AS date),
+                    CAST(:amount AS numeric)
+                )
             ");
             
             if (!$stmtSub->execute([
