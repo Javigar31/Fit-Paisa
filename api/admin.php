@@ -51,13 +51,16 @@ function handle_stats(): never
         FROM users
     ")->fetch();
 
-    $activeSubs = fp_query("
+    $activeSubs = (int) fp_query("
         SELECT COUNT(DISTINCT user_id) FROM subscriptions WHERE status = 'ACTIVE'
     ")->fetchColumn();
 
+    $mrr = $activeSubs * 9.99;
+
     fp_success([
         'stats' => array_merge($stats, [
-            'active_subscriptions' => (int) $activeSubs,
+            'active_subscriptions' => $activeSubs,
+            'mrr_estimate'         => number_format($mrr, 2, '.', '')
         ]),
     ]);
 }

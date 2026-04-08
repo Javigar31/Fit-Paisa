@@ -245,10 +245,10 @@ select.input{appearance:none;cursor:none}
     <div class="grid2 r r3" style="margin-bottom:16px">
       <div class="card">
         <div class="card-title">Ingresos (Stripe/PayPal)</div>
-        <div style="font-family:var(--fd);font-size:44px;color:var(--lime)">889,11€</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:4px">Este mes · 89 suscripciones × 9,99€</div>
-        <div class="bar-track" style="margin-top:12px"><div class="bar-fill" style="width:72%;background:var(--lime)"></div></div>
-        <div style="font-size:11px;color:var(--muted);margin-top:6px">72% del objetivo mensual (1.200€)</div>
+        <div style="font-family:var(--fd);font-size:44px;color:var(--lime)" id="stat-mrr">…</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px" id="stat-mrr-desc">Calculando…</div>
+        <div class="bar-track" style="margin-top:12px"><div class="bar-fill" id="stat-mrr-bar" style="width:0%;background:var(--lime)"></div></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px" id="stat-mrr-goal">0% del objetivo mensual (1.200€)</div>
       </div>
       <div class="card">
         <div class="card-title">Estado del sistema</div>
@@ -457,40 +457,11 @@ function show(id, el){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('on'));
   if (el) el.classList.add('on');
   document.getElementById('prog').style.width=((ni+1)/secs.length*100)+'%';
-  if(id==='logs')renderLogs();
 }
 
 // clock
 function tick(){const n=new Date();document.getElementById('clock').textContent=n.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+' · '+n.toLocaleDateString('es-ES')}
 tick();setInterval(tick,1000);
-
-// logs
-function renderLogs(){
-  const secLogs=[
-    {color:'var(--warn)', text:'Login fallido (3x) — Pablo Torres',time:'22:40'},
-    {color:'var(--lime)', text:'JWT renovado — Javier García',time:'18:32'},
-    {color:'var(--lime)', text:'Contraseña restablecida — Sofía Reyes',time:'09:15'},
-    {color:'var(--danger)',text:'Webhook HMAC inválido recibido',time:'Ayer 03:12'},
-  ];
-  const actLogs=[
-    {color:'var(--lime)', text:'Plan aprobado — Ana García / Laura Vidal',time:'18:05'},
-    {color:'var(--lime)', text:'Suscripción Premium — Javier García',time:'10:32'},
-    {color:'var(--success)',text:'Registro completado en 3 pasos',time:'Ayer 17:30'},
-    {color:'var(--lime)', text:'Mensaje enviado — Javier → Laura',time:'10:35'},
-  ];
-  document.getElementById('secLogs').innerHTML=secLogs.map(l=>`
-    <div class="log-item">
-      <div class="log-dot" style="background:${l.color}"></div>
-      <div class="log-time">${l.time}</div>
-      <div style="flex:1;color:var(--muted)">${l.text}</div>
-    </div>`).join('');
-  document.getElementById('actLogs').innerHTML=actLogs.map(l=>`
-    <div class="log-item">
-      <div class="log-dot" style="background:${l.color}"></div>
-      <div class="log-time">${l.time}</div>
-      <div style="flex:1;color:var(--muted)">${l.text}</div>
-    </div>`).join('');
-}
 
 // ═══ Modals ═══
 function openModal(id){document.getElementById(id).classList.add('open')}
@@ -539,6 +510,15 @@ async function loadStats(){
     document.getElementById('stat-week').textContent        = '+'+s.new_this_week+' esta semana';
     document.getElementById('badge-users').textContent      = s.total_users;
     document.getElementById('badge-coaches').textContent    = s.total_coaches;
+    
+    // Revenue module
+    const mrr = s.mrr_estimate || "0.00";
+    document.getElementById('stat-mrr').textContent = mrr.replace('.', ',') + '€';
+    document.getElementById('stat-mrr-desc').textContent = 'Este mes · ' + s.active_subscriptions + ' suscripciones activas';
+    const goalPct = Math.min(100, Math.round((parseFloat(mrr) / 1200) * 100));
+    document.getElementById('stat-mrr-bar').style.width = goalPct + '%';
+    document.getElementById('stat-mrr-goal').textContent = goalPct + '% del objetivo mensual (1.200€)';
+
     const uc = document.getElementById('users-count');
     if(uc) uc.textContent = s.total_users + ' registros';
   } catch(e){ console.error(e); }
