@@ -173,10 +173,11 @@ function handle_register(): never
         $heightToSave = ($height <= 0) ? 0.01 : $height;
 
         try {
-            $db->prepare("
+            $stmtProf = $db->prepare("
                 INSERT INTO profiles (user_id, weight, height, age, gender, objective, activity_level, updated_at)
                 VALUES (:uid, :weight, :height, :age, :gender, :objective, :activity, NOW())
-            ")->execute([
+            ");
+            if (!$stmtProf->execute([
                 ':uid'       => $user['user_id'],
                 ':weight'    => $weightToSave,
                 ':height'    => $heightToSave,
@@ -184,7 +185,15 @@ function handle_register(): never
                 ':gender'    => $gender,
                 ':objective' => $objective,
                 ':activity'  => $activity,
-            ]);
+            ])) {
+                $err = $stmtProf->errorInfo();
+                throw new Exception("Silent fail in profiles: " . json_encode($err));
+            }
+            
+            /* Debug check for aborted transaction */
+            if ($db->query("SELECT 1") === false) {
+                throw new Exception("Transaction silently aborted by Postgres during profiles insert! " . json_encode($db->errorInfo()));
+            }
         } catch (Exception $e) {
             throw new Exception("Error inserting profile: " . $e->getMessage());
         }
@@ -192,14 +201,18 @@ function handle_register(): never
         /* Crear suscripción inicial */
         $amount = ($plan === 'FREE') ? 0.0 : 14.99;
         try {
-            $db->prepare("
+            $stmtSub = $db->prepare("
                 INSERT INTO subscriptions (user_id, plan_type, status, start_date, end_date, amount)
                 VALUES (:uid, :plan, 'ACTIVE', CURRENT_DATE, CURRENT_DATE + INTERVAL '1 month', :amount)
-            ")->execute([
+            ");
+            if (!$stmtSub->execute([
                 ':uid'    => $user['user_id'],
                 ':plan'   => $plan,
                 ':amount' => $amount
-            ]);
+            ])) {
+                $err = $stmtSub->errorInfo();
+                throw new Exception("Silent fail in subscriptions: " . json_encode($err));
+            }
         } catch (Exception $e) {
             throw new Exception("Error inserting subscription: " . $e->getMessage());
         }
