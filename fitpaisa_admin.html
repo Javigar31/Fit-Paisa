@@ -206,7 +206,7 @@ select.input{appearance:none;cursor:none}
     </div>
     <div class="nav-item" onclick="show('subs', this)">
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Suscripciones
-      <span class="nbadge" style="background:var(--limedim);color:var(--lime)">89</span>
+      <span id="badge-subs" class="nbadge" style="background:rgba(255,255,255,.1);color:var(--muted)">…</span>
     </div>
     <div class="sb-label">Sistema</div>
     <div class="nav-item" onclick="show('logs', this)">
@@ -510,6 +510,19 @@ async function loadStats(){
     document.getElementById('stat-week').textContent        = '+'+s.new_this_week+' esta semana';
     document.getElementById('badge-users').textContent      = s.total_users;
     document.getElementById('badge-coaches').textContent    = s.total_coaches;
+    
+    // Update Subs badge dynamically
+    const bSubs = document.getElementById('badge-subs');
+    if (bSubs) {
+      bSubs.textContent = s.active_subscriptions;
+      if (s.active_subscriptions > 0) {
+        bSubs.style.background = 'var(--limedim)';
+        bSubs.style.color = 'var(--lime)';
+      } else {
+        bSubs.style.background = 'rgba(255,255,255,.1)';
+        bSubs.style.color = 'var(--muted)';
+      }
+    }
     
     // Revenue module
     const mrr = s.mrr_estimate || "0.00";
