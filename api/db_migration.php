@@ -2,7 +2,7 @@
 require_once __DIR__ . '/_db.php';
 
 try {
-    $db = fp_connect();
+    $db = fp_db();
 
     echo "--- INICIANDO MIGRACIÓN ---\n";
 
