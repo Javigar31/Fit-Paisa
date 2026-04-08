@@ -198,11 +198,11 @@ select.input{appearance:none;cursor:none}
     </div>
     <div class="nav-item" onclick="show('users', this)">
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Usuarios
-      <span class="nbadge" style="background:rgba(255,255,255,.1);color:var(--muted)">248</span>
+      <span id="badge-users" class="nbadge" style="background:rgba(255,255,255,.1);color:var(--muted)">…</span>
     </div>
     <div class="nav-item" onclick="show('coaches', this)">
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Entrenadores/as
-      <span class="nbadge" style="background:rgba(255,255,255,.1);color:var(--muted)">12</span>
+      <span id="badge-coaches" class="nbadge" style="background:rgba(255,255,255,.1);color:var(--muted)">…</span>
     </div>
     <div class="nav-item" onclick="show('subs', this)">
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Suscripciones
@@ -217,8 +217,14 @@ select.input{appearance:none;cursor:none}
     </div>
   </nav>
   <div class="sb-user">
-    <div class="avatar">AD</div>
-    <div><div style="font-size:13px;font-weight:600">Admin</div><div style="font-size:10px;color:var(--muted)">Acceso total</div></div>
+    <div class="avatar" id="admin-initials">AD</div>
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:600" id="admin-name">Admin</div>
+      <div style="font-size:10px;color:var(--muted)">Acceso total</div>
+    </div>
+    <button onclick="logout()" title="Cerrar sesión"
+      style="background:none;border:none;color:var(--muted);cursor:none;font-size:18px;padding:4px;line-height:1;transition:color .2s"
+      onmouseenter="this.style.color='var(--danger)'" onmouseleave="this.style.color='var(--muted)'">&#x23FB;</button>
   </div>
 </aside>
 
@@ -231,10 +237,10 @@ select.input{appearance:none;cursor:none}
       <div style="font-size:12px;color:var(--muted)" id="clock"></div>
     </div>
     <div class="grid4 r r2" style="margin-bottom:16px">
-      <div class="card"><div class="stat-v" style="color:var(--lime)">248</div><div class="stat-l">Usuarios totales</div><div class="stat-s">+12 esta semana</div></div>
-      <div class="card"><div class="stat-v" style="color:var(--success)">89</div><div class="stat-l">Suscripciones Premium</div><div class="stat-s">36% del total</div></div>
-      <div class="card"><div class="stat-v" style="color:var(--warn)">12</div><div class="stat-l">Entrenadores activos</div><div class="stat-s">3 en validación</div></div>
-      <div class="card"><div class="stat-v" style="color:var(--purple)">99.7%</div><div class="stat-l">Uptime mensual</div><div class="stat-s">Objetivo: ≥ 99.5%</div></div>
+      <div class="card"><div class="stat-v" style="color:var(--lime)" id="stat-total-users">…</div><div class="stat-l">Usuarios totales</div><div class="stat-s" id="stat-week">Cargando…</div></div>
+      <div class="card"><div class="stat-v" style="color:var(--success)" id="stat-premium">…</div><div class="stat-l">Suscripciones activas</div><div class="stat-s">Planes Premium</div></div>
+      <div class="card"><div class="stat-v" style="color:var(--warn)" id="stat-coaches">…</div><div class="stat-l">Entrenadores activos</div><div class="stat-s">Rol COACH en BD</div></div>
+      <div class="card"><div class="stat-v" style="color:var(--purple)">Vercel</div><div class="stat-l">Infraestructura</div><div class="stat-s">PHP + Neon PostgreSQL</div></div>
     </div>
     <div class="grid2 r r3" style="margin-bottom:16px">
       <div class="card">
@@ -247,25 +253,21 @@ select.input{appearance:none;cursor:none}
       <div class="card">
         <div class="card-title">Estado del sistema</div>
         <div style="display:flex;flex-direction:column;gap:10px">
-          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span>API REST</span><span class="badge b-green">✓ Operativo</span></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span>Base de datos MySQL</span><span class="badge b-green">✓ Operativo</span></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span>MongoDB (logs)</span><span class="badge b-green">✓ Operativo</span></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span>Stripe / PayPal</span><span class="badge b-green">✓ Operativo</span></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span>Servidor SMTP</span><span class="badge b-green">✓ Operativo</span></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span>TLS 1.2+</span><span class="badge b-green">✓ Activo</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span>Vercel PHP Runtime</span><span class="badge b-green">✓ Operativo</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span>Neon PostgreSQL</span><span id="db-status" class="badge b-green">✓ Conectado</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span>Autenticación JWT</span><span class="badge b-green">✓ Activa</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span>Stripe / PayPal</span><span class="badge b-yellow">Pendiente integración</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span>Servidor SMTP</span><span class="badge b-yellow">Pendiente integración</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span>TLS 1.2+</span><span class="badge b-green">✓ Activo (Vercel)</span></div>
         </div>
       </div>
     </div>
     <div class="card r r4">
-      <div class="card-title">Registros recientes</div>
+      <div class="card-title">Usuarios registrados recientemente</div>
       <div class="table-wrap">
-      <table><thead><tr><th>Usuario</th><th>Acción</th><th>Fecha</th><th>Estado</th></tr></thead>
-      <tbody>
-        <tr><td>Javier García</td><td>Suscripción Premium activada</td><td style="color:var(--muted)">Hoy 10:32</td><td><span class="badge b-lime">OK</span></td></tr>
-        <tr><td>Sofía Reyes</td><td>Contraseña restablecida</td><td style="color:var(--muted)">Hoy 09:15</td><td><span class="badge b-lime">OK</span></td></tr>
-        <tr><td>Pablo Torres</td><td>Intento de login fallido (3x)</td><td style="color:var(--muted)">Ayer 22:40</td><td><span class="badge b-yellow">Alerta</span></td></tr>
-        <tr><td>Ana García</td><td>Plan aprobado por entrenadora</td><td style="color:var(--muted)">Ayer 18:05</td><td><span class="badge b-lime">OK</span></td></tr>
-        <tr><td>Nuevo usuario</td><td>Registro completado (3 pasos)</td><td style="color:var(--muted)">Ayer 17:30</td><td><span class="badge b-lime">OK</span></td></tr>
+      <table><thead><tr><th>Usuario</th><th>Email</th><th>Rol</th><th>Fecha registro</th><th>Estado</th></tr></thead>
+      <tbody id="recent-tbody">
+        <tr><td colspan="5" style="text-align:center;color:var(--muted)">Cargando…</td></tr>
       </tbody></table>
       </div>
     </div>
@@ -275,24 +277,28 @@ select.input{appearance:none;cursor:none}
   <div class="section hidden-right" id="sec-users">
     <div class="page-head r r1">
       <div><h1>USUARIOS</h1><p>Gestión de todos los usuarios de la plataforma</p></div>
-      <div style="display:flex;gap:8px"><input class="input" placeholder="Buscar usuario…" style="width:200px"><button class="btn-lime">Buscar</button></div>
+      <div style="display:flex;gap:8px">
+        <input id="search-input" class="input" placeholder="Buscar usuario…" style="width:200px"
+          onkeydown="if(event.key==='Enter') loadUsers(1, this.value)">
+        <button class="btn-lime" onclick="loadUsers(1, document.getElementById('search-input').value)">Buscar</button>
+      </div>
     </div>
     <div class="card r r2">
-      <div class="card-title">Lista de usuarios <span style="font-weight:400;color:var(--muted);font-size:11px;text-transform:none;letter-spacing:0">248 registros</span></div>
+      <div class="card-title">Lista de usuarios <span id="users-count" style="font-weight:400;color:var(--muted);font-size:11px;text-transform:none;letter-spacing:0">Cargando…</span></div>
       <div class="table-wrap">
       <table>
         <thead><tr><th>Usuario</th><th>Correo</th><th>Rol</th><th>Suscripción</th><th>Estado</th><th>Acciones</th></tr></thead>
-        <tbody>
-          <tr><td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:26px;height:26px;font-size:10px">JG</div>Javier García</div></td><td style="color:var(--muted)">javier@mail.com</td><td><span class="badge b-gray">Usuario</span></td><td><span class="badge b-lime">Premium</span></td><td><span class="badge b-green">Activo</span></td><td><div style="display:flex;gap:6px"><button class="btn-ghost" onclick="openEditUser('Javier García','javier@mail.com','Usuario','Premium','Activo')">Editar</button><button class="btn-danger" onclick="openConfirmSuspend('Javier García')">Suspender</button></div></td></tr>
-          <tr><td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:26px;height:26px;font-size:10px">SR</div>Sofía Reyes</div></td><td style="color:var(--muted)">sofia@mail.com</td><td><span class="badge b-gray">Usuario</span></td><td><span class="badge b-lime">Premium</span></td><td><span class="badge b-green">Activo</span></td><td><div style="display:flex;gap:6px"><button class="btn-ghost" onclick="openEditUser('Sofía Reyes','sofia@mail.com','Usuario','Premium','Activo')">Editar</button><button class="btn-danger" onclick="openConfirmSuspend('Sofía Reyes')">Suspender</button></div></td></tr>
-          <tr><td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:26px;height:26px;font-size:10px">PT</div>Pablo Torres</div></td><td style="color:var(--muted)">pablo@mail.com</td><td><span class="badge b-gray">Usuario</span></td><td><span class="badge b-gray">Básico</span></td><td><span class="badge b-yellow">Alerta</span></td><td><div style="display:flex;gap:6px"><button class="btn-ghost" onclick="openEditUser('Pablo Torres','pablo@mail.com','Usuario','Básico','Alerta')">Editar</button><button class="btn-danger" onclick="openConfirmSuspend('Pablo Torres')">Suspender</button></div></td></tr>
-          <tr><td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:26px;height:26px;font-size:10px">AG</div>Ana García</div></td><td style="color:var(--muted)">ana@mail.com</td><td><span class="badge b-gray">Usuario</span></td><td><span class="badge b-lime">Premium</span></td><td><span class="badge b-green">Activo</span></td><td><div style="display:flex;gap:6px"><button class="btn-ghost" onclick="openEditUser('Ana García','ana@mail.com','Usuario','Premium','Activo')">Editar</button><button class="btn-danger" onclick="openConfirmSuspend('Ana García')">Suspender</button></div></td></tr>
+        <tbody id="users-tbody">
+          <tr><td colspan="6" style="text-align:center;color:var(--muted)">Cargando…</td></tr>
         </tbody>
       </table>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;font-size:12px;color:var(--muted)">
-        <span>Mostrando 4 de 248</span>
-        <div style="display:flex;gap:6px"><button class="btn-ghost">← Ant.</button><button class="btn-ghost">Sig. →</button></div>
+        <span id="pagination-info">—</span>
+        <div style="display:flex;gap:6px">
+          <button id="btn-prev" class="btn-ghost" onclick="loadUsers(currentPage-1, currentSearch)">← Ant.</button>
+          <button id="btn-next" class="btn-ghost" onclick="loadUsers(currentPage+1, currentSearch)">Sig. →</button>
+        </div>
       </div>
     </div>
   </div>
@@ -304,18 +310,16 @@ select.input{appearance:none;cursor:none}
       <button class="btn-lime" onclick="openModal('modal-add-coach')">+ Añadir entrenador/a</button>
     </div>
     <div class="grid2 r r2" style="margin-bottom:16px">
-      <div class="card"><div style="font-family:var(--fd);font-size:32px;color:var(--lime)">9</div><div class="stat-l">Activos</div></div>
-      <div class="card"><div style="font-family:var(--fd);font-size:32px;color:var(--warn)">3</div><div class="stat-l">En validación</div></div>
+      <div class="card"><div style="font-family:var(--fd);font-size:32px;color:var(--lime)" id="coaches-active">…</div><div class="stat-l">Activos</div></div>
+      <div class="card"><div style="font-family:var(--fd);font-size:32px;color:var(--warn)" id="coaches-inactive">…</div><div class="stat-l">Inactivos</div></div>
     </div>
     <div class="card r r3">
       <div class="card-title">Entrenadores/as registrados/as</div>
       <div class="table-wrap">
       <table>
-        <thead><tr><th>Nombre</th><th>Email</th><th>Clientes</th><th>Especialidad</th><th>Estado</th><th>Acciones</th></tr></thead>
-        <tbody>
-          <tr><td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:26px;height:26px;font-size:10px;background:rgba(255,107,107,.15);color:var(--lime)">LV</div>Laura Vidal</div></td><td style="color:var(--muted)">laura@fitpaisa.com</td><td>4</td><td>Fuerza / Nutrición</td><td><span class="badge b-green">Activa</span></td><td><div style="display:flex;gap:6px"><button class="btn-ghost" onclick="openViewCoach('Laura Vidal','laura@fitpaisa.com','Fuerza / Nutrición','4')">Ver</button><button class="btn-danger" onclick="openConfirmDeactivate('Laura Vidal')">Desactivar</button></div></td></tr>
-          <tr><td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:26px;height:26px;font-size:10px;background:rgba(255,107,107,.15);color:var(--lime)">MP</div>Marco Pérez</div></td><td style="color:var(--muted)">marco@fitpaisa.com</td><td>6</td><td>Cardio / Resistencia</td><td><span class="badge b-green">Activo</span></td><td><div style="display:flex;gap:6px"><button class="btn-ghost" onclick="openViewCoach('Marco Pérez','marco@fitpaisa.com','Cardio / Resistencia','6')">Ver</button><button class="btn-danger" onclick="openConfirmDeactivate('Marco Pérez')">Desactivar</button></div></td></tr>
-          <tr><td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:26px;height:26px;font-size:10px;background:rgba(255,179,71,.1);color:var(--warn)">RN</div>Rosa Núñez</div></td><td style="color:var(--muted)">rosa@mail.com</td><td>—</td><td>Pilates / Movilidad</td><td><span class="badge b-yellow">Validación</span></td><td><div style="display:flex;gap:6px"><button class="btn-lime" onclick="openConfirmValidate('Rosa Núñez')">✓ Validar</button><button class="btn-danger" onclick="openConfirmReject('Rosa Núñez')">Rechazar</button></div></td></tr>
+        <thead><tr><th>Nombre</th><th>Email</th><th>Clientes activos</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody id="coaches-tbody">
+          <tr><td colspan="5" style="text-align:center;color:var(--muted)">Cargando…</td></tr>
         </tbody>
       </table>
       </div>
@@ -500,49 +504,200 @@ function closeModal(el){el.closest('.modal-overlay').classList.remove('open')}
 document.querySelectorAll('.modal-overlay').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')})});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'))});
 
-// User data passed to modals
-const adminUsers=[
-  {name:'Javier García',email:'javier@mail.com',role:'Usuario',sub:'Premium',status:'Activo'},
-  {name:'Sofía Reyes',email:'sofia@mail.com',role:'Usuario',sub:'Premium',status:'Activo'},
-  {name:'Pablo Torres',email:'pablo@mail.com',role:'Usuario',sub:'Básico',status:'Alerta'},
-  {name:'Ana García',email:'ana@mail.com',role:'Usuario',sub:'Premium',status:'Activo'},
-];
-const adminCoaches=[
-  {name:'Laura Vidal',email:'laura@fitpaisa.com',spec:'Fuerza / Nutrición',clients:'4',status:'Activa'},
-  {name:'Marco Pérez',email:'marco@fitpaisa.com',spec:'Cardio / Resistencia',clients:'6',status:'Activo'},
-  {name:'Rosa Núñez',email:'rosa@mail.com',spec:'Pilates / Movilidad',clients:'—',status:'Validación'},
-];
+// ══ AUTH CHECK ══
+(function checkAuth(){
+  const token = localStorage.getItem('fp_token');
+  const user  = JSON.parse(localStorage.getItem('fp_user') || 'null');
+  if (!token || !user || user.role !== 'ADMIN') {
+    window.location.href = 'index.html';
+    return;
+  }
+  const name = user.name || 'Admin';
+  document.getElementById('admin-name').textContent = name;
+  const initials = name.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
+  document.getElementById('admin-initials').textContent = initials;
+})();
 
-function openEditUser(name,email,role,sub,status){
-  document.getElementById('eu-name').value=name;
-  document.getElementById('eu-email').value=email;
-  document.getElementById('eu-role').value=role;
-  document.getElementById('eu-sub').value=sub;
-  document.getElementById('eu-status').value=status;
-  openModal('modal-edit-user');
+function logout(){
+  localStorage.removeItem('fp_token');
+  localStorage.removeItem('fp_user');
+  window.location.href = 'index.html';
 }
 
-// Modal helpers
+// ══ HELPERS ══
+function fpHeaders(){ return {'Content-Type':'application/json','Authorization':'Bearer '+localStorage.getItem('fp_token')}; }
+function roleBadge(r){ const m={USER:'b-gray',COACH:'b-purple',ADMIN:'b-red'}; const l={USER:'Usuario',COACH:'Entrenador',ADMIN:'Admin'}; return `<span class="badge ${m[r]||'b-gray'}">${l[r]||r}</span>`; }
+function statusBadge(a){ return a ? '<span class="badge b-green">Activo</span>' : '<span class="badge b-red">Suspendido</span>'; }
+function subBadge(plan){ if(!plan) return '<span class="badge b-gray">Básico</span>'; const l={PREMIUM_MONTHLY:'Premium',PREMIUM_ANNUAL:'Anual',FREE:'Free'}; return `<span class="badge b-lime">${l[plan]||plan}</span>`; }
+function fmtDate(d){ if(!d) return '—'; const dt=new Date(d); return dt.toLocaleDateString('es-ES')+' '+dt.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}); }
+function initials(name){ return name.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2); }
+
+// ══ LOAD STATS ══
+async function loadStats(){
+  try{
+    const res  = await fetch('/api/admin.php?action=stats', {headers:fpHeaders()});
+    const data = await res.json();
+    if (!data.success) return;
+    const s = data.stats;
+    document.getElementById('stat-total-users').textContent = s.total_users;
+    document.getElementById('stat-premium').textContent     = s.active_subscriptions;
+    document.getElementById('stat-coaches').textContent     = s.total_coaches;
+    document.getElementById('stat-week').textContent        = '+'+s.new_this_week+' esta semana';
+    document.getElementById('badge-users').textContent      = s.total_users;
+    document.getElementById('badge-coaches').textContent    = s.total_coaches;
+    const uc = document.getElementById('users-count');
+    if(uc) uc.textContent = s.total_users + ' registros';
+  } catch(e){ console.error(e); }
+}
+
+// ══ LOAD RECENT ACTIVITY ══
+async function loadRecentActivity(){
+  try{
+    const res  = await fetch('/api/admin.php?action=recent_activity', {headers:fpHeaders()});
+    const data = await res.json();
+    if (!data.success) return;
+    document.getElementById('recent-tbody').innerHTML = data.recent.length === 0
+      ? '<tr><td colspan="5" style="text-align:center;color:var(--muted)">Sin registros aún.</td></tr>'
+      : data.recent.map(u=>`<tr>
+          <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:26px;height:26px;font-size:10px">${initials(u.full_name)}</div>${u.full_name}</div></td>
+          <td style="color:var(--muted)">${u.email}</td>
+          <td>${roleBadge(u.role)}</td>
+          <td style="color:var(--muted)">${fmtDate(u.created_at)}</td>
+          <td>${statusBadge(u.is_active)}</td>
+        </tr>`).join('');
+  } catch(e){ console.error(e); }
+}
+
+// ══ LOAD USERS ══
+let currentPage=1, currentSearch='';
+async function loadUsers(page=1, search=''){
+  currentPage=page; currentSearch=search;
+  const url = `/api/admin.php?action=users&page=${page}&search=${encodeURIComponent(search)}`;
+  try{
+    const res  = await fetch(url, {headers:fpHeaders()});
+    const data = await res.json();
+    if (!data.success) return;
+    const tbody = document.getElementById('users-tbody');
+    tbody.innerHTML = data.users.length === 0
+      ? '<tr><td colspan="6" style="text-align:center;color:var(--muted)">No se encontraron usuarios.</td></tr>'
+      : data.users.map(u=>`<tr>
+          <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:26px;height:26px;font-size:10px">${initials(u.full_name)}</div>${u.full_name}</div></td>
+          <td style="color:var(--muted)">${u.email}</td>
+          <td>${roleBadge(u.role)}</td>
+          <td>${subBadge(u.subscription_plan)}</td>
+          <td>${statusBadge(u.is_active)}</td>
+          <td><div style="display:flex;gap:6px">
+            <button class="btn-ghost" onclick="openEditUserModal(${u.user_id},'${u.full_name.replace(/'/g,"\\'")  }','${u.role}',${u.is_active})">Editar</button>
+            <button class="btn-danger" onclick="openSuspendModal(${u.user_id},'${u.full_name.replace(/'/g,"\\'")  }',${u.is_active})">${u.is_active?'Suspender':'Activar'}</button>
+          </div></td>
+        </tr>`).join('');
+    document.getElementById('pagination-info').textContent = `Mostrando ${data.users.length} de ${data.total}`;
+    document.getElementById('btn-prev').disabled = page <= 1;
+    document.getElementById('btn-next').disabled = page >= data.pages;
+  } catch(e){ console.error(e); }
+}
+
+// ══ LOAD COACHES ══
+async function loadCoaches(){
+  try{
+    const res  = await fetch('/api/admin.php?action=coaches', {headers:fpHeaders()});
+    const data = await res.json();
+    if (!data.success) return;
+    const coaches = data.coaches;
+    document.getElementById('coaches-active').textContent   = coaches.filter(c=>c.is_active).length;
+    document.getElementById('coaches-inactive').textContent = coaches.filter(c=>!c.is_active).length;
+    document.getElementById('coaches-tbody').innerHTML = coaches.length === 0
+      ? '<tr><td colspan="5" style="text-align:center;color:var(--muted)">No hay entrenadores registrados.</td></tr>'
+      : coaches.map(c=>`<tr>
+          <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:26px;height:26px;font-size:10px;background:rgba(255,107,107,.15);color:var(--lime)">${initials(c.full_name)}</div>${c.full_name}</div></td>
+          <td style="color:var(--muted)">${c.email}</td>
+          <td>${c.client_count}</td>
+          <td>${statusBadge(c.is_active)}</td>
+          <td><div style="display:flex;gap:6px">
+            <button class="btn-${c.is_active?'danger':'lime'}" onclick="updateUser(${c.user_id},{is_active:${!c.is_active}})">${c.is_active?'Desactivar':'Activar'}</button>
+          </div></td>
+        </tr>`).join('');
+  } catch(e){ console.error(e); }
+}
+
+// ══ UPDATE USER ══
+async function updateUser(userId, updates){
+  try{
+    const res  = await fetch('/api/admin.php?action=update_user',{method:'POST',headers:fpHeaders(),body:JSON.stringify({user_id:userId,...updates})});
+    const data = await res.json();
+    if (data.success){ loadUsers(currentPage,currentSearch); loadStats(); loadCoaches(); }
+    else alert(data.message||'Error al actualizar.');
+  } catch(e){ console.error(e); }
+}
+
+// ══ EDIT USER MODAL ══
+let editingUserId=null;
+function openEditUserModal(userId, name, role, isActive){
+  editingUserId=userId;
+  document.getElementById('eu-name').value  = name;
+  document.getElementById('eu-email').value = '—';
+  const rMap={USER:'Usuario',COACH:'Entrenador',ADMIN:'Admin'};
+  document.getElementById('eu-role').value  = rMap[role]||'Usuario';
+  document.getElementById('eu-status').value= isActive?'Activo':'Suspendido';
+  openModal('modal-edit-user');
+}
+async function saveEditUser(){
+  if (!editingUserId) return;
+  const rMap={'Usuario':'USER','Entrenador':'COACH','Admin':'ADMIN'};
+  const role     = rMap[document.getElementById('eu-role').value]||'USER';
+  const isActive = document.getElementById('eu-status').value === 'Activo';
+  closeModal(document.querySelector('#modal-edit-user .modal-close'));
+  await updateUser(editingUserId, {role, is_active:isActive});
+  editingUserId=null;
+}
+
+// ══ SUSPEND/ACTIVATE MODAL ══
+let suspendId=null, suspendCurrentlyActive=false;
+function openSuspendModal(userId, name, isActive){
+  suspendId=userId; suspendCurrentlyActive=isActive;
+  const el=document.querySelector('#modal-confirm-suspend .target-name');
+  if(el) el.textContent=name;
+  const btn=document.getElementById('btn-confirm-suspend');
+  btn.textContent = isActive ? 'Suspender' : 'Activar';
+  btn.className   = isActive ? 'btn-danger' : 'btn-lime';
+  document.getElementById('suspend-title').textContent = isActive ? 'Confirmar Suspensión' : 'Confirmar Activación';
+  openModal('modal-confirm-suspend');
+}
+async function confirmSuspend(){
+  closeModal(document.querySelector('#modal-confirm-suspend .modal-close'));
+  if(suspendId) await updateUser(suspendId, {is_active:!suspendCurrentlyActive});
+  suspendId=null;
+}
+
+// ══ HOOK show() para cargar datos lazy ══
+const _origShow=show;
+window.show=function(id,el){
+  _origShow(id,el);
+  if(id==='users')   loadUsers(currentPage,currentSearch);
+  if(id==='coaches') loadCoaches();
+};
+
+// ══ LEGACY MODAL HELPERS (mantener compatibilidad) ══
+function openEditUser(n,e,r,s,st){ openEditUserModal(0,n,r,st==='Activo'); }
+function openConfirmSuspend(n){ openSuspendModal(0,n,true); }
 function openConfirmModal(modalId,name){
   const el=document.getElementById(modalId).querySelector('.target-name');
   if(el)el.textContent=name;
   openModal(modalId);
 }
-function openConfirmSuspend(n){openConfirmModal('modal-confirm-suspend',n)}
 function openConfirmDeactivate(n){openConfirmModal('modal-confirm-deactivate',n)}
 function openConfirmValidate(n){openConfirmModal('modal-confirm-validate',n)}
 function openConfirmReject(n){openConfirmModal('modal-confirm-reject',n)}
-
 function openViewCoach(name,email,spec,clients){
   document.getElementById('vc-name').textContent=name;
-  document.getElementById('vc-detail').innerHTML=`
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px"><strong>Correo:</strong> <span style="color:var(--muted)">${email}</span></div>
-      <div style="font-size:13px"><strong>Especialidad:</strong> <span style="color:var(--muted)">${spec}</span></div>
-      <div style="font-size:13px"><strong>Clientes activos:</strong> <span style="color:var(--muted)">${clients}</span></div>
-    </div>`;
+  document.getElementById('vc-detail').innerHTML=`<div style="display:flex;flex-direction:column;gap:10px"><div style="font-size:13px"><strong>Correo:</strong> <span style="color:var(--muted)">${email}</span></div><div style="font-size:13px"><strong>Clientes activos:</strong> <span style="color:var(--muted)">${clients}</span></div></div>`;
   openModal('modal-view-coach');
 }
+
+// ══ INIT ══
+loadStats();
+loadRecentActivity();
+loadUsers();
 </script>
 
 <!-- ═══ MODALS ═══ -->
@@ -558,16 +713,16 @@ function openViewCoach(name,email,spec,clients){
       <label class="label">Suscripción</label><select class="input" id="eu-sub"><option>Básico</option><option>Premium</option></select>
       <label class="label">Estado</label><select class="input" id="eu-status"><option>Activo</option><option>Alerta</option><option>Suspendido</option></select>
     </div>
-    <div class="modal-actions"><button class="btn-ghost" onclick="closeModal(this)">Cancelar</button><button class="btn-lime" onclick="closeModal(this)">Guardar</button></div>
+    <div class="modal-actions"><button class="btn-ghost" onclick="closeModal(this)">Cancelar</button><button class="btn-lime" onclick="saveEditUser()">Guardar</button></div>
   </div>
 </div>
 
 <!-- Confirm Suspend -->
 <div class="modal-overlay" id="modal-confirm-suspend">
   <div class="modal-box" onclick="event.stopPropagation()">
-    <div class="modal-head"><h2>Confirmar Suspensión</h2><button class="modal-close" onclick="closeModal(this)">✕</button></div>
-    <div class="confirm-body"><span class="ico-warn">⚠️</span><p>¿Suspender a <strong class="target-name"></strong>?</p><p style="font-size:12px">El usuario no podrá acceder a la plataforma.</p></div>
-    <div class="confirm-actions"><button class="btn-ghost" onclick="closeModal(this)">Cancelar</button><button class="btn-danger" onclick="closeModal(this)" style="padding:8px 24px">Suspender</button></div>
+    <div class="modal-head"><h2 id="suspend-title">Confirmar Suspensión</h2><button class="modal-close" onclick="closeModal(this)">✕</button></div>
+    <div class="confirm-body"><span class="ico-warn">⚠️</span><p id="suspend-text">¿Suspender a <strong class="target-name"></strong>?</p><p style="font-size:12px">El estado del usuario cambiará en la base de datos.</p></div>
+    <div class="confirm-actions"><button class="btn-ghost" onclick="closeModal(this)">Cancelar</button><button id="btn-confirm-suspend" class="btn-danger" onclick="confirmSuspend()" style="padding:8px 24px">Suspender</button></div>
   </div>
 </div>
 
