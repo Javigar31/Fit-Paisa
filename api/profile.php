@@ -149,22 +149,17 @@ function handle_setup_macros(array $payload): never
     $gender   = ($current && isset($current['gender']))         ? $current['gender']         : 'OTHER';
     $activity = ($current && isset($current['activity_level'])) ? $current['activity_level'] : 'MODERATE';
 
-    /* UPSERT: Insertar si no existe, actualizar si ya existe */
+    /* FASE 1: Guardar datos básicos (Columnas que sabemos que existen) */
     try {
         fp_query(
-            'INSERT INTO profiles (
-                user_id, weight, height, age, gender, objective, activity_level, 
-                target_weight, target_time_weeks, updated_at
-            ) VALUES (
-                :uid, :w, :h, :a, :g, :o, :al, :tw, :ttw, NOW()
-            )
-            ON CONFLICT (user_id) DO UPDATE SET
+            'INSERT INTO profiles (user_id, weight, height, age, gender, objective, activity_level, updated_at)
+             VALUES (:uid, :w, :h, :a, :g, :o, :al, NOW())
+             ON CONFLICT (user_id) DO UPDATE SET
                 weight = EXCLUDED.weight,
                 height = EXCLUDED.height,
                 age = EXCLUDED.age,
                 objective = EXCLUDED.objective,
-                target_weight = EXCLUDED.target_weight,
-                target_time_weeks = EXCLUDED.target_time_weeks,
+                activity_level = EXCLUDED.activity_level,
                 updated_at = NOW()',
             [
                 ':uid' => $payload['user_id'],
@@ -173,18 +168,26 @@ function handle_setup_macros(array $payload): never
                 ':a'   => $age,
                 ':g'   => $gender,
                 ':o'   => $objective,
-                ':al'  => $activity,
-                ':tw'  => $targetWeight,
-                ':ttw' => $weeks
+                ':al'  => $activity
             ]
         );
-    } catch (Exception $e) {
-        // Si falla, es probable que las columnas no existan en la BD remota
-        $msg = $e->getMessage();
-        if (strpos($msg, 'target_weight') !== false || strpos($msg, 'column') !== false) {
-             fp_error(500, 'Error de base de datos: Faltan columnas. Por favor, ejecuta el script de migración (?token=...) o contacta soporte.');
+
+        /* FASE 2: Intentar guardar datos de objetivo (Columnas nuevas) - FALLO SILENCIOSO */
+        try {
+            $db = fp_db();
+            $st = $db->prepare('UPDATE profiles SET target_weight = :tw, target_time_weeks = :ttw WHERE user_id = :uid');
+            $st->execute([
+                ':tw'  => $targetWeight,
+                ':ttw' => $weeks,
+                ':uid' => $payload['user_id']
+            ]);
+        } catch (Exception $e) {
+            // Si las columnas no existen, simplemente ignorar y continuar el proceso
+            error_log("[FitPaisa][MIGRATION_PENDING] " . $e->getMessage());
         }
-        throw $e; // Re-lanzar si no es lo que esperamos
+
+    } catch (Exception $e) {
+        fp_error(500, 'Error crítico al guardar el perfil básico.');
     }
 
     $macros = calculate_macros($weight, $height, $age, $gender, $objective, $activity, $targetWeight, $weeks);
