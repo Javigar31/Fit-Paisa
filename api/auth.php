@@ -201,20 +201,26 @@ function handle_register(): never
         /* Crear suscripción inicial */
         $amount = ($plan === 'FREE') ? 0.0 : 14.99;
         try {
+            // Evaluamos la fecha en PHP para evitar cálculos raros en la base de datos de Postgres y posibles casts opacos
+            $endDate = date('Y-m-d', strtotime('+1 month'));
+
+            // Construir el INSERT lo más tonto posible (todo parametrizado y parseado desde PHP)
             $stmtSub = $db->prepare("
                 INSERT INTO subscriptions (user_id, plan_type, status, start_date, end_date, amount)
-                VALUES (:uid, :plan::subscription_plan, 'ACTIVE', CURRENT_DATE, CURRENT_DATE + INTERVAL '1 month', CAST(:amount AS numeric))
+                VALUES (:uid, :plan::subscription_plan, 'ACTIVE', CURRENT_DATE, :end_date::date, :amount::numeric)
             ");
+            
             if (!$stmtSub->execute([
-                ':uid'    => $user['user_id'],
-                ':plan'   => $plan,
-                ':amount' => $amount
+                ':uid'      => $user['user_id'],
+                ':plan'     => $plan,
+                ':end_date' => $endDate,
+                ':amount'   => $amount
             ])) {
                 $err = $stmtSub->errorInfo();
                 throw new Exception("Silent fail in subscriptions: " . json_encode($err));
             }
         } catch (Exception $e) {
-            throw new Exception("Error inserting subscription: " . $e->getMessage());
+            throw new Exception("Error inserting subscription: " . $e->getMessage() . " | Debug Info: user_id=" . $user['user_id'] . " plan=" . $plan);
         }
 
         $db->commit();
