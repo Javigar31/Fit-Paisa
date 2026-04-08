@@ -52,10 +52,22 @@ function handle_stats(): never
     ")->fetch();
 
     $activeSubs = (int) fp_query("
-        SELECT COUNT(DISTINCT user_id) FROM subscriptions WHERE status = 'ACTIVE'
+        SELECT COUNT(DISTINCT user_id)
+        FROM subscriptions
+        WHERE status = 'ACTIVE'
+          AND plan_type != 'FREE'
     ")->fetchColumn();
 
-    $mrr = $activeSubs * 9.99;
+    $mrr = (float) fp_query("
+        SELECT
+            COALESCE(SUM(CASE
+                WHEN plan_type = 'PREMIUM_MONTHLY' THEN 9.99
+                WHEN plan_type = 'PREMIUM_ANNUAL'  THEN 99.99 / 12
+                ELSE 0
+            END), 0)
+        FROM subscriptions
+        WHERE status = 'ACTIVE' AND plan_type != 'FREE'
+    ")->fetchColumn();
 
     fp_success([
         'stats' => array_merge($stats, [
