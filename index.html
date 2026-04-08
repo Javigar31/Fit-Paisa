@@ -1943,7 +1943,7 @@
         }
       } catch (e) {
         const errEl = document.getElementById('err-step2');
-        errEl.textContent = 'Error de conexión. Intenta de nuevo.';
+        errEl.textContent = e.message;
         errEl.classList.add('on');
         if (btn) { btn.textContent = selectedPlan === 'premium' ? 'Activar Plan Premium ✓' : 'Crear Cuenta Gratuita ✓'; btn.disabled = false; }
       }
