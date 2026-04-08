@@ -61,9 +61,14 @@ function handle_register(): never
     $phone      = fp_sanitize($body['phone']     ?? '', 30);
     $password   = $body['password'] ?? '';            /* No sanitizar: solo hashear */
     $gender     = fp_sanitize($body['gender']    ?? '', 10);
-    $objective  = fp_sanitize($body['objective'] ?? '', 30);
+    $objective  = fp_sanitize($body['objective'] ?? 'MAINTAIN', 30);
     $weight     = (float) ($body['weight'] ?? 0);
     $height     = (float) ($body['height'] ?? 0);
+    $plan       = fp_sanitize($body['plan'] ?? 'FREE', 20);
+    
+    if (!in_array($plan, ['FREE', 'PREMIUM_MONTHLY', 'PREMIUM_ANNUAL'], true)) {
+        $plan = 'FREE';
+    }
 
     /* ── Validaciones de negocio ── */
     $errors = [];
@@ -87,11 +92,11 @@ function handle_register(): never
     if (!in_array($objective, ['LOSE_WEIGHT', 'GAIN_MUSCLE', 'MAINTAIN', 'IMPROVE_HEALTH'], true)) {
         $errors[] = 'El objetivo seleccionado no es válido.';
     }
-    if ($weight <= 0 || $weight > 500) {
-        $errors[] = 'El peso debe estar entre 1 y 500 kg.';
+    if ($weight < 0 || $weight > 500) {
+        $errors[] = 'El peso debe estar entre 0 y 500 kg.';
     }
-    if ($height <= 0 || $height > 300) {
-        $errors[] = 'La altura debe estar entre 1 y 300 cm.';
+    if ($height < 0 || $height > 300) {
+        $errors[] = 'La altura debe estar entre 0 y 300 cm.';
     }
 
     if (!empty($errors)) {
@@ -164,6 +169,15 @@ function handle_register(): never
             ':activity'  => $activity,
         ]);
 
+        /* Crear suscripción inicial */
+        $db->prepare("
+            INSERT INTO subscriptions (user_id, plan_type, status, provider, starts_at)
+            VALUES (:uid, :plan, 'ACTIVE', 'NONE', NOW())
+        ")->execute([
+            ':uid'  => $user['user_id'],
+            ':plan' => $plan,
+        ]);
+
         $db->commit();
     } catch (Throwable $e) {
         $db->rollBack();
@@ -182,11 +196,12 @@ function handle_register(): never
     fp_success([
         'token' => $token,
         'user'  => [
-            'user_id'    => $user['user_id'],
-            'email'      => $user['email'],
-            'name'       => $user['full_name'],
-            'role'       => $user['role'],
-            'created_at' => $user['created_at'],
+            'user_id'           => $user['user_id'],
+            'email'             => $user['email'],
+            'name'              => $user['full_name'],
+            'role'              => $user['role'],
+            'created_at'        => $user['created_at'],
+            'subscription_plan' => $plan,
         ],
     ], 201);
 }
@@ -228,11 +243,14 @@ function handle_login(): never
         fp_error(400, 'Formato de correo electrónico inválido.');
     }
 
-    /* ── Buscar usuario ── */
+    /* ── Buscar usuario y su suscripción ── */
     $user = fp_query(
-        'SELECT user_id, email, password_hash, full_name, role, is_active,
-                login_attempts, locked_until, last_login
-         FROM users WHERE email = :email LIMIT 1',
+        "SELECT u.user_id, u.email, u.password_hash, u.full_name, u.role, u.is_active,
+                u.login_attempts, u.locked_until, u.last_login,
+                s.plan_type AS subscription_plan
+         FROM users u
+         LEFT JOIN subscriptions s ON s.user_id = u.user_id AND s.status = 'ACTIVE'
+         WHERE u.email = :email LIMIT 1",
         [':email' => $email]
     )->fetch();
 
@@ -313,11 +331,12 @@ function handle_login(): never
     fp_success([
         'token' => $token,
         'user'  => [
-            'user_id'    => $user['user_id'],
-            'email'      => $user['email'],
-            'name'       => $user['full_name'],
-            'role'       => $user['role'],
-            'last_login' => $user['last_login'],
+            'user_id'           => $user['user_id'],
+            'email'             => $user['email'],
+            'name'              => $user['full_name'],
+            'role'              => $user['role'],
+            'last_login'        => $user['last_login'],
+            'subscription_plan' => $user['subscription_plan'] ?? 'FREE',
         ],
     ]);
 }
@@ -340,12 +359,14 @@ function handle_me(): never
     $payload = jwt_require(); /* Aborta con 401 si no hay token válido */
 
     $user = fp_query(
-        'SELECT u.user_id, u.email, u.full_name, u.phone, u.role, u.created_at,
-                p.profile_id, p.weight, p.height, p.age, p.gender, p.objective, p.activity_level
+        "SELECT u.user_id, u.email, u.full_name, u.phone, u.role, u.created_at,
+                p.profile_id, p.weight, p.height, p.age, p.gender, p.objective, p.activity_level,
+                s.plan_type AS subscription_plan
          FROM users u
          LEFT JOIN profiles p ON p.user_id = u.user_id
+         LEFT JOIN subscriptions s ON s.user_id = u.user_id AND s.status = 'ACTIVE'
          WHERE u.user_id = :id AND u.is_active = TRUE
-         LIMIT 1',
+         LIMIT 1",
         [':id' => $payload['user_id']]
     )->fetch();
 

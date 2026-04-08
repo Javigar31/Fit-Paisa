@@ -933,18 +933,34 @@
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
                 <div
                   style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);font-weight:800">
-                  Registro Paso <span id="reg-step-label">1</span> de 4</div>
+                  Registro Paso <span id="reg-step-label">1</span> de 2</div>
                 <div style="font-size:11px;color:var(--muted);cursor:none" class="btn-hover-opacity"
                   onclick="regBack()">Volver</div>
               </div>
 
               <!-- Step 1: Account & Identity -->
               <div class="register-step is-active" id="step-1">
-                  <div class="field">
-                    <label class="label">Nombre completo</label>
-                    <input type="text" id="reg-name" class="input" placeholder="Tu nombre (sin números)"
-                      onkeydown="if(event.key==='Enter') setStep(2, document.querySelector('#step-1 .slide-cta'))">
-                    <div class="error-msg" id="err-name">No se permiten números en el nombre.</div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="field">
+                      <label class="label">Nombre completo</label>
+                      <input type="text" id="reg-name" class="input" placeholder="Tu nombre"
+                        onkeydown="if(event.key==='Enter') setStep(2, document.querySelector('#step-1 .slide-cta'))">
+                      <div class="error-msg" id="err-name">Inválido.</div>
+                    </div>
+                    <div class="field" style="gap:2px">
+                      <label class="label">Sexo</label>
+                      <div style="display:flex;gap:4px">
+                        <div class="goal-card" onclick="selectGender(this, 'M')" style="flex:1;padding:6px;min-height:auto">
+                          <div class="goal-icon" style="font-size:18px;margin-bottom:0">👨</div>
+                        </div>
+                        <div class="goal-card" onclick="selectGender(this, 'F')" style="flex:1;padding:6px;min-height:auto">
+                          <div class="goal-icon" style="font-size:18px;margin-bottom:0">👩‍🦰</div>
+                        </div>
+                        <div class="goal-card" onclick="selectGender(this, 'O')" style="flex:1;padding:6px;min-height:auto">
+                          <div class="goal-icon" style="font-size:18px;margin-bottom:0">⚧️</div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -985,85 +1001,25 @@
                 </div>
               </div>
 
-              <!-- Step 2: Goal & Sex -->
+              <!-- Step 2: Plan & Payment -->
               <div class="register-step" id="step-2">
-                <div class="field" style="gap:10px">
-                  <label class="label">Sexo</label>
-                  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-                    <div class="goal-card" onclick="selectGender(this, 'M')">
-                      <div class="goal-icon">👨</div>
-                      <div class="goal-name">Hombre</div>
+                <div class="field" style="gap:10px;margin-bottom:16px">
+                  <label class="label">Selecciona tu Plan</label>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                    <div class="goal-card on" id="plan-free" onclick="selectPlan('free')" style="display:flex;flex-direction:row;align-items:center;padding:12px;gap:12px">
+                      <div class="goal-icon" style="font-size:24px;margin:0">🌱</div>
+                      <div style="text-align:left"><div style="font-size:14px;font-weight:800">Básico</div><div style="font-size:10px;color:var(--muted)">Gratis</div></div>
                     </div>
-                    <div class="goal-card" onclick="selectGender(this, 'F')">
-                      <div class="goal-icon">👩‍🦰</div>
-                      <div class="goal-name">Mujer</div>
-                    </div>
-                    <div class="goal-card" onclick="selectGender(this, 'O')">
-                      <div class="goal-icon">⚧️</div>
-                      <div class="goal-name">Otro</div>
+                    <div class="goal-card" id="plan-premium" onclick="selectPlan('premium')" style="display:flex;flex-direction:row;align-items:center;padding:12px;gap:12px">
+                      <div class="goal-icon" style="font-size:24px;margin:0">⚡</div>
+                      <div style="text-align:left"><div style="font-size:14px;font-weight:800;color:var(--accent)">Premium</div><div style="font-size:10px;color:var(--muted)">14.99€ / mes</div></div>
                     </div>
                   </div>
                 </div>
 
-                <div class="field" style="gap:10px;margin-top:4px">
-                  <label class="label">Objetivo</label>
-                  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-                    <div class="goal-card on" onclick="selectGoal(this, 'm')">
-                      <div class="goal-icon">💪</div>
-                      <div class="goal-name">Músculo</div>
-                    </div>
-                    <div class="goal-card" onclick="selectGoal(this, 'p')">
-                      <div class="goal-icon">🏃</div>
-                      <div class="goal-name">Perder</div>
-                    </div>
-                    <div class="goal-card" onclick="selectGoal(this, 'k')">
-                      <div class="goal-icon">⚖️</div>
-                      <div class="goal-name">Mantener</div>
-                    </div>
-                  </div>
-                </div>
-                <div class="error-msg" id="err-step2" style="text-align:center">Selecciona sexo y objetivo.</div>
-                <div style="text-align:center;margin-top:16px">
-                  <button class="slide-cta"
-                    style="justify-content:center;transition:transform .15s cubic-bezier(.34,1.56,.64,1);position:relative;z-index:10"
-                    onmouseenter="if(!validateStep(currentRegStep)) { jumpButton(this); } else { this.style.transform = 'translate(0,0)'; }"
-                    onclick="setStep(3, this)">Casi listo →</button>
-                </div>
-              </div>
+                <div id="payment-section" style="display:none">
 
-              <!-- Step 3: Metrics -->
-              <div class="register-step" id="step-3">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                  <div class="field">
-                    <label class="label">Peso (kg)</label>
-                    <input type="number" id="reg-weight" class="input" placeholder="70"
-                      onkeydown="if(event.key==='Enter') setStep(4, document.querySelector('#step-3 .slide-cta'))">
-                  </div>
-                  <div class="field">
-                    <label class="label">Altura (cm)</label>
-                    <input type="number" id="reg-height" class="input" placeholder="175"
-                      onkeydown="if(event.key==='Enter') setStep(4, document.querySelector('#step-3 .slide-cta'))">
-                  </div>
-                </div>
-                <div class="error-msg" id="err-step3" style="text-align:center">Introduce valores válidos.</div>
-                <div style="text-align:center;margin-top:16px">
-                  <button class="slide-cta"
-                    style="justify-content:center;transition:transform .15s cubic-bezier(.34,1.56,.64,1);position:relative;z-index:10"
-                    onmouseenter="if(!validateStep(3)) { jumpButton(this); } else { this.style.transform = 'translate(0,0)'; }"
-                    onclick="setStep(4, this)">Continuar Pago →</button>
-                </div>
-              </div>
 
-              <!-- Step 4: Payment -->
-              <div class="register-step" id="step-4">
-                <div
-                  style="background:rgba(255,59,59,0.08);border-radius:12px;padding:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
-                  <div>
-                    <div style="font-size:11px;font-weight:800;color:var(--accent)">FitPaisa Premium</div>
-                    <div style="font-size:10px;color:var(--muted)">Suscripción mensual</div>
-                  </div>
-                  <div style="font-family:var(--font-d);font-size:20px;color:var(--accent)">14.99€</div>
-                </div>
 
                 <div class="field" style="gap:10px;margin-bottom:12px">
                   <label class="label">Método de Pago</label>
@@ -1128,20 +1084,20 @@
                   <div style="font-size:10px;color:var(--muted)">Haz clic en "Activar" para continuar.</div>
                 </div>
 
-                <div class="error-msg" id="err-step4" style="text-align:center">Verifica los datos de pago.</div>
+                </div> <!-- End payment-section -->
+
+                <div class="error-msg" id="err-step2" style="text-align:center">Verifica los datos.</div>
                 <div style="text-align:center;margin-top:16px">
                   <button class="slide-cta" id="btn-finish"
                     style="justify-content:center;transition:transform .15s cubic-bezier(.34,1.56,.64,1);position:relative;z-index:10"
-                    onmouseenter="if(validateStep(4)) { this.style.transform = 'translate(0,0)'; } else { jumpButton(this); }"
-                    onclick="finishReg(this)">Activar Plan ✓</button>
+                    onmouseenter="if(validateStep(2)) { this.style.transform = 'translate(0,0)'; } else { jumpButton(this); }"
+                    onclick="finishReg(this)">Crear Cuenta Gratuita ✓</button>
                 </div>
               </div>
 
               <!-- Progress dots -->
               <div style="display:flex;gap:6px;margin-top:20px;justify-content:center" id="reg-indicator">
                 <div style="height:4px;flex:1;background:var(--accent);border-radius:99px" class="reg-dot"></div>
-                <div style="height:4px;flex:1;background:rgba(255,255,255,.1);border-radius:99px" class="reg-dot"></div>
-                <div style="height:4px;flex:1;background:rgba(255,255,255,.1);border-radius:99px" class="reg-dot"></div>
                 <div style="height:4px;flex:1;background:rgba(255,255,255,.1);border-radius:99px" class="reg-dot"></div>
               </div>
             </div>
@@ -1803,44 +1759,35 @@
           document.getElementById('err-pass-confirm').classList.add('on');
           valid = false;
         }
+        
+        // Gender check
+        if (!userGender) {
+          // You could add a specific err-gender div, but for simplicity let's use err-name or general error
+          document.querySelectorAll('#step-1 .goal-card').forEach(c => c.style.borderColor = 'var(--danger)');
+          valid = false;
+        } else {
+          document.querySelectorAll('#step-1 .goal-card').forEach(c => c.style.borderColor = 'var(--border)');
+        }
       }
 
       if (n === 2) {
-        if (!userGender) {
-          document.getElementById('err-step2').classList.add('on');
-          valid = false;
+        if (selectedPlan === 'premium') {
+          if (payMethod === 'card') {
+            const num = document.getElementById('pay-card');
+            const exp = document.getElementById('pay-expiry');
+            const cvc = document.getElementById('pay-cvc');
+            const pName = document.getElementById('pay-name');
+  
+            if (pName.value.trim() === '') { pName.classList.add('invalid-input'); valid = false; }
+            if (!/^[0-9\s]{16,}$/.test(num.value.replace(/\s/g, ''))) { num.classList.add('invalid-input'); valid = false; }
+            if (!/^[0-9]{2}\/[0-9]{2}$/.test(exp.value)) { exp.classList.add('invalid-input'); valid = false; }
+            if (!/^[0-9]{3,4}$/.test(cvc.value)) { cvc.classList.add('invalid-input'); valid = false; }
+          } else if (payMethod === 'bizum') {
+            const phone = document.getElementById('pay-bizum-phone');
+            if (!/^[0-9\s]{9,}$/.test(phone.value.replace(/\s/g, ''))) { phone.classList.add('invalid-input'); valid = false; }
+          }
         }
-      }
-
-      if (n === 3) {
-        const w = document.getElementById('reg-weight');
-        const h = document.getElementById('reg-height');
-        if (!w.value || w.value <= 0 || !h.value || h.value <= 0) {
-          if (w.value <= 0) w.classList.add('invalid-input');
-          if (h.value <= 0) h.classList.add('invalid-input');
-          document.getElementById('err-step3').classList.add('on');
-          valid = false;
-        }
-      }
-
-      if (n === 4) {
-        if (payMethod === 'card') {
-          const num = document.getElementById('pay-card');
-          const exp = document.getElementById('pay-expiry');
-          const cvc = document.getElementById('pay-cvc');
-          const pName = document.getElementById('pay-name');
-
-          if (pName.value.trim() === '') { pName.classList.add('invalid-input'); valid = false; }
-          if (!/^[0-9\s]{16,}$/.test(num.value.replace(/\s/g, ''))) { num.classList.add('invalid-input'); valid = false; }
-          if (!/^[0-9]{2}\/[0-9]{2}$/.test(exp.value)) { exp.classList.add('invalid-input'); valid = false; }
-          if (!/^[0-9]{3,4}$/.test(cvc.value)) { cvc.classList.add('invalid-input'); valid = false; }
-        } else if (payMethod === 'bizum') {
-          const phone = document.getElementById('pay-bizum-phone');
-          if (!/^[0-9\s]{9,}$/.test(phone.value.replace(/\s/g, ''))) { phone.classList.add('invalid-input'); valid = false; }
-        }
-        // PayPal is always true for simulation
-
-        if (!valid) document.getElementById('err-step4').classList.add('on');
+        if (!valid) document.getElementById('err-step2').classList.add('on');
       }
 
       return valid;
@@ -1849,7 +1796,7 @@
     let payMethod = 'card';
     function selectPayMethod(method) {
       payMethod = method;
-      document.querySelectorAll('#step-4 .goal-card').forEach(c => c.classList.remove('on'));
+      document.querySelectorAll('#payment-section .goal-card').forEach(c => c.classList.remove('on'));
       document.getElementById('m-' + method).classList.add('on');
 
       // Show/Hide relevant views
@@ -1858,9 +1805,28 @@
       document.getElementById('view-paypal').style.display = (method === 'paypal') ? 'block' : 'none';
 
       // Reset error state
-      document.querySelectorAll('#step-4 .error-msg').forEach(e => e.classList.remove('on'));
-      document.querySelectorAll('#step-4 .input').forEach(e => e.classList.remove('invalid-input'));
+      document.querySelectorAll('#step-2 .error-msg').forEach(e => e.classList.remove('on'));
+      document.querySelectorAll('#step-2 .input').forEach(e => e.classList.remove('invalid-input'));
       document.getElementById('btn-finish').style.transform = 'translate(0,0)';
+    }
+    
+    let selectedPlan = 'free';
+    function selectPlan(plan) {
+      selectedPlan = plan;
+      // Only target the plan cards themselves, not the payment method ones
+      document.getElementById('plan-free').classList.remove('on');
+      document.getElementById('plan-premium').classList.remove('on');
+      document.getElementById('plan-' + plan).classList.add('on');
+      
+      const ps = document.getElementById('payment-section');
+      const btn = document.getElementById('btn-finish');
+      if (plan === 'premium') {
+        ps.style.display = 'block';
+        btn.textContent = 'Activar Plan Premium ✓';
+      } else {
+        ps.style.display = 'none';
+        btn.textContent = 'Crear Cuenta Gratuita ✓';
+      }
     }
 
     function jumpButton(el) {
@@ -1927,19 +1893,18 @@
 
     /* ── REGISTRO con API real ───────────────────────────────────── */
     async function finishReg(btn) {
-      if (!validateStep(4)) {
+      if (!validateStep(2)) {
         if (btn) jumpButton(btn);
         return;
       }
 
       if (btn) {
         btn.style.transform = 'translate(0,0)';
-        btn.textContent     = 'Activando…';
+        btn.textContent     = 'Procesando…';
         btn.disabled        = true;
       }
 
       /* Mapear selecciones del UI a valores del backend */
-      const goalMap = { m: 'GAIN_MUSCLE', p: 'LOSE_WEIGHT', k: 'MAINTAIN' };
       const genderMap = { M: 'MALE', F: 'FEMALE', O: 'OTHER' };
 
       const payload = {
@@ -1948,10 +1913,8 @@
         phone:      document.getElementById('reg-phone').value.trim(),
         password:   document.getElementById('reg-pass').value,
         gender:     genderMap[userGender] || 'OTHER',
-        objective:  goalMap[userGoal]     || 'MAINTAIN',
-        weight:     parseFloat(document.getElementById('reg-weight').value),
-        height:     parseFloat(document.getElementById('reg-height').value),
-        pay_method: payMethod,
+        plan:       selectedPlan === 'premium' ? 'PREMIUM_MONTHLY' : 'FREE',
+        pay_method: selectedPlan === 'premium' ? payMethod : null,
       };
 
       try {
@@ -1968,32 +1931,26 @@
           isRegActive = false;
           window.location.href = 'fitpaisa_cliente.html';
         } else {
-          const errEl = document.getElementById('err-step4');
+          const errEl = document.getElementById('err-step2');
           errEl.textContent = data.message || 'Error al registrar. Intenta de nuevo.';
           errEl.classList.add('on');
-          if (btn) { btn.textContent = 'Activar Plan ✓'; btn.disabled = false; }
+          if (btn) { btn.textContent = selectedPlan === 'premium' ? 'Activar Plan Premium ✓' : 'Crear Cuenta Gratuita ✓'; btn.disabled = false; }
         }
       } catch (e) {
-        const errEl = document.getElementById('err-step4');
+        const errEl = document.getElementById('err-step2');
         errEl.textContent = 'Error de conexión. Intenta de nuevo.';
         errEl.classList.add('on');
-        if (btn) { btn.textContent = 'Activar Plan ✓'; btn.disabled = false; }
+        if (btn) { btn.textContent = selectedPlan === 'premium' ? 'Activar Plan Premium ✓' : 'Crear Cuenta Gratuita ✓'; btn.disabled = false; }
       }
     }
 
-    function selectGoal(el, val) {
-      document.querySelectorAll('#step-2 .goal-card').forEach(c => c.classList.remove('on'));
-      el.classList.add('on');
-      userGoal = val;
-    }
-
     function selectGender(el, val) {
-      // Only target the gender row cards (the first 3)
-      const genderCards = document.querySelectorAll('#step-2 > div:nth-of-type(1) .goal-card');
+      const genderCards = document.querySelectorAll('#step-1 .goal-card');
       genderCards.forEach(c => c.classList.remove('on'));
       el.classList.add('on');
       userGender = val;
-      document.getElementById('err-step2').classList.remove('on');
+      // Remove red border error
+      document.querySelectorAll('#step-1 .goal-card').forEach(c => c.style.borderColor = 'var(--border)');
     }
 
     // Hover effect on interactive elements
@@ -2016,7 +1973,7 @@
     document.addEventListener('keydown', e => {
       if (e.key === 'Enter' && isRegActive) {
         e.preventDefault();
-        if (currentRegStep < 4) {
+        if (currentRegStep < 2) {
           // Find the active button for the current step
           const activeBtn = document.querySelector('#step-' + currentRegStep + ' .slide-cta');
           setStep(currentRegStep + 1, activeBtn);

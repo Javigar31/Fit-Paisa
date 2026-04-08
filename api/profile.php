@@ -28,9 +28,10 @@ $action  = fp_sanitize($_GET['action'] ?? 'get', 32);
 
 match ($action) {
     'get'       => handle_get_profile($payload),
-    'update'    => handle_update_profile($payload),
-    'log_body'  => handle_log_body($payload),
-    'history'   => handle_body_history($payload),
+    'update'       => handle_update_profile($payload),
+    'setup_macros' => handle_setup_macros($payload),
+    'log_body'     => handle_log_body($payload),
+    'history'      => handle_body_history($payload),
     default     => fp_error(400, "Acción '{$action}' no reconocida."),
 };
 
@@ -114,6 +115,61 @@ function handle_update_profile(array $payload): never
 
     $macros = calculate_macros($weight, $height, $age, $gender, $objective, $activity);
     fp_success(['message' => 'Perfil actualizado correctamente.', 'macro_targets' => $macros]);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SETUP MACROS (Primer inicio post-registro)
+   ══════════════════════════════════════════════════════════════════════ */
+function handle_setup_macros(array $payload): never
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $_SERVER['REQUEST_METHOD'] !== 'PUT') {
+        fp_error(405, 'Método no permitido.');
+    }
+
+    $body   = fp_json_body();
+    $weight = (float) ($body['weight'] ?? 0);
+    $height = (float) ($body['height'] ?? 0);
+    $objective = fp_sanitize($body['objective'] ?? 'MAINTAIN', 30);
+
+    if ($weight <= 0 || $weight > 500) fp_error(400, 'Peso inválido.');
+    if ($height <= 0 || $height > 300) fp_error(400, 'Altura inválida.');
+    if (!in_array($objective, ['LOSE_WEIGHT', 'GAIN_MUSCLE', 'MAINTAIN', 'IMPROVE_HEALTH'], true)) {
+        fp_error(400, 'Objetivo inválido.');
+    }
+
+    /* Obtener el resto de datos que no piden en el setup (edad, género, actividad) de la BD */
+    $current = fp_query(
+        'SELECT age, gender, activity_level FROM profiles WHERE user_id = :uid',
+        [':uid' => $payload['user_id']]
+    )->fetch();
+
+    $age = $current['age'] > 0 ? (int)$current['age'] : 25;
+    $gender = $current['gender'] ?: 'OTHER';
+    $activity = $current['activity_level'] ?: 'MODERATE';
+
+    fp_query(
+        'UPDATE profiles
+         SET weight = :w, height = :h, objective = :o, updated_at = NOW()
+         WHERE user_id = :uid',
+        [
+            ':w'   => $weight,
+            ':h'   => $height,
+            ':o'   => $objective,
+            ':uid' => $payload['user_id'],
+        ]
+    );
+
+    $macros = calculate_macros($weight, $height, $age, $gender, $objective, $activity);
+    
+    fp_success([
+        'message' => 'Macros configurados correctamente.',
+        'profile' => [
+            'weight' => $weight,
+            'height' => $height,
+            'objective' => $objective
+        ],
+        'macro_targets' => $macros
+    ]);
 }
 
 /* ══════════════════════════════════════════════════════════════════════

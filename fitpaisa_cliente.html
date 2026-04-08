@@ -178,6 +178,17 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:va
 .btn-danger{background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.3);border-radius:8px;padding:8px 14px;color:var(--danger);font-size:12px;cursor:none;font-family:var(--fb);transition:all .2s}
 .btn-danger:hover{background:rgba(255,77,109,.2)}
 
+/* ═══ Paywall ═══ */
+.paywall-overlay{
+  position:absolute; inset:0; z-index:100;
+  background:rgba(8,10,15,.75); backdrop-filter:blur(8px);
+  display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:40px;
+}
+.paywall-overlay.on{ display:flex; }
+.pw-icon{ font-size:48px; margin-bottom:16px; }
+.pw-title{ font-family:var(--fd); font-size:32px; color:var(--lime); margin-bottom:12px; }
+.pw-text{ font-size:14px; color:var(--text); max-width:320px; line-height:1.6; margin-bottom:24px; }
+
 /* ═══ Modal overlay ═══ */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);z-index:500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
 .modal-overlay.open{opacity:1;pointer-events:auto}
@@ -309,6 +320,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:va
       <div class="user-tag"><div class="avatar">JG</div>Javier García</div>
     </div>
     <div class="slide-body-wrap">
+      <div class="paywall-overlay">
+        <div class="pw-icon">🔒</div>
+        <div class="pw-title">EXCLUSIVO PREMIUM</div>
+        <div class="pw-text">Desbloquea rutinas personalizadas, registro de marcas y todo lo que necesitas para romper tus límites.</div>
+        <button class="btn-lime" onclick="openModal('modal-subscription')">Actualizar a Premium</button>
+      </div>
       <div class="slide-hero">
         <div class="slide-tag">Plan activo · Volumen</div>
         <div class="slide-title">ROMPE<br>TUS<br><em>LÍMITES.</em></div>
@@ -355,7 +372,38 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:va
       <div class="premium-chip">🥗 Nutrición</div>
       <div class="user-tag"><div class="avatar">JG</div>Javier García</div>
     </div>
-    <div class="slide-body-wrap">
+    <!-- Diet Setup UI (when weight is 0) -->
+    <div class="slide-body-wrap" id="diet-setup" style="display:none">
+      <div class="slide-hero">
+        <div class="slide-tag">Configuración Inicial</div>
+        <div class="slide-title">CALCULA<br>TUS<br><em>MACROS.</em></div>
+        <div class="slide-desc">Para poder darte recomendaciones exactas de calorías y macronutrientes, necesitamos conocer tus métricas actuales y tu objetivo.</div>
+      </div>
+      <div class="slide-panel">
+        <div class="card">
+          <div class="card-title">Mis Métricas y Objetivo</div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="grid2">
+              <div class="field"><label class="label">Peso (kg)</label><input class="input" id="setup-weight" type="number" placeholder="70"></div>
+              <div class="field"><label class="label">Altura (cm)</label><input class="input" id="setup-height" type="number" placeholder="175"></div>
+            </div>
+            <div class="field">
+              <label class="label">Objetivo</label>
+              <select class="input" id="setup-objective" style="appearance:none;background:rgba(255,255,255,.05);color:var(--text)">
+                <option value="GAIN_MUSCLE" style="color:black">Construir masa muscular</option>
+                <option value="LOSE_WEIGHT" style="color:black">Perder peso / Definir</option>
+                <option value="MAINTAIN" style="color:black">Mantener el peso actual</option>
+                <option value="IMPROVE_HEALTH" style="color:black">Mejorar salud general</option>
+              </select>
+            </div>
+            <button class="btn-lime" onclick="saveDietSetup(this)">Calcular Mis Macros</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Diet Content UI -->
+    <div class="slide-body-wrap" id="diet-content" style="display:grid">
       <div class="slide-hero">
         <div class="slide-tag">Control nutricional · Hoy</div>
         <div class="slide-title">COME<br>CON<br><em>DATOS.</em></div>
@@ -411,6 +459,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:va
       <div class="user-tag"><div class="avatar">JG</div>Javier García</div>
     </div>
     <div class="slide-body-wrap">
+      <div class="paywall-overlay">
+        <div class="pw-icon">💬</div>
+        <div class="pw-title">EXCLUSIVO PREMIUM</div>
+        <div class="pw-text">Conecta directamente con tu entrenador personal para resolver dudas y ajustar tu plan sobre la marcha.</div>
+        <button class="btn-lime" onclick="openModal('modal-subscription')">Actualizar a Premium</button>
+      </div>
       <div class="slide-hero">
         <div class="slide-tag">Mensajería directa</div>
         <div class="slide-title">TU ENTRE<br>NADORA<br><em>EN LÍNEA.</em></div>
@@ -446,6 +500,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:va
       <div class="user-tag"><div class="avatar">JG</div>Javier García</div>
     </div>
     <div class="slide-body-wrap">
+      <div class="paywall-overlay">
+        <div class="pw-icon">📈</div>
+        <div class="pw-title">EXCLUSIVO PREMIUM</div>
+        <div class="pw-text">Monitorea tu peso corporal y tus medidas de forma avanzada para visualizar tu progreso cada semana.</div>
+        <button class="btn-lime" onclick="openModal('modal-subscription')">Actualizar a Premium</button>
+      </div>
       <div class="slide-hero">
         <div class="slide-tag">Evolución física</div>
         <div class="slide-title">TU<br>MEJOR<br><em>VERSIÓN.</em></div>
@@ -579,9 +639,98 @@ function show(id, el) {
 }
 
 // ── Initialization ────────────────────
+let userProfile = null;
 window.addEventListener('load', () => {
+  const token = localStorage.getItem('fp_token');
+  if (!token) { window.location.href = 'index.html'; return; }
+  
+  const user = JSON.parse(localStorage.getItem('fp_user'));
+  if (!user || user.role !== 'USER') { window.location.href = 'index.html'; return; }
+  
+  userProfile = user;
+  const plan = user.subscription_plan || 'FREE';
+  
+  // Set user names
+  const initials = user.name.substring(0, 2).toUpperCase();
+  document.querySelectorAll('.user-tag, .sb-user-tag').forEach(t => {
+    t.innerHTML = `<div class="avatar">${initials}</div>${user.name}`;
+  });
+  
+  // Apply Paywall logic
+  if (plan === 'FREE') {
+    document.querySelectorAll('.premium-chip').forEach(c => {
+      c.innerHTML = '🌱 Básico';
+      c.style.background = 'rgba(255,255,255,.05)';
+      c.style.color = 'var(--text)';
+      c.style.borderColor = 'var(--border)';
+    });
+    document.getElementById('sec-training').querySelector('.paywall-overlay').classList.add('on');
+    document.getElementById('sec-messages').querySelector('.paywall-overlay').classList.add('on');
+    document.getElementById('sec-progress').querySelector('.paywall-overlay').classList.add('on');
+  }
+
+  // Diet UI toggle
+  if (!userProfile.weight || userProfile.weight <= 0) {
+    document.getElementById('diet-content').style.display = 'none';
+    document.getElementById('diet-setup').style.display = 'grid';
+  } else {
+    document.getElementById('diet-setup').style.display = 'none';
+    document.getElementById('diet-content').style.display = 'grid';
+  }
+
   prog.style.width = (1 / secs.length * 100) + '%';
 });
+
+// ── Diet Setup ────────────────────────
+async function saveDietSetup(btn) {
+  const w = parseFloat(document.getElementById('setup-weight').value);
+  const h = parseFloat(document.getElementById('setup-height').value);
+  const o = document.getElementById('setup-objective').value;
+
+  if (!w || !h || w <= 0 || h <= 0) {
+    alert("Introduce valores válidos de peso y altura.");
+    return;
+  }
+  btn.textContent = 'Calculando...';
+  btn.style.opacity = '0.6';
+  btn.style.pointerEvents = 'none';
+
+  try {
+    const token = localStorage.getItem('fp_token');
+    const res = await fetch('/api/profile.php?action=setup_macros', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ weight: w, height: h, objective: o })
+    });
+    
+    const data = await res.json();
+    
+    if (data.success) {
+      // Guardar en la sesión visual
+      userProfile.weight = w;
+      userProfile.height = h;
+      userProfile.objective = o;
+      localStorage.setItem('fp_user', JSON.stringify(userProfile));
+
+      // Mostrar vista principal
+      document.getElementById('diet-setup').style.display = 'none';
+      document.getElementById('diet-content').style.display = 'grid';
+    } else {
+      alert(data.message || 'Hubo un error al guardar los datos.');
+      btn.textContent = 'Calcular Mis Macros';
+      btn.style.opacity = '1';
+      btn.style.pointerEvents = 'auto';
+    }
+  } catch (e) {
+    alert('Error de conexión.');
+    btn.textContent = 'Calcular Mis Macros';
+    btn.style.opacity = '1';
+    btn.style.pointerEvents = 'auto';
+  }
+}
 
 // ── Week bars ─────────────────────────
 const wData   = [65,72,58,84,77,90,0];
