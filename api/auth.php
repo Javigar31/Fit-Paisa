@@ -61,16 +61,16 @@ function handle_register(): never
     $phone      = fp_sanitize($body['phone']     ?? '', 30);
     $password   = $body['password'] ?? '';            /* No sanitizar: solo hashear */
     $gender     = fp_sanitize($body['gender']    ?? '', 10);
-    $objective  = fp_sanitize($body['objective'] ?? 'MAINTAIN', 30);
-    $weight     = (float) ($body['weight'] ?? 0);
-    $height     = (float) ($body['height'] ?? 0);
-    $plan       = fp_sanitize($body['plan'] ?? 'FREE', 20);
-    
+    $objectiveInput  = fp_sanitize($body['objective'] ?? '', 30);
+    $rawWeight       = (float) ($body['weight'] ?? 0);
+    $rawHeight       = (float) ($body['height'] ?? 0);
+    $plan            = fp_sanitize($body['plan'] ?? 'FREE', 20);
+
     if (!in_array($plan, ['FREE', 'PREMIUM_MONTHLY', 'PREMIUM_ANNUAL'], true)) {
         $plan = 'FREE';
     }
 
-    /* ── Validaciones de negocio ── */
+    /* ── VALIDACIONES DE NEGOCIO ── */
     $errors = [];
 
     if (empty($name) || preg_match('/[0-9]/', $name)) {
@@ -89,14 +89,26 @@ function handle_register(): never
     if (!in_array($gender, ['MALE', 'FEMALE', 'OTHER'], true)) {
         $errors[] = 'El sexo seleccionado no es válido.';
     }
-    if (!in_array($objective, ['LOSE_WEIGHT', 'GAIN_MUSCLE', 'MAINTAIN', 'IMPROVE_HEALTH'], true)) {
-        $errors[] = 'El objetivo seleccionado no es válido.';
-    }
-    if ($weight < 0 || $weight > 500) {
-        $errors[] = 'El peso debe estar entre 0 y 500 kg.';
-    }
-    if ($height < 0 || $height > 300) {
-        $errors[] = 'La altura debe estar entre 0 y 300 cm.';
+
+    /* ── Valores por defecto para cuenta GRATUITA ── */
+    $objective = 'MAINTAIN';
+    $weight    = 0.01;
+    $height    = 0.01;
+
+    if ($plan !== 'FREE') {
+        /* Plan de pago: requiere datos físicos completos */
+        if (!in_array($objectiveInput, ['LOSE_WEIGHT', 'GAIN_MUSCLE', 'MAINTAIN', 'IMPROVE_HEALTH'], true)) {
+            $errors[] = 'El objetivo seleccionado no es válido.';
+        }
+        if ($rawWeight <= 0 || $rawWeight > 500) {
+            $errors[] = 'El peso debe estar entre 0 y 500 kg.';
+        }
+        if ($rawHeight <= 0 || $rawHeight > 300) {
+            $errors[] = 'La altura debe estar entre 0 y 300 cm.';
+        }
+        $objective = $objectiveInput;
+        $weight    = $rawWeight;
+        $height    = $rawHeight;
     }
 
     if (!empty($errors)) {
