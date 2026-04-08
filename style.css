@@ -55,6 +55,12 @@ html, body {
   transition: transform .1s, width .3s, height .3s, opacity .3s;
 }
 
+@media (pointer: coarse) {
+  html, body { cursor: auto !important; }
+  #cursor, #cursor-ring, #cur, #cur-ring { display: none !important; }
+  button, a, .slide-cta, .nav-dot, .arrow-btn, .role-card, .btn-hover-opacity, .btn-hover-scale { cursor: auto !important; }
+}
+
 #cursor-ring,
 #cur-ring {
   position: fixed;

@@ -16,6 +16,14 @@
     background: var(--dark); color: var(--text);
     font-family: var(--font-b);
     -webkit-font-smoothing: antialiased;
+    cursor: none; /* Desktop default */
+  }
+
+  /* Restore cursor on mobile/touch devices */
+  @media (pointer: coarse) {
+    html, body { cursor: auto !important; }
+    #cursor, #cursor-ring { display: none !important; }
+    button, a, .slide-cta, .nav-dot, .arrow-btn, .role-card, .btn-hover-opacity, .btn-hover-scale { cursor: auto !important; }
   }
 
   /* ── Custom cursor ── */
@@ -72,13 +80,23 @@
     line-height: .95; color: var(--text); margin-bottom: 20px;
   }
   .slide-title em { color: var(--accent); font-style: normal; }
-  .slide-body { font-size: 15px; color: var(--muted); line-height: 1.7; margin-bottom: 32px; font-weight: 400; }
+  .slide-body { 
+    font-size: 14px; line-height: 1.8; margin-bottom: 32px; font-weight: 400; 
+    color: #fff; 
+    background: rgba(0,0,0,0.5);
+    padding: 14px 24px;
+    border-radius: 16px;
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.08);
+    max-width: 580px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+  }
 
   .slide-cta {
     display: inline-flex; align-items: center; gap: 10px;
     background: var(--accent); color: var(--dark); padding: 14px 28px;
     border-radius: 4px; font-weight: 800; font-size: 14px; letter-spacing: .05em;
-    cursor: none; transition: transform .2s, box-shadow .2s;
+    cursor: pointer; transition: transform .2s, box-shadow .2s;
     text-transform: uppercase;
   }
   .slide-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(255,107,107,.3); }
@@ -161,20 +179,41 @@
     position: fixed; top: 32px; left: 40px; z-index: 100;
     font-family: var(--font-d); font-size: 28px; color: var(--accent);
     letter-spacing: .05em;
+    transition: opacity .4s ease, transform .4s ease;
   }
+  #logo.is-hidden { opacity: 0; pointer-events: none; transform: translateY(-10px); }
 
   /* ── Arrow hints ── */
   #arrows {
-    position: fixed; top: 50%; right: 32px; transform: translateY(-50%);
-    z-index: 100; display: flex; flex-direction: column; gap: 8px;
+    position: fixed; bottom: 140px; left: 50%; transform: translateX(-50%);
+    z-index: 100; display: flex; flex-direction: row; gap: 16px;
   }
   .arrow-btn {
-    width: 40px; height: 40px; border-radius: 50%;
-    background: rgba(255,255,255,.05); border: 1px solid var(--border);
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(15,18,25,.8); border: 1px solid var(--border);
     color: var(--muted); display: flex; align-items: center; justify-content: center;
-    cursor: none; transition: all .2s; font-size: 16px;
+    cursor: none; transition: all .3s, opacity .4s, visibility .4s; font-size: 18px;
+    backdrop-filter: blur(10px);
+  }
+  .arrow-btn:hover { background: var(--accent); color: var(--dark); border-color: var(--accent); transform: scale(1.1); }
+  
+  .arrow-btn.pulse { 
+    animation: arrowPulse 2s infinite; 
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .arrow-btn.pulse-once { 
+    animation: arrowPulse 2s ease-out; 
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  @keyframes arrowPulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,59,59,0.4); }
+    70% { transform: scale(1.1); box-shadow: 0 0 0 15px rgba(255,59,59,0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,59,59,0); }
   }
   .arrow-btn:hover { background: var(--accent); color: var(--dark); border-color: var(--accent); }
+  .arrow-btn.is-disabled { opacity: 0.1 !important; pointer-events: none !important; }
 
   /* ── Progress line ── */
   #progress-line {
@@ -204,27 +243,52 @@
   @keyframes fadeHint { 0%{opacity:0} 20%{opacity:1} 80%{opacity:1} 100%{opacity:0} }
 
   @media (max-width: 768px) {
-    html, body { overflow: auto; min-height: 100%; }
-    #scene, #carousel, .slide { position: relative; inset: auto; }
+    html, body { 
+      overflow-y: auto !important; 
+      overflow-x: hidden;
+      height: auto !important; 
+      min-height: 100vh;
+      scroll-snap-type: y proximity;
+      scroll-behavior: smooth;
+    }
+    #scene, #carousel, .slide { 
+      position: relative; 
+      inset: auto; 
+      height: auto;
+      min-height: min-content;
+    }
     #scene { perspective: none; }
     #carousel { transform: none !important; }
     .slide {
       min-height: 100vh;
-      padding: 100px 0 120px;
+      display: flex;
+      flex-direction: column;
+      padding: 80px 0 100px;
       opacity: 1 !important;
-      transform: none !important;
+      visibility: visible !important;
       pointer-events: auto !important;
-      transition: opacity 0.4s ease;
+      scroll-snap-align: start;
+      transform: none !important; /* Force reset of JS-based 3D transforms */
     }
-    .slide:not(.is-active) .slide-inner > * { opacity: 1; transform: none; }
-    .slide-inner { grid-template-columns: 1fr; gap: 40px; padding: 0 24px; }
-    .ui-card { display: block; transform: none; }
+    /* Allow slide content animations to work on mobile */
+    .slide-inner { 
+      grid-template-columns: 1fr; 
+      gap: 40px; 
+      padding: 0 24px; 
+      transform: none !important; /* Disable parallax on mobile to avoid jitter */
+    }
+    .ui-card { display: block; transform: none !important; }
     .slide-title { font-size: clamp(40px, 12vw, 64px); }
     #logo { font-size: 22px; top: 20px; left: 20px; }
     #counter { top: 20px; right: 20px; }
     #arrows { display: none; }
     #hint { display: none; }
-    #nav { width: calc(100% - 32px); bottom: 18px; justify-content: center; }
+    #nav { 
+      width: calc(100% - 32px); 
+      bottom: 18px; 
+      justify-content: center; 
+      background: rgba(15,18,25,0.95);
+    }
   }
 
   @media (max-width: 520px) {
@@ -234,7 +298,60 @@
     .stat-grid { grid-template-columns: 1fr; }
   }
 
+  /* ── Interactive role cards ── */
+  .role-card:hover {
+    background: rgba(255,59,59,0.08) !important;
+    border-color: var(--accent) !important;
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(255,59,59,0.15);
+  }
+
+  /* ── Form View States ── */
+  .form-view { display: none; flex-direction: column; gap: 12px; }
+  .form-view.is-active { display: flex; animation: fadeIn .3s ease forwards; }
+
+  .register-step { display: none; flex-direction: column; gap: 12px; }
+  .register-step.is-active { display: flex; animation: slideInNext .4s ease forwards; }
+
+  @keyframes slideInNext {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .goal-card {
+    background: rgba(255,255,255,.05); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px; text-align: center;
+    cursor: none; transition: all .2s;
+  }
+  .goal-card:hover { border-color: var(--accent); background: rgba(255,59,59,0.05); }
+  .goal-card.on { border-color: var(--accent); background: rgba(255,59,59,0.1); }
+  .goal-icon { font-size: 20px; margin-bottom: 4px; }
+  .goal-name { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; color: var(--muted); }
+  .goal-card.on .goal-name { color: var(--accent); }
+
+  .invalid-input { border-color: var(--accent) !important; background: rgba(255,59,59,0.05) !important; }
+  .error-msg { font-size: 10px; color: var(--accent); margin-top: 4px; display: none; font-weight: 600; line-height: 1.2; }
+  .error-msg.on { display: block; }
   
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field .label { font-size: 11px; color: var(--muted); margin-bottom: 6px; font-weight: 400; text-transform: none; letter-spacing: normal; }
+
+  
+
+  .input {
+    background: rgba(255,255,255,.05);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 11px 14px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: var(--font-b);
+    outline: none;
+    width: 100%;
+    transition: border-color .2s;
+  }
+  .input:focus { border-color: var(--accent); }
+  .input::placeholder { color: var(--muted); }
 
 </style>
 </head>
@@ -266,11 +383,11 @@
           <div class="slide-label">Bienvenido/a a FitPaisa</div>
           <div class="slide-title">ENTRENA.<br><em>COME.</em><br>EVOLUCIONA.</div>
           <p class="slide-body">Plataforma web de entrenamiento y nutrición personalizada. Tu entrenador/a, tus planes y tu progreso, en un solo lugar.</p>
-          <button class="slide-cta" onclick="go(1)">Comenzar →</button>
+          <button class="slide-cta" onclick="go(1)">Descubre más →</button>
         </div>
         <div class="ui-card">
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--lime);margin-bottom:20px;font-weight:700">Acceso rápido</div>
-          <div style="display:flex;flex-direction:column;gap:12px">
+          <div id="login-view" class="form-view is-active">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-bottom:8px;font-weight:700">Acceso rápido</div>
             <div>
               <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Correo electrónico</div>
               <div style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:11px 14px;font-size:13px;color:var(--muted)">javier@fitpaisa.com</div>
@@ -279,16 +396,216 @@
               <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Contraseña</div>
               <div style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:11px 14px;font-size:13px;color:var(--muted)">••••••••</div>
             </div>
-            <div style="background:var(--lime);color:var(--dark);border-radius:8px;padding:12px;text-align:center;font-weight:800;font-size:13px;margin-top:4px">ENTRAR</div>
-            <div style="text-align:center;font-size:11px;color:var(--muted)">¿Primera vez? Regístrate en 3 pasos</div>
+            <div style="background:var(--accent);color:var(--dark);border-radius:8px;padding:12px;text-align:center;font-weight:800;font-size:13px;margin-top:4px;cursor:none" class="btn-hover-scale" onclick="window.location.href='fitpaisa_cliente.html'">ENTRAR</div>
+            <div style="text-align:center;font-size:11px;color:var(--muted);cursor:none" class="btn-hover-opacity" onclick="toggleForm('register')">¿Primera vez? <span style="color:var(--accent);font-weight:700">Regístrate gratis</span></div>
           </div>
-          <!-- Steps indicator -->
-          <div style="display:flex;gap:6px;margin-top:20px;justify-content:center">
-            <div style="height:4px;flex:1;background:var(--lime);border-radius:99px"></div>
-            <div style="height:4px;flex:1;background:rgba(255,255,255,.1);border-radius:99px"></div>
-            <div style="height:4px;flex:1;background:rgba(255,255,255,.1);border-radius:99px"></div>
+
+          <div id="register-view" class="form-view">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);font-weight:800">Registro Paso <span id="reg-step-label">1</span> de 4</div>
+              <div style="font-size:11px;color:var(--muted);cursor:none" class="btn-hover-opacity" onclick="regBack()">Volver</div>
+            </div>
+
+            <!-- Step 1: Account & Identity -->
+            <div class="register-step is-active" id="step-1">
+              <div class="field">
+                <label class="label">Nombre completo</label>
+                <input type="text" id="reg-name" class="input" placeholder="Tu nombre (sin números)">
+                <div class="error-msg" id="err-name">No se permiten números en el nombre.</div>
+              </div>
+              
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div class="field">
+                  <label class="label">Email</label>
+                  <input type="email" id="reg-email" class="input" placeholder="ej@fitpaisa.com">
+                  <div class="error-msg" id="err-email">Formato inválido.</div>
+                </div>
+                <div class="field">
+                  <label class="label">Teléfono</label>
+                  <input type="tel" id="reg-phone" class="input" placeholder="600 000 000">
+                  <div class="error-msg" id="err-phone">Inválido.</div>
+                </div>
+              </div>
+              
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div class="field">
+                  <label class="label">Contraseña</label>
+                  <input type="password" id="reg-pass" class="input" placeholder="********">
+                </div>
+                <div class="field">
+                  <label class="label">Confirmar Contraseña</label>
+                  <input type="password" id="reg-pass-confirm" class="input" placeholder="********">
+                </div>
+              </div>
+              <div class="error-msg" id="err-pass">Debe incluir: Mayúscula, Número y Símbolo.</div>
+              <div class="error-msg" id="err-pass-confirm">Las contraseñas no coinciden.</div>
+              
+              <div style="text-align:center;margin-top:12px">
+                <button class="slide-cta" style="justify-content:center;transition:transform .15s cubic-bezier(.34,1.56,.64,1);position:relative;z-index:10" onmouseenter="if(!validateStep(currentRegStep)) { jumpButton(this); } else { this.style.transform = 'translate(0,0)'; }" onclick="setStep(2, this)">Continuar →</button>
+              </div>
+            </div>
+
+            <!-- Step 2: Goal & Sex -->
+            <div class="register-step" id="step-2">
+              <div class="field" style="gap:10px">
+                <label class="label">Sexo</label>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+                  <div class="goal-card" onclick="selectGender(this, 'M')">
+                    <div class="goal-icon">👨</div>
+                    <div class="goal-name">Hombre</div>
+                  </div>
+                  <div class="goal-card" onclick="selectGender(this, 'F')">
+                    <div class="goal-icon">👩‍🦰</div>
+                    <div class="goal-name">Mujer</div>
+                  </div>
+                  <div class="goal-card" onclick="selectGender(this, 'O')">
+                    <div class="goal-icon">⚧️</div>
+                    <div class="goal-name">Otro</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="field" style="gap:10px;margin-top:4px">
+                <label class="label">Objetivo</label>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+                  <div class="goal-card on" onclick="selectGoal(this, 'm')">
+                    <div class="goal-icon">💪</div>
+                    <div class="goal-name">Músculo</div>
+                  </div>
+                  <div class="goal-card" onclick="selectGoal(this, 'p')">
+                    <div class="goal-icon">🏃</div>
+                    <div class="goal-name">Perder</div>
+                  </div>
+                  <div class="goal-card" onclick="selectGoal(this, 'k')">
+                    <div class="goal-icon">⚖️</div>
+                    <div class="goal-name">Mantener</div>
+                  </div>
+                </div>
+              </div>
+              <div class="error-msg" id="err-step2" style="text-align:center">Selecciona sexo y objetivo.</div>
+              <div style="text-align:center;margin-top:16px">
+                <button class="slide-cta" style="justify-content:center;transition:transform .15s cubic-bezier(.34,1.56,.64,1);position:relative;z-index:10" onmouseenter="if(!validateStep(currentRegStep)) { jumpButton(this); } else { this.style.transform = 'translate(0,0)'; }" onclick="setStep(3, this)">Casi listo →</button>
+              </div>
+            </div>
+
+            <!-- Step 3: Metrics -->
+            <div class="register-step" id="step-3">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div class="field">
+                  <label class="label">Peso (kg)</label>
+                  <input type="number" id="reg-weight" class="input" placeholder="70">
+                </div>
+                <div class="field">
+                  <label class="label">Altura (cm)</label>
+                  <input type="number" id="reg-height" class="input" placeholder="175">
+                </div>
+              </div>
+              <div class="error-msg" id="err-step3" style="text-align:center">Introduce valores válidos.</div>
+              <div style="text-align:center;margin-top:16px">
+                <button class="slide-cta" style="justify-content:center;transition:transform .15s cubic-bezier(.34,1.56,.64,1);position:relative;z-index:10" onmouseenter="if(!validateStep(3)) { jumpButton(this); } else { this.style.transform = 'translate(0,0)'; }" onclick="setStep(4, this)">Continuar Pago →</button>
+              </div>
+            </div>
+
+            <!-- Step 4: Payment -->
+            <div class="register-step" id="step-4">
+              <div style="background:rgba(255,59,59,0.08);border-radius:12px;padding:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div style="font-size:11px;font-weight:800;color:var(--accent)">FitPaisa Premium</div>
+                  <div style="font-size:10px;color:var(--muted)">Suscripción mensual</div>
+                </div>
+                <div style="font-family:var(--font-d);font-size:20px;color:var(--accent)">14.99€</div>
+              </div>
+
+              <div class="field" style="gap:10px;margin-bottom:12px">
+                <label class="label">Método de Pago</label>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+                  <div class="goal-card on" id="m-card" onclick="selectPayMethod('card')">
+                    <div class="goal-icon">💳</div>
+                    <div class="goal-name">Tarjeta</div>
+                  </div>
+                  <div class="goal-card" id="m-bizum" onclick="selectPayMethod('bizum')">
+                    <div class="goal-icon" style="color:#00AAAD">📱</div>
+                    <div class="goal-name">Bizum</div>
+                  </div>
+                  <div class="goal-card" id="m-paypal" onclick="selectPayMethod('paypal')">
+                    <div class="goal-icon" style="color:#003087">🅿️</div>
+                    <div class="goal-name">PayPal</div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Card View -->
+              <div id="view-card">
+                <div class="field">
+                  <label class="label">Titular de la tarjeta</label>
+                  <input type="text" id="pay-name" class="input" placeholder="Javier García">
+                </div>
+                <div class="field" style="margin-top:8px">
+                  <label class="label">Número de tarjeta</label>
+                  <input type="text" id="pay-card" class="input" placeholder="0000 0000 0000 0000" maxlength="19">
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
+                  <div class="field">
+                    <label class="label">Fecha (MM/YY)</label>
+                    <input type="text" id="pay-expiry" class="input" placeholder="12/28" maxlength="5">
+                  </div>
+                  <div class="field">
+                    <label class="label">CVC</label>
+                    <input type="text" id="pay-cvc" class="input" placeholder="000" maxlength="3">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bizum View -->
+              <div id="view-bizum" style="display:none">
+                <div class="field">
+                  <label class="label">Teléfono Bizum</label>
+                  <input type="text" id="pay-bizum-phone" class="input" placeholder="600 000 000" maxlength="11">
+                </div>
+                <div style="font-size:10px;color:var(--muted);margin-top:8px;text-align:center">Recibirás una notificación en tu app bancaria para confirmar.</div>
+              </div>
+
+              <!-- PayPal View -->
+              <div id="view-paypal" style="display:none;padding:20px;text-align:center;background:rgba(255,255,255,0.03);border-radius:12px">
+                <div style="font-size:12px;color:var(--text);margin-bottom:10px">Serás redirigido a la plataforma segura de PayPal.</div>
+                <div style="font-size:10px;color:var(--muted)">Haz clic en "Activar" para continuar.</div>
+              </div>
+              
+              <div class="error-msg" id="err-step4" style="text-align:center">Verifica los datos de pago.</div>
+              <div style="text-align:center;margin-top:16px">
+                <button class="slide-cta" id="btn-finish" style="justify-content:center;transition:transform .15s cubic-bezier(.34,1.56,.64,1);position:relative;z-index:10" onmouseenter="if(validateStep(4)) { this.style.transform = 'translate(0,0)'; } else { jumpButton(this); }" onclick="finishReg(this)">Activar Plan ✓</button>
+              </div>
+            </div>
+
+            <!-- Progress dots -->
+            <div style="display:flex;gap:6px;margin-top:20px;justify-content:center" id="reg-indicator">
+              <div style="height:4px;flex:1;background:var(--accent);border-radius:99px" class="reg-dot"></div>
+              <div style="height:4px;flex:1;background:rgba(255,255,255,.1);border-radius:99px" class="reg-dot"></div>
+              <div style="height:4px;flex:1;background:rgba(255,255,255,.1);border-radius:99px" class="reg-dot"></div>
+              <div style="height:4px;flex:1;background:rgba(255,255,255,.1);border-radius:99px" class="reg-dot"></div>
+            </div>
+            </div>
           </div>
-          <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:8px">Paso 1 de 3</div>
+          
+          <div id="demo-selector-wrap" style="max-width: 50%;">
+            <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin-bottom:12px;font-weight:800">Seleccionar Perfil (Modo Demo)</div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+                <a href="fitpaisa_admin.html" style="text-decoration:none;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center;transition:all .3s;cursor:none" class="role-card">
+                  <div style="font-size:20px;margin-bottom:4px">🛡️</div>
+                  <div style="font-size:10px;color:var(--text);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Admin</div>
+                </a>
+                <a href="fitpaisa_entrenador.html" style="text-decoration:none;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center;transition:all .3s;cursor:none" class="role-card">
+                  <div style="font-size:20px;margin-bottom:4px">⚖️</div>
+                  <div style="font-size:10px;color:var(--text);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Coach</div>
+                </a>
+                <a href="fitpaisa_cliente.html" style="text-decoration:none;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center;transition:all .3s;cursor:none" class="role-card">
+                  <div style="font-size:20px;margin-bottom:4px">👤</div>
+                  <div style="font-size:10px;color:var(--text);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Cliente</div>
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -465,14 +782,14 @@
           <div class="slide-label">Suscripción Premium</div>
           <div class="slide-title">EL NIVEL<br>PRO,<br><em>SIN LÍMITES.</em></div>
           <p class="slide-body">Entrenador/a personal, planes a medida, estadísticas avanzadas y mensajería directa. Pago seguro con Stripe y PayPal — PCI-DSS.</p>
-          <button class="slide-cta" onclick="go(-5)">Volver al inicio →</button>
+          <button class="slide-cta" onclick="go(1)">Contactar →</button>
         </div>
         <div class="ui-card">
           <div class="premium-card">
             <div style="display:flex;justify-content:space-between;align-items:flex-start">
               <div>
                 <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--lime);font-weight:700">Premium</div>
-                <div class="price-big">9,99</div>
+                <div class="price-big">14,99</div>
                 <div style="font-size:12px;color:var(--muted)">€ / mes · Sin permanencia</div>
               </div>
               <div style="background:var(--lime);color:var(--dark);padding:4px 10px;border-radius:99px;font-size:10px;font-weight:800;text-transform:uppercase">⚡ Popular</div>
@@ -518,6 +835,7 @@
               Medellín, Colombia
             </div>
           </div>
+          <button class="slide-cta" style="margin-top: 32px;" onclick="goTo(0)">← Volver al inicio</button>
         </div>
         <div class="ui-card">
           <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);font-weight:700;margin-bottom:16px">Formulario de contacto</div>
@@ -555,6 +873,7 @@
 <script>
 const TOTAL = 7;
 let current = 0;
+let lastCurrent = 0;
 let isAnimating = false;
 
 // ── 3D Carousel ──────────────────────
@@ -565,6 +884,7 @@ const curEl    = document.getElementById('slide-cur');
 const progressLine = document.getElementById('progress-line');
 
 function positionSlides() {
+  if (window.innerWidth <= 768) return; // Don't apply 3D transforms on mobile
   slides.forEach((s, i) => {
     const offset = i - current;
     if (offset === 0) {
@@ -598,12 +918,43 @@ const gradients = [
 function updateUI() {
   dots.forEach((d, i) => d.classList.toggle('active', i === current));
   curEl.textContent = String(current + 1).padStart(2, '0');
-  progressLine.style.width = ((current + 1) / TOTAL * 100) + '%';
-  document.getElementById('global-bg').style.background = gradients[current];
+  
+  const navDots = document.getElementById('nav');
+  const arrowBtnsWrap = document.getElementById('arrows');
+  if (isRegActive) {
+    if (navDots) navDots.style.opacity = '0.3';
+    if (arrowBtnsWrap) arrowBtnsWrap.style.opacity = '0.1';
+  } else {
+    if (navDots) navDots.style.opacity = '1';
+    if (arrowBtnsWrap) arrowBtnsWrap.style.opacity = '1';
+  }
+  
+  // Infinite pulse for the hint on the first or last slides
+  const arrowBtns = document.querySelectorAll('.arrow-btn');
+  const arrowUp = arrowBtns[0];
+  const arrowDown = arrowBtns[1];
+  
+  if (arrowUp) {
+    arrowUp.classList.toggle('pulse', current === TOTAL - 1);
+    arrowUp.style.opacity = '1';
+    arrowUp.style.pointerEvents = 'auto';
+    arrowUp.style.visibility = 'visible';
+  }
+  
+  if (arrowDown) {
+    arrowDown.classList.toggle('pulse', current === 0);
+    arrowDown.style.opacity = '1';
+    arrowDown.style.pointerEvents = 'auto';
+    arrowDown.style.visibility = 'visible';
+  }
+  
+  lastCurrent = current;
 }
 
+let isRegActive = false;
+
 function goTo(n) {
-  if (isAnimating || n === current) return;
+  if (isAnimating || n === current || isRegActive) return;
   isAnimating = true;
   current = Math.max(0, Math.min(TOTAL - 1, n));
   
@@ -657,18 +1008,38 @@ window.addEventListener('touchend',   e => {
 
 // ── Mobile native scroll bindings ─────
 if (window.innerWidth <= 768) {
+  const observerOptions = {
+    threshold: 0.5,
+    rootMargin: "0px"
+  };
+
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
+        // Toggle active class
+        slides.forEach(s => s.classList.remove('is-active'));
         entry.target.classList.add('is-active');
+        
         const idx = parseInt(entry.target.getAttribute('data-index'));
-        current = idx;
-        updateUI();
+        if (current !== idx) {
+          current = idx;
+          updateUI();
+        }
       }
     });
-  }, { threshold: 0.3 });
+  }, observerOptions);
   
   slides.forEach(s => observer.observe(s));
+
+  // Hide logo on scroll
+  window.addEventListener('scroll', () => {
+    const logo = document.getElementById('logo');
+    if (window.scrollY > 40) {
+      logo.classList.add('is-hidden');
+    } else {
+      logo.classList.remove('is-hidden');
+    }
+  }, { passive: true });
 }
 
 // ── Custom cursor ─────────────────────
@@ -695,8 +1066,201 @@ animRing();
 positionSlides();
 updateUI();
 
+// ── Selection Logic ─────────────────
+let currentRegStep = 1;
+let userGender = null;
+let userGoal = 'm';
+
+function toggleForm(type) {
+  const loginView = document.getElementById('login-view');
+  const registerView = document.getElementById('register-view');
+  const demoWrap = document.getElementById('demo-selector-wrap');
+
+  if (type === 'register') {
+    isRegActive = true;
+    loginView.classList.remove('is-active');
+    registerView.classList.add('is-active');
+    demoWrap.style.display = 'none';
+    currentRegStep = 1;
+    setStep(1);
+    updateUI();
+  } else {
+    isRegActive = false;
+    registerView.classList.remove('is-active');
+    loginView.classList.add('is-active');
+    demoWrap.style.display = 'block';
+    updateUI();
+  }
+}
+
+function setStep(step, btn) {
+  if (step > currentRegStep) {
+    if (!validateStep(currentRegStep)) {
+      if (btn) jumpButton(btn);
+      return;
+    }
+  }
+  if (btn) btn.style.transform = 'translate(0,0)';
+
+  currentRegStep = step;
+  document.querySelectorAll('.register-step').forEach(el => el.classList.remove('is-active'));
+  document.getElementById('step-' + step).classList.add('is-active');
+  document.getElementById('reg-step-label').textContent = step;
+
+  const dots = document.querySelectorAll('.reg-dot');
+  dots.forEach((dot, i) => {
+    dot.style.background = (i < step) ? 'var(--accent)' : 'rgba(255,255,255,.1)';
+  });
+}
+
+function regBack() {
+  // Reset any jumping buttons when going back
+  document.querySelectorAll('.slide-cta').forEach(b => b.style.transform = 'translate(0,0)');
+  if (currentRegStep > 1) {
+    setStep(currentRegStep - 1);
+  } else {
+    toggleForm('login');
+  }
+}
+
+function validateStep(n) {
+  let valid = true;
+  document.querySelectorAll('.error-msg').forEach(e => e.classList.remove('on'));
+  document.querySelectorAll('.input').forEach(e => e.classList.remove('invalid-input'));
+
+  if (n === 1) {
+    const name = document.getElementById('reg-name');
+    const email = document.getElementById('reg-email');
+    const phone = document.getElementById('reg-phone');
+    const pass = document.getElementById('reg-pass');
+    const passConf = document.getElementById('reg-pass-confirm');
+    
+    // Name: No numbers
+    if (/[0-9]/.test(name.value) || name.value.trim() === '') {
+      name.classList.add('invalid-input');
+      document.getElementById('err-name').classList.add('on');
+      valid = false;
+    }
+    // Email: Regex
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
+      email.classList.add('invalid-input');
+      document.getElementById('err-email').classList.add('on');
+      valid = false;
+    }
+    // Phone: Digits and spaces only
+    if (!/^[0-9\s+]+$/.test(phone.value) || phone.value.trim() === '') {
+      phone.classList.add('invalid-input');
+      document.getElementById('err-phone').classList.add('on');
+      valid = false;
+    }
+    // Pass: Regex
+    const passRegex = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9])(?=.{8,})/;
+    if (!passRegex.test(pass.value)) {
+      pass.classList.add('invalid-input');
+      document.getElementById('err-pass').classList.add('on');
+      valid = false;
+    }
+    // Match check
+    if (pass.value !== passConf.value || passConf.value === '') {
+      passConf.classList.add('invalid-input');
+      document.getElementById('err-pass-confirm').classList.add('on');
+      valid = false;
+    }
+  }
+
+  if (n === 2) {
+    if (!userGender) {
+      document.getElementById('err-step2').classList.add('on');
+      valid = false;
+    }
+  }
+
+  if (n === 3) {
+    const w = document.getElementById('reg-weight');
+    const h = document.getElementById('reg-height');
+    if (!w.value || w.value <= 0 || !h.value || h.value <= 0) {
+      if (w.value <= 0) w.classList.add('invalid-input');
+      if (h.value <= 0) h.classList.add('invalid-input');
+      document.getElementById('err-step3').classList.add('on');
+      valid = false;
+    }
+  }
+
+  if (n === 4) {
+    if (payMethod === 'card') {
+      const num = document.getElementById('pay-card');
+      const exp = document.getElementById('pay-expiry');
+      const cvc = document.getElementById('pay-cvc');
+      const pName = document.getElementById('pay-name');
+      
+      if (pName.value.trim() === '') { pName.classList.add('invalid-input'); valid = false; }
+      if (!/^[0-9\s]{16,}$/.test(num.value.replace(/\s/g,''))) { num.classList.add('invalid-input'); valid = false; }
+      if (!/^[0-9]{2}\/[0-9]{2}$/.test(exp.value)) { exp.classList.add('invalid-input'); valid = false; }
+      if (!/^[0-9]{3,4}$/.test(cvc.value)) { cvc.classList.add('invalid-input'); valid = false; }
+    } else if (payMethod === 'bizum') {
+      const phone = document.getElementById('pay-bizum-phone');
+      if (!/^[0-9\s]{9,}$/.test(phone.value.replace(/\s/g,''))) { phone.classList.add('invalid-input'); valid = false; }
+    }
+    // PayPal is always true for simulation
+    
+    if (!valid) document.getElementById('err-step4').classList.add('on');
+  }
+
+  return valid;
+}
+
+let payMethod = 'card';
+function selectPayMethod(method) {
+  payMethod = method;
+  document.querySelectorAll('#step-4 .goal-card').forEach(c => c.classList.remove('on'));
+  document.getElementById('m-' + method).classList.add('on');
+
+  // Show/Hide relevant views
+  document.getElementById('view-card').style.display = (method === 'card') ? 'block' : 'none';
+  document.getElementById('view-bizum').style.display = (method === 'bizum') ? 'block' : 'none';
+  document.getElementById('view-paypal').style.display = (method === 'paypal') ? 'block' : 'none';
+  
+  // Reset error state
+  document.querySelectorAll('#step-4 .error-msg').forEach(e => e.classList.remove('on'));
+  document.querySelectorAll('#step-4 .input').forEach(e => e.classList.remove('invalid-input'));
+  document.getElementById('btn-finish').style.transform = 'translate(0,0)';
+}
+
+function jumpButton(el) {
+  const x = Math.random() * 260 - 130;
+  const y = Math.random() * 160 - 80;
+  el.style.transform = `translate(${x}px, ${y}px)`;
+}
+
+function finishReg(btn) {
+  if (!validateStep(4)) {
+    if (btn) jumpButton(btn);
+    return;
+  }
+  
+  if (btn) btn.style.transform = 'translate(0,0)';
+  isRegActive = false;
+  // Mock success and redirect
+  window.location.href = 'fitpaisa_cliente.html';
+}
+
+function selectGoal(el, val) {
+  document.querySelectorAll('#step-2 .goal-card').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+  userGoal = val;
+}
+
+function selectGender(el, val) {
+  // Only target the gender row cards (the first 3)
+  const genderCards = document.querySelectorAll('#step-2 > div:nth-of-type(1) .goal-card');
+  genderCards.forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+  userGender = val;
+  document.getElementById('err-step2').classList.remove('on');
+}
+
 // Hover effect on interactive elements
-document.querySelectorAll('button, .slide-cta, .nav-dot, .arrow-btn').forEach(el => {
+document.querySelectorAll('button, .slide-cta, .nav-dot, .arrow-btn, .role-card, .btn-hover-opacity, .goal-card').forEach(el => {
   el.addEventListener('mouseenter', () => {
     cursor.style.width = '24px';
     cursor.style.height = '24px';
@@ -709,6 +1273,20 @@ document.querySelectorAll('button, .slide-cta, .nav-dot, .arrow-btn').forEach(el
     cursorRing.style.width = '40px';
     cursorRing.style.height = '40px';
   });
+});
+
+// ── Keydown shortcuts (Enter to proceed) ─────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && isRegActive) {
+    e.preventDefault();
+    if (currentRegStep < 4) {
+      // Find the active button for the current step
+      const activeBtn = document.querySelector('#step-' + currentRegStep + ' .slide-cta');
+      setStep(currentRegStep + 1, activeBtn);
+    } else {
+      finishReg(document.getElementById('btn-finish'));
+    }
+  }
 });
 
 // ── Parallax on mouse move ─────────────
