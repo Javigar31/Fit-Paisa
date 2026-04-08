@@ -196,12 +196,16 @@ function handle_register(): never
 
         $db->commit();
     } catch (PDOException $e) {
-        $db->rollBack();
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
         error_log('[FitPaisa][AUTH] Error SQL en handle_register: ' . $e->getMessage());
         $messageForUser = 'Error en base de datos: ' . $e->getMessage();
         fp_error(500, $messageForUser);
     } catch (Exception $e) {
-        $db->rollBack();
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
         error_log('[FitPaisa][AUTH] Exception en handle_register: ' . $e->getMessage());
         fp_error(500, $e->getMessage());
     }
