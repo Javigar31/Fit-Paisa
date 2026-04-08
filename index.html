@@ -1937,6 +1937,7 @@
           isRegActive = false;
           window.location.href = 'fitpaisa_cliente.html';
         } else {
+          const errEl = document.getElementById('err-step2');
           errEl.textContent = data.message || 'Error al registrar. Intenta de nuevo.';
           errEl.classList.add('on');
           if (btn) { btn.textContent = selectedPlan === 'premium' ? 'Activar Plan Premium ✓' : 'Crear Cuenta Gratuita ✓'; btn.disabled = false; }
