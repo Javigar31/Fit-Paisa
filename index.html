@@ -940,35 +940,40 @@
 
               <!-- Step 1: Account & Identity -->
               <div class="register-step is-active" id="step-1">
-                <div class="field">
-                  <label class="label">Nombre completo</label>
-                  <input type="text" id="reg-name" class="input" placeholder="Tu nombre (sin números)">
-                  <div class="error-msg" id="err-name">No se permiten números en el nombre.</div>
-                </div>
+                  <div class="field">
+                    <label class="label">Nombre completo</label>
+                    <input type="text" id="reg-name" class="input" placeholder="Tu nombre (sin números)"
+                      onkeydown="if(event.key==='Enter') setStep(2, document.querySelector('#step-1 .slide-cta'))">
+                    <div class="error-msg" id="err-name">No se permiten números en el nombre.</div>
+                  </div>
 
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                  <div class="field">
-                    <label class="label">Email</label>
-                    <input type="email" id="reg-email" class="input" placeholder="ej@fitpaisa.com">
-                    <div class="error-msg" id="err-email">Formato inválido.</div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <div class="field">
+                      <label class="label">Email</label>
+                      <input type="email" id="reg-email" class="input" placeholder="ej@fitpaisa.com"
+                        onkeydown="if(event.key==='Enter') setStep(2, document.querySelector('#step-1 .slide-cta'))">
+                      <div class="error-msg" id="err-email">Formato inválido.</div>
+                    </div>
+                    <div class="field">
+                      <label class="label">Teléfono</label>
+                      <input type="tel" id="reg-phone" class="input" placeholder="600 000 000"
+                        onkeydown="if(event.key==='Enter') setStep(2, document.querySelector('#step-1 .slide-cta'))">
+                      <div class="error-msg" id="err-phone">Inválido.</div>
+                    </div>
                   </div>
-                  <div class="field">
-                    <label class="label">Teléfono</label>
-                    <input type="tel" id="reg-phone" class="input" placeholder="600 000 000">
-                    <div class="error-msg" id="err-phone">Inválido.</div>
-                  </div>
-                </div>
 
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                  <div class="field">
-                    <label class="label">Contraseña</label>
-                    <input type="password" id="reg-pass" class="input" placeholder="********">
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <div class="field">
+                      <label class="label">Contraseña</label>
+                      <input type="password" id="reg-pass" class="input" placeholder="********"
+                        onkeydown="if(event.key==='Enter') setStep(2, document.querySelector('#step-1 .slide-cta'))">
+                    </div>
+                    <div class="field">
+                      <label class="label">Confirmar Contraseña</label>
+                      <input type="password" id="reg-pass-confirm" class="input" placeholder="********"
+                        onkeydown="if(event.key==='Enter') setStep(2, document.querySelector('#step-1 .slide-cta'))">
+                    </div>
                   </div>
-                  <div class="field">
-                    <label class="label">Confirmar Contraseña</label>
-                    <input type="password" id="reg-pass-confirm" class="input" placeholder="********">
-                  </div>
-                </div>
                 <div class="error-msg" id="err-pass">Debe incluir: Mayúscula, Número y Símbolo.</div>
                 <div class="error-msg" id="err-pass-confirm">Las contraseñas no coinciden.</div>
 
@@ -1031,11 +1036,13 @@
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
                   <div class="field">
                     <label class="label">Peso (kg)</label>
-                    <input type="number" id="reg-weight" class="input" placeholder="70">
+                    <input type="number" id="reg-weight" class="input" placeholder="70"
+                      onkeydown="if(event.key==='Enter') setStep(4, document.querySelector('#step-3 .slide-cta'))">
                   </div>
                   <div class="field">
                     <label class="label">Altura (cm)</label>
-                    <input type="number" id="reg-height" class="input" placeholder="175">
+                    <input type="number" id="reg-height" class="input" placeholder="175"
+                      onkeydown="if(event.key==='Enter') setStep(4, document.querySelector('#step-3 .slide-cta'))">
                   </div>
                 </div>
                 <div class="error-msg" id="err-step3" style="text-align:center">Introduce valores válidos.</div>
@@ -1080,20 +1087,24 @@
                 <div id="view-card">
                   <div class="field">
                     <label class="label">Titular de la tarjeta</label>
-                    <input type="text" id="pay-name" class="input" placeholder="Javier García">
+                    <input type="text" id="pay-name" class="input" placeholder="Javier García"
+                      onkeydown="if(event.key==='Enter') finishReg(document.getElementById('btn-finish'))">
                   </div>
                   <div class="field" style="margin-top:8px">
                     <label class="label">Número de tarjeta</label>
-                    <input type="text" id="pay-card" class="input" placeholder="0000 0000 0000 0000" maxlength="19">
+                    <input type="text" id="pay-card" class="input" placeholder="0000 0000 0000 0000" maxlength="19"
+                      onkeydown="if(event.key==='Enter') finishReg(document.getElementById('btn-finish'))">
                   </div>
                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
                     <div class="field">
                       <label class="label">Fecha (MM/YY)</label>
-                      <input type="text" id="pay-expiry" class="input" placeholder="12/28" maxlength="5">
+                      <input type="text" id="pay-expiry" class="input" placeholder="12/28" maxlength="5"
+                        onkeydown="if(event.key==='Enter') finishReg(document.getElementById('btn-finish'))">
                     </div>
                     <div class="field">
                       <label class="label">CVC</label>
-                      <input type="text" id="pay-cvc" class="input" placeholder="000" maxlength="3">
+                      <input type="text" id="pay-cvc" class="input" placeholder="000" maxlength="3"
+                        onkeydown="if(event.key==='Enter') finishReg(document.getElementById('btn-finish'))">
                     </div>
                   </div>
                 </div>
@@ -1102,7 +1113,8 @@
                 <div id="view-bizum" style="display:none">
                   <div class="field">
                     <label class="label">Teléfono Bizum</label>
-                    <input type="text" id="pay-bizum-phone" class="input" placeholder="600 000 000" maxlength="11">
+                    <input type="text" id="pay-bizum-phone" class="input" placeholder="600 000 000" maxlength="11"
+                      onkeydown="if(event.key==='Enter') finishReg(document.getElementById('btn-finish'))">
                   </div>
                   <div style="font-size:10px;color:var(--muted);margin-top:8px;text-align:center">Recibirás una
                     notificación en tu app bancaria para confirmar.</div>

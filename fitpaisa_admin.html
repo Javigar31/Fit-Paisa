@@ -763,8 +763,8 @@ loadUsers();
   <div class="modal-box" onclick="event.stopPropagation()">
     <div class="modal-head"><h2>Editar Usuario</h2><button class="modal-close" onclick="closeModal(this)">✕</button></div>
     <div class="modal-body">
-      <label class="label">Nombre</label><input class="input" id="eu-name">
-      <label class="label">Correo</label><input class="input" id="eu-email" type="email">
+      <label class="label">Nombre</label><input class="input" id="eu-name" onkeydown="if(event.key==='Enter') saveEditUser()">
+      <label class="label">Correo</label><input class="input" id="eu-email" type="email" onkeydown="if(event.key==='Enter') saveEditUser()">
       <label class="label">Rol</label><select class="input" id="eu-role"><option>Usuario</option><option>Entrenador</option><option>Admin</option></select>
       <label class="label">Suscripción</label><select class="input" id="eu-sub"><option>Básico</option><option>Premium</option></select>
       <label class="label">Estado</label><select class="input" id="eu-status"><option>Activo</option><option>Alerta</option><option>Suspendido</option></select>
@@ -832,9 +832,12 @@ loadUsers();
   <div class="modal-box" onclick="event.stopPropagation()">
     <div class="modal-head"><h2>Añadir Entrenador/a</h2><button class="modal-close" onclick="closeModal(this)">✕</button></div>
     <div class="modal-body">
-      <label class="label">Nombre completo</label><input class="input" placeholder="Nombre del entrenador/a">
-      <label class="label">Correo electrónico</label><input class="input" type="email" placeholder="correo@fitpaisa.com">
-      <label class="label">Especialidad</label><input class="input" placeholder="Ej: Fuerza / Nutrición">
+      <label class="label">Nombre completo</label><input class="input" placeholder="Nombre del entrenador/a"
+        onkeydown="if(event.key==='Enter') closeModal(this.closest('.modal-box').querySelector('.btn-lime'))">
+      <label class="label">Correo electrónico</label><input class="input" type="email" placeholder="correo@fitpaisa.com"
+        onkeydown="if(event.key==='Enter') closeModal(this.closest('.modal-box').querySelector('.btn-lime'))">
+      <label class="label">Especialidad</label><input class="input" placeholder="Ej: Fuerza / Nutrición"
+        onkeydown="if(event.key==='Enter') closeModal(this.closest('.modal-box').querySelector('.btn-lime'))">
     </div>
     <div class="modal-actions"><button class="btn-ghost" onclick="closeModal(this)">Cancelar</button><button class="btn-lime" onclick="closeModal(this)">Guardar</button></div>
   </div>
