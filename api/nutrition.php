@@ -149,9 +149,14 @@ function handle_daily_summary(array $payload): never
 
     $targets = $profile
         ? calculate_macros(
-            (float) $profile['weight'], (float) $profile['height'],
-            (int) $profile['age'], $profile['gender'],
-            $profile['objective'], $profile['activity_level']
+            $profile['weight'], 
+            $profile['height'],
+            $profile['age'], 
+            $profile['gender'],
+            $profile['objective'], 
+            $profile['activity_level'],
+            $profile['target_weight'] ?? 0,
+            $profile['target_time_weeks'] ?? 0
           )
         : null;
 

@@ -146,8 +146,8 @@ function handle_setup_macros(array $payload): never
         [':uid' => $payload['user_id']]
     )->fetch();
 
-    $gender   = ($current['gender'] ?? null) ?: 'OTHER';
-    $activity = ($current['activity_level'] ?? null) ?: 'MODERATE';
+    $gender   = ($current && isset($current['gender']))         ? $current['gender']         : 'OTHER';
+    $activity = ($current && isset($current['activity_level'])) ? $current['activity_level'] : 'MODERATE';
 
     fp_query(
         'UPDATE profiles
@@ -251,15 +251,24 @@ function handle_body_history(array $payload): never
  * Calcula los objetivos diarios de macronutrientes según el método de Fitia.
  */
 function calculate_macros(
-    float  $weight,
-    float  $height,
-    int    $age,
-    string $gender,
-    string $objective,
-    string $activity,
-    float  $targetWeight = 0.0,
-    int    $weeks = 0
+    $weight,
+    $height,
+    $age,
+    $gender,
+    $objective,
+    $activity,
+    $targetWeight = 0.0,
+    $weeks = 0
 ): array {
+    $weight = (float)($weight ?: 0);
+    $height = (float)($height ?: 0);
+    $age    = (int)($age ?: 25);
+    $gender = $gender ?: 'OTHER';
+    $activity = $activity ?: 'MODERATE';
+    $objective = $objective ?: 'MAINTAIN';
+    $targetWeight = (float)($targetWeight ?: 0);
+    $weeks = (int)($weeks ?: 0);
+
     /* 1. TMB - Mifflin-St Jeor */
     $genderConst = ($gender === 'FEMALE') ? -161 : 5;
     $tmb = (10 * $weight) + (6.25 * $height) - (5 * $age) + $genderConst;
