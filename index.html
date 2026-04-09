@@ -630,7 +630,10 @@
       color: var(--muted);
       letter-spacing: .1em;
       text-transform: uppercase;
-      animation: fadeHint 3s ease forwards;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 1000;
+      animation: fadeHint 3.5s ease 0.5s forwards;
     }
 
     @keyframes fadeHint {
@@ -727,22 +730,27 @@
       }
 
       #hint {
-        display: block;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         bottom: auto;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        background: rgba(10, 12, 18, 0.9);
-        backdrop-filter: blur(10px);
-        padding: 18px 24px;
-        border-radius: 16px;
+        background: rgba(10, 12, 18, 0.95);
+        backdrop-filter: blur(15px);
+        padding: 20px 30px;
+        border-radius: 20px;
         border: 1px solid var(--accent);
-        white-space: nowrap;
-        font-size: 13px;
+        white-space: normal;
+        inline-size: min-content;
+        min-width: 260px;
+        max-width: 85vw;
+        font-size: 14px;
+        line-height: 1.4;
         color: var(--text);
-        z-index: 1000;
-        pointer-events: none;
-        animation: fadeHint 4s ease 3s forwards; /* 3s de retraso, 4s de duración */
+        text-align: center;
+        animation: fadeHint 3s ease 3s forwards; /* Espera 3s, dura 3s (in/out) */
       }
 
       #nav {
