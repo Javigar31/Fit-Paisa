@@ -1,0 +1,38 @@
+
+
+***
+
+# Informe de Traspaso Técnico: Proyecto FitPaisa (v1.2.1)
+**Fecha:** 2026-04-09
+**Estado:** Estable en Producción (`master`) y Testing (`testing`).
+
+## 1. Cambios en la Arquitectura (Cache-Busting)
+*   **Renombramiento Crítico**: Se ha migrado `fitpaisa_cliente.html` a `fitpaisa_cliente-v2.html` para invalidar cachés agresivas en redes corporativas (Fortinet).
+*   **Redirecciones**: Actualizadas todas las referencias en `index.html` (login y registro) para apuntar a la nueva versión `-v2`.
+
+## 2. Sistema de Mensajería (Dinamización)
+*   **Backend**: `api/messages.php` operativo con acciones `inbox`, `thread` y `send`.
+*   **Frontend**: Se eliminaron todos los datos mock (Laura Vidal). 
+    *   Implementadas `loadLastMessage()` y `fetchInbox()` para poblar la UI desde la base de datos.
+    *   `openChat(userId)` y `sendMsg()` ahora realizan peticiones `POST` reales a la API.
+    *   IDs añadidos: `dash-msg-title`, `dash-msg-avatar`, `dash-msg-trainer`, `dash-msg-text`.
+
+## 3. Correcciones en el Perfil y Seguridad
+*   **Ajuste de CORS**: En `api/_db.php`, la función `fp_cors()` ahora permite dinámicamente cualquier origen que termine en `.vercel.app`, solucionando bloqueos en ramas de testing.
+*   **Bug de JS**: Corregido un `TypeError` en `saveProfile` donde se intentaba acceder a un objeto intermedio `.data` que ya no existía en el nuevo formato de respuesta de la API.
+
+## 4. Motor Nutricional (Fix del Algoritmo)
+*   **Bug de Consulta**: La acción `summary` en `api/nutrition.php` no estaba seleccionando las columnas `target_weight` y `target_time_weeks`, provocando que el déficit/superávit fuera siempre 0. Corregido.
+*   **Lógica de Macros**: La función `calculate_macros` ahora aplica correctamente la diferencia de peso multiplicada por 7700 kcal repartida entre el tiempo objetivo.
+*   **UI Dinámica**: El TMB y el ajuste calórico (Déficit/Superávit) en `fitpaisa_cliente-v2.html` ya no son texto estático; se actualizan mediante IDs `diet-tmb-val` y `diet-adj-val`.
+
+## 5. Acciones Manuales Pendientes
+*   **Migración de DB**: Es necesario ejecutar `api/db_migration.php` en cualquier entorno nuevo o base de datos de producción para añadir las columnas de objetivos a la tabla `profiles`.
+*   **Roles**: Las credenciales de entrenador registradas hoy son `javigar.1731@hotmail.com` / `Javigar.coach1731` (Rol: `COACH`).
+
+## Contexto para el Modelo:
+*   **Frontend**: Vanilla JS / HTML / CSS.
+*   **Backend**: PHP (con `PDO`).
+*   **Entry Points Clave**: `api/profile.php` (Gestión de usuario/macros), `api/nutrition.php` (Diario de comidas), `api/messages.php` (Mensajería).
+
+***
