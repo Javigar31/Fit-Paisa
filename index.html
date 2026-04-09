@@ -636,6 +636,10 @@
       animation: fadeHint 3.5s ease 0.5s forwards;
     }
 
+    #hint::before {
+      content: "Haz scroll o presiona las flechas para navegar";
+    }
+
     @keyframes fadeHint {
       0% { opacity: 0 }
       12% { opacity: 1 }
@@ -749,6 +753,10 @@
         animation: 
           fadeHint 4.5s ease 3s forwards,
           borderPulse 1.5s ease-in-out 3s infinite;
+      }
+
+      #hint::before {
+        content: "Desliza para navegar";
       }
 
       #nav {
@@ -954,7 +962,7 @@
   <div id="progress-line"></div>
   <div id="logo">FITPAISA</div>
   <div id="counter"><span id="slide-cur">01</span> / <span id="tot">07</span></div>
-  <div id="hint">Desliza o presiona las flechas para navegar</div>
+  <div id="hint"></div>
 
   <div id="arrows">
     <div class="arrow-btn" onclick="go(-1)">↑</div>
