@@ -164,14 +164,16 @@ function fp_json_body(): array
  */
 function fp_cors(): void
 {
+    $origin  = $_SERVER['HTTP_ORIGIN'] ?? '';
     $allowed = [
         'https://fit-paisa.vercel.app',
         'http://localhost:3000',
         'http://localhost',
     ];
 
-    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-    if (in_array($origin, $allowed, true)) {
+    $isVercel = str_ends_with($origin, '.vercel.app');
+
+    if (in_array($origin, $allowed, true) || $isVercel) {
         header("Access-Control-Allow-Origin: {$origin}");
     }
 

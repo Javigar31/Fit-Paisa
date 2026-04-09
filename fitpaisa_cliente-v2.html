@@ -1043,7 +1043,8 @@ async function saveProfile(btn) {
       errEl.style.display = 'block';
     }
   } catch(e) {
-    errEl.textContent = 'Error de conexión. Inténtalo de nuevo.';
+    console.error("Profile Save Error:", e);
+    errEl.textContent = 'Error de conexión. Revisa la consola para más detalles.';
     errEl.style.display = 'block';
   }
 
