@@ -18,6 +18,7 @@ fp_cors();
 
 /* Solo ejecutar el enrutador si este archivo es el punto de entrada directo */
 if (strpos($_SERVER['SCRIPT_NAME'], 'profile.php') !== false) {
+    $payload = jwt_require(); /* 401 si no autenticado */
     $action = fp_sanitize($_GET['action'] ?? 'get', 32);
     match ($action) {
         'get'          => handle_get_profile($payload),

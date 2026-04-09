@@ -1153,8 +1153,8 @@ async function loadDailySummary() {
        console.error("Daily Log Error:", await resLog.text());
     } else {
        const dataLog = await resLog.json();
-       if (dataLog.success) {
-         renderMealsReal(dataLog.data.entries);
+       if (dataLog.success && dataLog.entries) {
+         renderMealsReal(dataLog.entries);
        }
     }
 
@@ -1167,8 +1167,9 @@ async function loadDailySummary() {
     } else {
        const dataSum = await resSum.json();
        if (dataSum.success) {
-         const { totals, targets } = dataSum.data;
-      if (targets) {
+         const totals = dataSum.totals;
+         const targets = dataSum.targets;
+         if (targets && totals) {
         setMacroBar('bar-kcal', totals.total_calories, targets.calories, 'var(--lime)');
         setMacroBar('bar-prot', totals.total_protein, targets.protein_g, 'var(--success)');
         setMacroBar('bar-carb', totals.total_carbs, targets.carbs_g, 'var(--warn)');
