@@ -298,6 +298,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:va
     color: var(--lime); 
     font-weight: 700;
   }
+  .macro-p { color: #ff4d6d; font-weight: 800; }
+  .macro-c { color: #ff4d6d; font-weight: 800; }
+  .macro-g { color: #ff4d6d; font-weight: 800; }
   
   #btn-clear-food {
     transition: all 0.2s;
@@ -1091,7 +1094,7 @@ function renderSuggestions(list) {
   box.innerHTML = list.map(f => `
     <div class="suggestion-item" onclick='selectFood(${JSON.stringify(f).replace(/'/g, "&apos;")})'>
       <div class="s-name">${f.name}</div>
-      <div class="sugg-info">100g: <strong>${Math.round(f.calories_100g)} kcal</strong> | P:${f.protein_100g} C:${f.carbs_100g} G:${f.fat_100g}</div>
+      <div class="sugg-info">100g: <strong>${Math.round(f.calories_100g)} kcal</strong> | <span class="macro-p">P</span>:${f.protein_100g} <span class="macro-c">C</span>:${f.carbs_100g} <span class="macro-g">G</span>:${f.fat_100g}</div>
     </div>
   `).join('');
   box.style.display = 'block';
