@@ -33,7 +33,7 @@ match ($action) {
     'summary' => handle_daily_summary($payload),
     'weekly'  => handle_weekly_trend($payload),
     'delete'  => handle_delete_entry($payload),
-    default   => fp_error(400, "Acción '{$action}' no reconocida."),
+    default   => fp_error(400, "Action debug: hex=" . bin2hex($action) . " len=" . strlen($action) . " val=" . $action),
 };
 
 /* ══════════════════════════════════════════════════════════════════════
