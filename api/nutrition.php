@@ -149,7 +149,7 @@ function handle_daily_summary(array $payload): never
     )->fetch();
 
     $profile = fp_query(
-        'SELECT weight, height, age, gender, objective, activity_level
+        'SELECT weight, height, age, gender, objective, activity_level, target_weight, target_time_weeks
          FROM profiles WHERE user_id = :uid',
         [':uid' => $payload['user_id']]
     )->fetch();

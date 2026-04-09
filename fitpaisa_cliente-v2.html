@@ -491,7 +491,7 @@ body.ready .sidebar, body.ready .main{opacity:1}
       <div class="slide-hero">
         <div class="slide-tag">Control nutricional · Hoy</div>
         <div class="slide-title">COME<br>CON<br><em>DATOS.</em></div>
-        <div class="slide-desc">Macros calculados automáticamente con la fórmula de Mifflin-St Jeor según tu perfil. TMB estimado: <strong style="color:var(--lime)">1.847 kcal</strong>.</div>
+        <div class="slide-desc">Macros calculados con Mifflin-St Jeor. TMB: <strong style="color:var(--lime)" id="diet-tmb-val">1.910 kcal</strong>. <span id="diet-adj-val" style="opacity:.7"></span></div>
         <div style="display:flex;flex-direction:column;gap:10px;max-width:280px">
           <div class="bar-row">
             <div class="bar-labels"><span>Kcal</span><strong id="lbl-kcal">0 / 0</strong></div>
@@ -919,10 +919,17 @@ function populateUI(profile, macros, user) {
   } else {
     document.getElementById('diet-setup').style.display = 'none';
     document.getElementById('diet-content').style.display = 'grid';
-    // Actualizar TMB y barras de macros en la sección dieta
     if (macros) {
-      const tmbEl = document.getElementById('diet-tmb');
-      if (tmbEl) tmbEl.textContent = `${Math.round(macros.tmb)} kcal`;
+      const tmbVal = document.getElementById('diet-tmb-val');
+      if (tmbVal) tmbVal.textContent = Math.round(macros.tmb) + ' kcal';
+      
+      const adjVal = document.getElementById('diet-adj-val');
+      if (adjVal) {
+          if (macros.adjustment < -10) adjVal.textContent = `· Déficit: ${Math.round(Math.abs(macros.adjustment))} kcal`;
+          else if (macros.adjustment > 10) adjVal.textContent = `· Superávit: ${Math.round(macros.adjustment)} kcal`;
+          else adjVal.textContent = '';
+      }
+
       setMacroBar('bar-kcal', 0, macros.calories, 'var(--lime)');
       setMacroBar('bar-prot', 0, macros.protein_g, 'var(--success)');
       setMacroBar('bar-carb', 0, macros.carbs_g, 'var(--warn)');
