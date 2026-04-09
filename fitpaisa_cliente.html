@@ -749,6 +749,13 @@ function populateUI(profile, macros, user) {
     t.innerHTML = `<div class="avatar">${initials}</div>${name}`;
   });
 
+  // ── Saludo en el Dashboard
+  const dashNameEm = document.getElementById('dash-hero-name-em');
+  if (dashNameEm) {
+    const firstName = name.split(' ')[0].toUpperCase();
+    dashNameEm.textContent = `${firstName}.`;
+  }
+
   // ── Chip de plan en todos los topbars
   document.querySelectorAll('.premium-chip').forEach(c => {
     if (isPremium) {
