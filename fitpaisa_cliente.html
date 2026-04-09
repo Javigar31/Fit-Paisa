@@ -7,7 +7,8 @@
 <link rel="stylesheet" href="style.css">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:var(--text);font-family:var(--fb);-webkit-font-smoothing:antialiased}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:var(--text);font-family:var(--fb);-webkit-font-smoothing:antialiased;opacity:0;transition:opacity .4s ease}
+body.ready{opacity:1}
 
 /* main layout */
 :root { --sw: 260px; }
@@ -335,8 +336,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:va
   </nav>
   <div class="sb-user">
     <div class="sb-user-tag" onclick="openModal('modal-profile')">
-      <div class="avatar">JG</div>
-      Javier García
+      <div class="avatar" id="sb-avatar-initials">—</div>
+      <span id="sb-user-name">...</span>
     </div>
   </div>
 </aside>
@@ -353,7 +354,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:va
     <div class="slide-body-wrap">
       <div class="slide-hero">
         <div class="slide-tag">Dashboard · Bienvenida</div>
-        <div class="slide-title">HOLA,<br><em id="dash-hero-name-em">USUARIO.</em></div>
+        <div class="slide-title">HOLA,<br><em id="dash-hero-name-em">...</em></div>
         <div class="slide-desc">Configura tu perfil en la sección de Dieta para ver tus macros personalizados.</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button class="btn-lime" onclick="show('training', null)">Ver mi entreno →</button>
@@ -658,7 +659,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:va
     <div class="topbar">
       <div class="logo-mobile">FITPAISA</div>
       <div class="premium-chip">🛠️ Soporte</div>
-      <div class="user-tag"><div class="avatar">JG</div>Javier García</div>
+      <div class="user-tag"><div class="avatar">—</div>...</div>
     </div>
       <div class="slide-body-wrap">
         <div class="slide-hero">
@@ -787,7 +788,7 @@ function populateUI(profile, macros, user) {
   console.log("Starting UI Population. LocalStorage User:", localUser);
 
   const name = profile?.full_name || user?.name || localUser?.name || localUser?.full_name || 'Invitado';
-  const firstName = (name.split(' ')[0].replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, '') || 'USUARIO').toUpperCase();
+  const firstName = (name.split(' ')[0].replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, '') || '...').toUpperCase();
   const email = profile?.email || user?.email || '';
   const plan = profile?.subscription_plan || user?.subscription_plan || 'FREE';
   const isPremium = plan !== 'FREE';
@@ -798,9 +799,17 @@ function populateUI(profile, macros, user) {
   const planLabel = isPremium ? '⚡ Premium' : '🌱 Básico';
 
   // ── Nombre e iniciales en toda la UI
-  document.querySelectorAll('.user-tag, .sb-user-tag').forEach(t => {
+  document.querySelectorAll('.user-tag').forEach(t => {
     t.innerHTML = `<div class="avatar">${initials}</div>${name}`;
   });
+  // Sidebar initials/name
+  const sbInit = document.getElementById('sb-avatar-initials');
+  const sbName = document.getElementById('sb-user-name');
+  if(sbInit) sbInit.textContent = initials;
+  if(sbName) sbName.textContent = name;
+
+  // Mostrar la página una vez poblada al menos con localStorage
+  document.body.classList.add('ready');
 
   // ── Saludo en el Dashboard
   const dashNameEm = document.getElementById('dash-hero-name-em');

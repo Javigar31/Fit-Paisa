@@ -10,7 +10,8 @@
 :root{
   --sw:230px;
 }
-html,body{height:100%;overflow:hidden;background:var(--dark);color:var(--text);font-family:var(--fb);-webkit-font-smoothing:antialiased}
+html,body{height:100%;overflow:hidden;background:var(--dark);color:var(--text);font-family:var(--fb);-webkit-font-smoothing:antialiased;opacity:0;transition:opacity .4s ease}
+body.ready{opacity:1}
 
 .sidebar{position:fixed;left:0;top:0;width:var(--sw);height:100vh;background:var(--dark2);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100}
 .sb-logo{padding:22px 20px 18px;border-bottom:1px solid var(--border)}
@@ -481,6 +482,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelect
   document.getElementById('admin-name').textContent = name;
   const initials = name.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
   document.getElementById('admin-initials').textContent = initials;
+  document.body.classList.add('ready');
 })();
 
 function logout(){

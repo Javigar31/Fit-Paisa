@@ -10,7 +10,8 @@
 :root{
   --sw:220px;
 }
-html,body{height:100%;overflow:hidden;background:var(--dark);color:var(--text);font-family:var(--fb);-webkit-font-smoothing:antialiased}
+html,body{height:100%;overflow:hidden;background:var(--dark);color:var(--text);font-family:var(--fb);-webkit-font-smoothing:antialiased;opacity:0;transition:opacity .4s ease}
+body.ready{opacity:1}
 
 /* sidebar */
 .sidebar{position:fixed;left:0;top:0;width:var(--sw);height:100vh;background:var(--dark2);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100;overflow-y:auto}
@@ -287,7 +288,7 @@ select.input{cursor:none;appearance:none}
       <div class="card-title">Nuevo plan</div>
       <div class="grid2" style="gap:14px;margin-bottom:14px">
         <div class="field"><label class="label">Cliente</label>
-          <select class="input"><option>Javier García</option><option>Sofía Reyes</option><option>Pablo Torres</option><option>Ana García</option></select>
+          <select class="input"><option>Seleccionar cliente...</option></select>
         </div>
         <div class="field"><label class="label">Tipo</label>
           <select class="input"><option>Entrenamiento</option><option>Nutrición</option></select>
@@ -320,7 +321,7 @@ select.input{cursor:none;appearance:none}
         <div id="contactList" style="display:flex;flex-direction:column;gap:4px"></div>
       </div>
       <div class="card" style="display:flex;flex-direction:column">
-        <div class="card-title" id="chatTitle">Javier García</div>
+        <div class="card-title" id="chatTitle">Chat</div>
         <div id="chatMsgs" style="flex:1;display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;max-height:400px;margin-bottom:14px"></div>
         <div style="display:flex;gap:8px">
           <input class="input" id="coachInput" placeholder="Escribe un mensaje…" onkeydown="if(event.key==='Enter')coachSend()" style="flex:1">
@@ -379,6 +380,7 @@ select.input{cursor:none;appearance:none}
   document.getElementById('coach-name').textContent = name;
   const initials = name.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
   document.getElementById('coach-initials').textContent = initials;
+  document.body.classList.add('ready');
 })();
 
 function logout(){
@@ -434,7 +436,7 @@ function show(id, el) {
 
 // ── Clients ───────────────────────────
 const clients = [
-  {initials:'JG',name:'Javier García',plan:'Volumen',status:'active', adh:78},
+  {initials:'—',name:'...',plan:'—',status:'active', adh:0},
   {initials:'SR',name:'Sofía Reyes',plan:'Mantenimiento',status:'active', adh:92},
   {initials:'PT',name:'Pablo Torres',plan:'Definición',status:'warning', adh:45},
   {initials:'AG',name:'Ana García',plan:'Volumen',status:'active', adh:88}
@@ -458,7 +460,7 @@ function renderClients(){
 
 // ── Plans ─────────────────────────────
 const plans=[
-  {client:'Javier García',initials:'JG',type:'Entrenamiento',status:'ACTIVO',   updated:'Hace 2 días'},
+  {client:'...',initials:'—',type:'...',status:'PENDIENTE', updated:'—'},
   {client:'Sofía Reyes',  initials:'SR',type:'Nutrición',    status:'PENDIENTE',updated:'Hace 1 día'},
   {client:'Pablo Torres', initials:'PT',type:'Entrenamiento',status:'BORRADOR', updated:'Hace 4 días'},
   {client:'Ana García',   initials:'AG',type:'Nutrición',    status:'ACTIVO',   updated:'Hace 1 hora'},
@@ -481,7 +483,7 @@ function toggleNewPlan(){
 
 // ── Messages ──────────────────────────
 const conversations={
-  'Javier García':[
+  '...': [
     {text:'¿Cómo fue el entreno de hoy?',mine:false,time:'10:32'},
     {text:'¡Muy bien! Superé mi marca en sentadilla.',mine:true,time:'10:35'},
     {text:'Perfecto 💪 Mañana subimos las cargas.',mine:false,time:'10:36'},
@@ -495,7 +497,7 @@ const conversations={
     {text:'Vamos a sustituirlo por remo esta semana.',mine:false,time:'Ayer'},
   ],
 };
-let activeContact='Javier García';
+let activeContact='...';
 function renderContacts(){
   document.getElementById('contactList').innerHTML=Object.keys(conversations).map(name=>`
     <div onclick="selectContact('${name}')" style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;cursor:none;transition:all .2s;background:${name===activeContact?'var(--limedim)':'transparent'};border:1px solid ${name===activeContact?'rgba(255,107,107,.2)':'transparent'}">
