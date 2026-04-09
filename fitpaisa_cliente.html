@@ -721,8 +721,8 @@ window.addEventListener('load', async () => {
       return;
     }
 
-    appState.profile = data.data.profile;
-    appState.macros  = data.data.macro_targets;
+    appState.profile = data.profile;
+    appState.macros  = data.macro_targets;
     populateUI(appState.profile, appState.macros, user);
 
   } catch (e) {
