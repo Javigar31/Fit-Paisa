@@ -737,10 +737,16 @@ window.addEventListener('load', async () => {
 
 // ── Poblar toda la UI con datos reales ─
 function populateUI(profile, macros, user) {
-  const name = profile?.full_name || user?.name || 'Usuario';
+  const localUser = JSON.parse(localStorage.getItem('fp_user') || 'null');
+  console.log("Starting UI Population. User in storage:", localUser, "Profile:", profile);
+
+  const name = profile?.full_name || user?.name || localUser?.name || localUser?.full_name || 'Usuario';
   const email = profile?.email || user?.email || '';
   const plan = profile?.subscription_plan || user?.subscription_plan || 'FREE';
   const isPremium = plan !== 'FREE';
+
+  console.log("Determined Name:", name);
+
   const initials = name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
   const planLabel = isPremium ? '⚡ Premium' : '🌱 Básico';
 
@@ -751,9 +757,10 @@ function populateUI(profile, macros, user) {
 
   // ── Saludo en el Dashboard
   const dashNameEm = document.getElementById('dash-hero-name-em');
+  console.log("Dash Greeting Element:", dashNameEm);
   if (dashNameEm) {
     const firstName = name.split(' ')[0].toUpperCase();
-    dashNameEm.textContent = `${firstName}.`;
+    dashNameEm.textContent = firstName + ".";
   }
 
   // ── Chip de plan en todos los topbars
