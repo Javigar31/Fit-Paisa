@@ -1134,9 +1134,13 @@ function resetFoodSearch() {
   ['mGrams', 'mKcal', 'mProt', 'mCarb', 'mFat'].forEach(id => {
     const el = document.getElementById(id);
     el.value = '';
-    el.readOnly = id !== 'mGrams' ? false : false; // Default allowed
-    el.style.opacity = '1';
-    el.removeAttribute('readonly');
+    if (id !== 'mGrams') {
+      el.readOnly = true;
+      el.style.opacity = '0.6';
+    } else {
+      el.readOnly = false;
+      el.style.opacity = '1';
+    }
   });
 }
 
@@ -1308,6 +1312,15 @@ function editMeal(m) {
   const btn = document.getElementById('btn-add-meal');
   btn.innerHTML = '💾 Actualizar';
   
+  // Restaurar "SelectedFood" virtual para permitir recálculo proporcional
+  const factor = (m.portion_grams || 100) / 100;
+  selectedFood = {
+    calories_100g: m.calories / factor,
+    protein_100g: m.protein / factor,
+    carbs_100g: m.carbs / factor,
+    fat_100g: m.fat / factor
+  };
+
   // Desplazar al formulario
   document.getElementById('mSearch').scrollIntoView({ behavior: 'smooth', block: 'center' });
   document.getElementById('mSearch').focus();
