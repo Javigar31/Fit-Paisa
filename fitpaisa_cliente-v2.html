@@ -1,4 +1,4 @@
-<!-- FitPaisa Version: 1.1.0 - Hardened Deployment -->
+<!-- FitPaisa Version: 1.2.0 - Nuclear Cache Reset -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -327,7 +327,7 @@ body.ready .sidebar, body.ready .main{opacity:1}
 <div id="prog"></div>
 
 <aside class="sidebar">
-  <div class="sb-logo">FITPAISA <span style="font-size:10px;opacity:.4;margin-left:8px">v1.1.0</span></div>
+  <div class="sb-logo">FITPAISA <span style="font-size:10px;opacity:.4;margin-left:8px">v1.2.0</span></div>
   <nav class="sb-nav">
     <div class="nav-item on" onclick="show('dashboard', this)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Dashboard</div>
     <div class="nav-item" onclick="show('training', this)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg> Entreno</div>
@@ -356,7 +356,7 @@ body.ready .sidebar, body.ready .main{opacity:1}
     <div class="slide-body-wrap">
       <div class="slide-hero">
         <div class="slide-tag">Dashboard · Bienvenida</div>
-        <div class="slide-title">HOLA,<br><em id="dash-hero-name-em">...</em></div>
+        <div class="slide-title">HOLA,<br><em id="v2-hero-name-em">...</em></div>
         <div class="slide-desc">Configura tu perfil en la sección de Dieta para ver tus macros personalizados.</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button class="btn-lime" onclick="show('training', null)">Ver mi entreno →</button>
@@ -367,10 +367,10 @@ body.ready .sidebar, body.ready .main{opacity:1}
         <div class="card">
           <div class="card-title">Hoy · Macros</div>
           <div class="stat-row">
-            <div class="stat-box"><div class="stat-v" id="dash-kcal">—</div><div class="stat-l">Kcal</div></div>
-            <div class="stat-box"><div class="stat-v" id="dash-prot">—</div><div class="stat-l">Prot.</div></div>
-            <div class="stat-box"><div class="stat-v" id="dash-carb">—</div><div class="stat-l">Carbos</div></div>
-            <div class="stat-box"><div class="stat-v" id="dash-fat">—</div><div class="stat-l">Grasa</div></div>
+            <div class="stat-box"><div class="stat-v" id="v2-kcal">—</div><div class="stat-l">Kcal</div></div>
+            <div class="stat-box"><div class="stat-v" id="v2-prot">—</div><div class="stat-l">Prot.</div></div>
+            <div class="stat-box"><div class="stat-v" id="v2-carb">—</div><div class="stat-l">Carbos</div></div>
+            <div class="stat-box"><div class="stat-v" id="v2-fat">—</div><div class="stat-l">Grasa</div></div>
           </div>
         </div>
         <div class="card">
@@ -696,6 +696,20 @@ body.ready .sidebar, body.ready .main{opacity:1}
 <div id="nav"></div>
 
 <script>
+// ── NUCLEAR CLEANUP ──
+(function(){
+  console.log("Nuclear cleanup: clearing local user cache.");
+  const u = localStorage.getItem('fp_user');
+  if(u) {
+    // Solo forzamos refresco si no hay un flag de 'v2_cleaned'
+    if(!localStorage.getItem('fp_v2_cleaned')) {
+      localStorage.removeItem('fp_user'); // Forzar relogin o recarga de perfil
+      localStorage.setItem('fp_v2_cleaned', 'true');
+      location.reload(); 
+    }
+  }
+})();
+
 // ── State ─────────────────────────────
 const secs = ['dashboard', 'training', 'diet', 'messages', 'progress', 'support'];
 let active = 'dashboard';
@@ -790,7 +804,7 @@ window.addEventListener('load', async () => {
 // ── Poblar toda la UI con datos reales ─
 function populateUI(profile, macros, user) {
   // 1. Limpieza absoluta de IDs de macros para evitar parpadeos de versiones antiguas
-  ['dash-kcal','dash-prot','dash-carb','dash-fat'].forEach(id => {
+  ['v2-kcal','v2-prot','v2-carb','v2-fat'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.textContent = '—';
   });
@@ -827,7 +841,7 @@ function populateUI(profile, macros, user) {
   document.body.classList.add('ready');
 
   // ── Saludo en el Dashboard
-  const dashNameEm = document.getElementById('dash-hero-name-em');
+  const dashNameEm = document.getElementById('v2-hero-name-em');
   if (dashNameEm) {
     dashNameEm.textContent = (firstName || 'USUARIO') + ".";
   }
@@ -895,10 +909,10 @@ function populateUI(profile, macros, user) {
   // ── Dashboard macros
   if (macros) {
     const dot = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-    dot('dash-kcal',  Math.round(macros.calories));
-    dot('dash-prot',  Math.round(macros.protein_g) + 'g');
-    dot('dash-carb',  Math.round(macros.carbs_g) + 'g');
-    dot('dash-fat',   Math.round(macros.fat_g) + 'g');
+    dot('v2-kcal',  Math.round(macros.calories));
+    dot('v2-prot',  Math.round(macros.protein_g) + 'g');
+    dot('v2-carb',  Math.round(macros.carbs_g) + 'g');
+    dot('v2-fat',   Math.round(macros.fat_g) + 'g');
   }
 
   // ── Dieta: mostrar setup o macros según peso
@@ -927,7 +941,7 @@ function populateUI(profile, macros, user) {
   // ── Dashboard hero texto
   const heroName = document.getElementById('dash-hero-name');
   if (heroName) heroName.textContent = `HOLA,`;
-  const heroNameEm = document.getElementById('dash-hero-name-em');
+  const heroNameEm = document.getElementById('v2-hero-name-em');
   if (heroNameEm) heroNameEm.textContent = name.split(' ')[0].toUpperCase() + '.';
 }
 
@@ -1256,10 +1270,10 @@ async function loadDailySummary() {
 
         // 1. Actualizar Dashboard (Datos consumidos REALES)
         if (totals) {
-          document.getElementById('dash-kcal').textContent = Math.round(totals.total_calories || 0);
-          document.getElementById('dash-prot').textContent = Math.round(totals.total_protein || 0) + 'g';
-          document.getElementById('dash-carb').textContent = Math.round(totals.total_carbs || 0) + 'g';
-          document.getElementById('dash-fat').textContent = Math.round(totals.total_fat || 0) + 'g';
+          document.getElementById('v2-kcal').textContent = Math.round(totals.total_calories || 0);
+          document.getElementById('v2-prot').textContent = Math.round(totals.total_protein || 0) + 'g';
+          document.getElementById('v2-carb').textContent = Math.round(totals.total_carbs || 0) + 'g';
+          document.getElementById('v2-fat').textContent = Math.round(totals.total_fat || 0) + 'g';
         }
 
         // 2. Actualizar sección Dieta (Barras de progreso)
