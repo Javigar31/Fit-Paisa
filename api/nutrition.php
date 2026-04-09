@@ -229,7 +229,7 @@ function handle_edit_entry(array $payload): never
     fp_query(
         'UPDATE food_entries 
          SET food_name = :fn, portion_grams = :pg, calories = :cal, 
-             protein = :pro, carbs = :car, fat = :fat, updated_at = NOW()
+             protein = :pro, carbs = :car, fat = :fat
          WHERE entry_id = :eid',
         [
             ':fn'  => $foodName,

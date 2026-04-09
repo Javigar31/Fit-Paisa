@@ -1287,8 +1287,12 @@ async function deleteMeal(id) {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const data = await res.json();
-    if (data.success) loadDailySummary();
-    else alert(data.message);
+    if (data.success) {
+      editingMealId = null;
+      document.getElementById('btn-add-meal').innerHTML = '+ Registrar en Diario';
+      resetFoodSearch();
+      loadDailySummary();
+    } else alert(data.message);
   } catch(e) {}
 }
 
