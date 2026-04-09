@@ -118,7 +118,15 @@ function handle_update_profile(array $payload): never
     );
 
     $macros = calculate_macros($weight, $height, $age, $gender, $objective, $activity, $targetWeight, $weeks);
-    fp_success(['message' => 'Perfil actualizado correctamente.', 'macro_targets' => $macros]);
+    
+    /* Retornar el perfil actualizado para que el frontend se refresque */
+    $profile = fp_query('SELECT * FROM profiles WHERE user_id = :uid', [':uid' => $payload['user_id']])->fetch();
+    
+    fp_success([
+        'message' => 'Perfil actualizado correctamente.', 
+        'macro_targets' => $macros,
+        'profile' => $profile
+    ]);
 }
 
 /* ══════════════════════════════════════════════════════════════════════

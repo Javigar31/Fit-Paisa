@@ -1007,8 +1007,8 @@ async function saveDietSetup(btn) {
     const data = await res.json();
 
     if (data.success) {
-      appState.profile = data.data.profile;
-      appState.macros  = data.data.macro_targets;
+      appState.profile = data.profile;
+      appState.macros  = data.macro_targets;
       const user = JSON.parse(localStorage.getItem('fp_user') || '{}');
       populateUI(appState.profile, appState.macros, user);
       loadDailySummary(); // Cargar datos reales de nutrición
