@@ -36,3 +36,31 @@
 *   **Entry Points Clave**: `api/profile.php` (Gestión de usuario/macros), `api/nutrition.php` (Diario de comidas), `api/messages.php` (Mensajería).
 
 ***
+
+# Informe Técnico (Tarde): Optimización Mobile & UX (v1.3.0)
+**Fecha:** 2026-04-09
+**Estado:** Merge completado a `master`.
+
+## 1. Optimización de Interfaz Cliente (`fitpaisa_cliente-v2.html`)
+*   **Paridad de Funciones**: Se han integrado los botones de **Perfil** y **Cerrar Sesión** en el menú táctil inferior de la versión móvil, vinculándolos a la lógica de negocio existente.
+*   **Scroll-Snap Vertical**: Implementado sistema de "imán" (`scroll-snap-type: y mandatory`) para que cada sección (Dashboard, Entreno, Dieta) se ajuste automáticamente al centro de la pantalla al hacer scroll, mejorando el feeling de App nativa.
+*   **Alineación de Cabecera**: Ajustada la altura fija de cabecera a 70px y sincronizado el `scroll-margin-top` para evitar que el contenido quede oculto bajo el menú.
+
+## 2. Mejoras en el Index y Acceso (`index.html`)
+*   **Seguridad y Visibilidad**: 
+    *   Añadidos **iconos de ojo** para alternar la visibilidad de la contraseña en el registro.
+    *   Habilitado **Copia/Pega** entre campos de contraseña para reducir errores del usuario.
+*   **Mejora de Conversión**: El botón de "Regístrate gratis" ahora es más grande (13px), con mayor área de clic, resaltado en negrita y subrayado, y efectos hover para facilitar su localización.
+*   **Validación de Formulario**: Nuevo mensaje de error "Todos los campos son obligatorios" que valida el Paso 1 del registro antes de permitir el avance.
+
+## 3. Sistema de Ayuda Inteligente (Hints)
+*   **Diferenciación por Dispositivo**:
+    *   **Desktop**: Mantiene el mensaje "Haz scroll o presiona las flechas para navegar".
+    *   **Mobile/Tablet**: Implementado un **Hint Flotante** (Toast) que aparece a los 3 segundos de carga.
+*   **Efectos Premium**: El hint de móvil aparece en la parte superior con un **borde palpitante** (Rojo/Blanco) para captar la atención de forma no intrusiva y desaparece tras 2.5 segundos de exposición.
+
+## 4. Notas de Despliegue
+*   **Merge**: Se ha realizado el merge de `testing` a `master` satisfactoriamente.
+*   **Caché**: Se recomienda a los usuarios móviles refrescar la página una vez para cargar los nuevos estilos de `scroll-snap`.
+
+***
