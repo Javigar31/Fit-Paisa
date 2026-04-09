@@ -313,7 +313,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:va
     <div class="slide-body-wrap">
       <div class="slide-hero">
         <div class="slide-tag">Dashboard · Bienvenida</div>
-        <div class="slide-title" id="dash-hero-name">HOLA,<br><em id="dash-hero-name-em">USUARIO.</em></div>
+        <div class="slide-title">HOLA,<br><em id="dash-hero-name-em">USUARIO.</em></div>
         <div class="slide-desc">Configura tu perfil en la sección de Dieta para ver tus macros personalizados.</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button class="btn-lime" onclick="show('training', null)">Ver mi entreno →</button>
@@ -738,9 +738,10 @@ window.addEventListener('load', async () => {
 // ── Poblar toda la UI con datos reales ─
 function populateUI(profile, macros, user) {
   const localUser = JSON.parse(localStorage.getItem('fp_user') || 'null');
-  console.log("Starting UI Population. User in storage:", localUser, "Profile:", profile);
+  console.log("Starting UI Population. LocalStorage User:", localUser);
 
-  const name = profile?.full_name || user?.name || localUser?.name || localUser?.full_name || 'Usuario';
+  const name = profile?.full_name || user?.name || localUser?.name || localUser?.full_name || 'Invitado';
+  const firstName = name.split(' ')[0].replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, '').toUpperCase();
   const email = profile?.email || user?.email || '';
   const plan = profile?.subscription_plan || user?.subscription_plan || 'FREE';
   const isPremium = plan !== 'FREE';
@@ -757,10 +758,8 @@ function populateUI(profile, macros, user) {
 
   // ── Saludo en el Dashboard
   const dashNameEm = document.getElementById('dash-hero-name-em');
-  console.log("Dash Greeting Element:", dashNameEm);
   if (dashNameEm) {
-    const firstName = name.split(' ')[0].toUpperCase();
-    dashNameEm.textContent = firstName + ".";
+    dashNameEm.textContent = (firstName || 'USUARIO') + ".";
   }
 
   // ── Chip de plan en todos los topbars

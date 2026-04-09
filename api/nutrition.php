@@ -25,16 +25,21 @@ require_once __DIR__ . '/profile.php';   /* Reutiliza calculate_macros() */
 fp_cors();
 
 $payload = jwt_require();
-$action  = fp_sanitize($_GET['action'] ?? 'daily', 32);
+$action = trim($_GET['action'] ?? 'daily');
 
-match ($action) {
-    'log'     => handle_log_food($payload),
-    'daily'   => handle_daily_log($payload),
-    'summary' => handle_daily_summary($payload),
-    'weekly'  => handle_weekly_trend($payload),
-    'delete'  => handle_delete_entry($payload),
-    default   => fp_error(400, "Action debug: hex=" . bin2hex($action) . " len=" . strlen($action) . " val=" . $action),
-};
+if ($action === 'log') {
+    handle_log_food($payload);
+} elseif ($action === 'daily') {
+    handle_daily_log($payload);
+} elseif ($action === 'summary') {
+    handle_daily_summary($payload);
+} elseif ($action === 'weekly') {
+    handle_weekly_trend($payload);
+} elseif ($action === 'delete') {
+    handle_delete_entry($payload);
+} else {
+    fp_error(400, "Action error: [{$action}]. Try 'daily' or 'summary'.");
+}
 
 /* ══════════════════════════════════════════════════════════════════════
    REGISTRAR INGESTA
