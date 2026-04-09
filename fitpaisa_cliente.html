@@ -771,9 +771,12 @@ window.addEventListener('load', async () => {
     populateUI(appState.profile, appState.macros, user);
 
   } catch (e) {
-    // Fallback: al menos mostrar el nombre desde localStorage
     populateUI(null, null, user);
   }
+
+  // 2. Cargar datos reales de nutrición y chart
+  loadDailySummary();
+  if (active === 'progress') drawChart();
 
   prog.style.width = (1 / secs.length * 100) + '%';
 });
@@ -784,7 +787,7 @@ function populateUI(profile, macros, user) {
   console.log("Starting UI Population. LocalStorage User:", localUser);
 
   const name = profile?.full_name || user?.name || localUser?.name || localUser?.full_name || 'Invitado';
-  const firstName = name.split(' ')[0].replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, '').toUpperCase();
+  const firstName = (name.split(' ')[0].replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, '') || 'USUARIO').toUpperCase();
   const email = profile?.email || user?.email || '';
   const plan = profile?.subscription_plan || user?.subscription_plan || 'FREE';
   const isPremium = plan !== 'FREE';
@@ -1395,11 +1398,7 @@ renderEx();
 
 
 // ── Chat ──────────────────────────────
-let messages = [
-  {text:'¿Cómo fue el entreno de hoy?',mine:false,time:'10:32'},
-  {text:'¡Muy bien! Superé mi marca en sentadilla.',mine:true,time:'10:35'},
-  {text:'Perfecto 💪 Mañana subimos las cargas.',mine:false,time:'10:36'},
-];
+let messages = [];
 function renderChat() {
   const el = document.getElementById('chatMessages');
   el.innerHTML = messages.map(m=>`
