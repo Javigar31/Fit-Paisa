@@ -728,8 +728,21 @@
 
       #hint {
         display: block;
-        bottom: 85px;
-        font-size: 11px;
+        bottom: auto;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(10, 12, 18, 0.9);
+        backdrop-filter: blur(10px);
+        padding: 18px 24px;
+        border-radius: 16px;
+        border: 1px solid var(--accent);
+        white-space: nowrap;
+        font-size: 13px;
+        color: var(--text);
+        z-index: 1000;
+        pointer-events: none;
+        animation: fadeHint 4s ease 3s forwards; /* 3s de retraso, 4s de duración */
       }
 
       #nav {
