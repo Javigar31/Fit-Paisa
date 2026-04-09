@@ -35,6 +35,8 @@ if ($action === 'log') {
     handle_daily_summary($payload);
 } elseif ($action === 'weekly') {
     handle_weekly_trend($payload);
+} elseif ($action === 'edit') {
+    handle_edit_entry($payload);
 } elseif ($action === 'delete') {
     handle_delete_entry($payload);
 } else {
@@ -189,6 +191,58 @@ function handle_weekly_trend(array $payload): never
     )->fetchAll();
 
     fp_success(['weekly_trend' => $rows]);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   EDITAR INGESTA (Modificar datos de una comida ya registrada)
+   ══════════════════════════════════════════════════════════════════════ */
+function handle_edit_entry(array $payload): never
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $_SERVER['REQUEST_METHOD'] !== 'PUT') {
+        fp_error(405, 'Método no permitido.');
+    }
+
+    $body    = fp_json_body();
+    $entryId = (int) ($body['entry_id'] ?? 0);
+    
+    if ($entryId <= 0) fp_error(400, 'ID de entrada inválido.');
+
+    $foodName  = fp_sanitize($body['food_name']     ?? '', 200);
+    $portion   = (float) ($body['portion_grams']    ?? 0);
+    $calories  = (float) ($body['calories']         ?? 0);
+    $protein   = (float) ($body['protein']          ?? 0);
+    $carbs     = (float) ($body['carbs']            ?? 0);
+    $fat       = (float) ($body['fat']              ?? 0);
+
+    /* Validar propiedad */
+    $owned = fp_query(
+        'SELECT 1 FROM food_entries fe
+         JOIN profiles p ON p.profile_id = fe.profile_id
+         WHERE fe.entry_id = :eid AND p.user_id = :uid',
+        [':eid' => $entryId, ':uid' => $payload['user_id']]
+    )->fetchColumn();
+
+    if (!$owned) {
+        fp_error(403, 'No tienes permiso para editar esta ingesta.');
+    }
+
+    fp_query(
+        'UPDATE food_entries 
+         SET food_name = :fn, portion_grams = :pg, calories = :cal, 
+             protein = :pro, carbs = :car, fat = :fat, updated_at = NOW()
+         WHERE entry_id = :eid',
+        [
+            ':fn'  => $foodName,
+            ':pg'  => $portion,
+            ':cal' => $calories,
+            ':pro' => $protein,
+            ':car' => $carbs,
+            ':fat' => $fat,
+            ':eid' => $entryId,
+        ]
+    );
+
+    fp_success(['message' => 'Ingesta actualizada correctamente.']);
 }
 
 /* ══════════════════════════════════════════════════════════════════════

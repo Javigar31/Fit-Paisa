@@ -150,6 +150,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:va
 .meal-name{flex:1;font-size:13px;font-weight:600}
 .meal-sub{font-size:11px;color:var(--muted)}
 .meal-kcal{font-family:var(--fd);color:var(--lime);font-size:16px}
+.meal-actions{display:flex;gap:8px;margin-left:15px;opacity:0.3;transition:opacity .2s}
+.meal-item:hover .meal-actions{opacity:1}
+.m-act-btn{width:26px;height:26px;border-radius:6px;border:none;background:rgba(255,255,255,.05);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .2s}
+.m-act-btn:hover{background:var(--lime);color:var(--dark)}
+.m-act-btn.del:hover{background:var(--danger);color:var(--text)}
 
 .bubble{padding:9px 13px;border-radius:14px;font-size:13px;line-height:1.5;margin-bottom:8px;max-width:85%}
 .bubble.in{background:rgba(255,255,255,.06);border-radius:4px 14px 14px 14px;color:var(--muted)}
@@ -1064,6 +1069,7 @@ async function saveDietSetup(btn) {
 // ── Nutrición Real ────────────────────
 let selectedFood = null;
 let searchTimer;
+let editingMealId = null; // Para saber si estamos editando
 
 function searchFoodDebounced(q) {
   clearTimeout(searchTimer);
@@ -1160,13 +1166,22 @@ async function addMeal() {
 
   try {
     const token = localStorage.getItem('fp_token');
-    const res = await fetch('/api/nutrition.php?action=log', {
+    const endpoint = editingMealId ? '/api/nutrition.php?action=edit' : '/api/nutrition.php?action=log';
+    const payload = { 
+      food_name: name, portion_grams: grams, calories: kcal, 
+      protein: prot, carbs: carb, fat: fat, meal_type: 'SNACK' 
+    };
+    if (editingMealId) payload.entry_id = editingMealId;
+
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ food_name: name, portion_grams: grams, calories: kcal, protein: prot, carbs: carb, fat: fat, meal_type: 'SNACK' })
+      body: JSON.stringify(payload)
     });
     const data = await res.json();
     if (data.success) {
+      editingMealId = null;
+      btn.innerHTML = '+ Registrar en Diario';
       resetFoodSearch();
       loadDailySummary();
     } else {
@@ -1231,10 +1246,48 @@ function renderMealsReal(list) {
   el.innerHTML = list.map(m => `
     <div class="meal-item">
       <div class="meal-icon">🍽️</div>
-      <div><div class="meal-name">${m.food_name}</div><div class="meal-sub">${m.portion_grams}g · P:${Math.round(m.protein)}g C:${Math.round(m.carbs)}g G:${Math.round(m.fat)}g</div></div>
+      <div style="flex:1">
+        <div class="meal-name">${m.food_name}</div>
+        <div class="meal-sub">${m.portion_grams}g · P:${Math.round(m.protein)}g C:${Math.round(m.carbs)}g G:${Math.round(m.fat)}g</div>
+      </div>
       <div class="meal-kcal">${Math.round(m.calories)}</div>
+      <div class="meal-actions">
+        <button class="m-act-btn" onclick='editMeal(${JSON.stringify(m).replace(/'/g, "&apos;")})' title="Editar">✏️</button>
+        <button class="m-act-btn del" onclick="deleteMeal(${m.entry_id})" title="Eliminar">🗑️</button>
+      </div>
     </div>
   `).join('');
+}
+
+async function deleteMeal(id) {
+  if (!confirm('¿Seguro que quieres eliminar esta ingesta?')) return;
+  const token = localStorage.getItem('fp_token');
+  try {
+    const res = await fetch(`/api/nutrition.php?action=delete&entry_id=${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (data.success) loadDailySummary();
+    else alert(data.message);
+  } catch(e) {}
+}
+
+function editMeal(m) {
+  editingMealId = m.entry_id;
+  document.getElementById('mSearch').value = m.food_name;
+  document.getElementById('mGrams').value = m.portion_grams;
+  document.getElementById('mKcal').value = m.calories;
+  document.getElementById('mProt').value = m.protein;
+  document.getElementById('mCarb').value = m.carbs;
+  document.getElementById('mFat').value = m.fat;
+  
+  const btn = document.getElementById('btn-add-meal');
+  btn.innerHTML = '💾 Actualizar';
+  
+  // Desplazar al formulario
+  document.getElementById('mSearch').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  document.getElementById('mSearch').focus();
 }
 
 // Llamar al cargar
