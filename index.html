@@ -868,6 +868,33 @@
     .input::placeholder {
       color: var(--muted);
     }
+
+    .pass-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .pass-wrapper .input {
+      padding-right: 40px;
+    }
+
+    .eye-toggle {
+      position: absolute;
+      right: 12px;
+      padding: 4px;
+      cursor: none;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.2s;
+      z-index: 5;
+    }
+
+    .eye-toggle:hover {
+      color: var(--accent);
+    }
   </style>
 </head>
 
@@ -981,15 +1008,26 @@
                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
                     <div class="field">
                       <label class="label">Contraseña</label>
-                      <input type="password" id="reg-pass" class="input" placeholder="********"
-                        onkeydown="if(event.key==='Enter') setStep(2, document.querySelector('#step-1 .slide-cta'))">
+                      <div class="pass-wrapper">
+                        <input type="password" id="reg-pass" class="input" placeholder="********"
+                          onkeydown="if(event.key==='Enter') setStep(2, document.querySelector('#step-1 .slide-cta'))">
+                        <div class="eye-toggle btn-hover-scale" onclick="togglePass('reg-pass', this)">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </div>
+                      </div>
                     </div>
                     <div class="field">
                       <label class="label">Confirmar Contraseña</label>
-                      <input type="password" id="reg-pass-confirm" class="input" placeholder="********"
-                        onkeydown="if(event.key==='Enter') setStep(2, document.querySelector('#step-1 .slide-cta'))">
+                      <div class="pass-wrapper">
+                        <input type="password" id="reg-pass-confirm" class="input" placeholder="********"
+                          onkeydown="if(event.key==='Enter') setStep(2, document.querySelector('#step-1 .slide-cta'))">
+                        <div class="eye-toggle btn-hover-scale" onclick="togglePass('reg-pass-confirm', this)">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </div>
+                      </div>
                     </div>
                   </div>
+                <div class="error-msg" id="err-required">Todos los campos son obligatorios.</div>
                 <div class="error-msg" id="err-pass">Debe incluir: Mayúscula, Número y Símbolo.</div>
                 <div class="error-msg" id="err-pass-confirm">Las contraseñas no coinciden.</div>
 
@@ -1730,6 +1768,7 @@
       let valid = true;
       document.querySelectorAll('.error-msg').forEach(e => e.classList.remove('on'));
       document.querySelectorAll('.input').forEach(e => e.classList.remove('invalid-input'));
+      document.getElementById('err-required').classList.remove('on');
 
       if (n === 1) {
         const name = document.getElementById('reg-name');
@@ -1737,6 +1776,12 @@
         const phone = document.getElementById('reg-phone');
         const pass = document.getElementById('reg-pass');
         const passConf = document.getElementById('reg-pass-confirm');
+
+        // Check if any required field is empty
+        if (!name.value.trim() || !email.value.trim() || !phone.value.trim() || !pass.value || !passConf.value) {
+          document.getElementById('err-required').classList.add('on');
+          valid = false;
+        }
 
         // Name: No numbers
         if (/[0-9]/.test(name.value) || name.value.trim() === '') {
@@ -1846,6 +1891,19 @@
     }
 
     /* ── LOGIN con API real ──────────────────────────────────────── */
+    function togglePass(inputId, btn) {
+      const input = document.getElementById(inputId);
+      const isPass = input.type === 'password';
+      input.type = isPass ? 'text' : 'password';
+      
+      // Update SVG icon
+      if (isPass) {
+        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+      } else {
+        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+      }
+    }
+
     async function loginUser() {
       const emailEl = document.getElementById('login-email');
       const passEl  = document.getElementById('login-password');
