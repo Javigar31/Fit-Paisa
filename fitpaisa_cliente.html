@@ -1136,18 +1136,25 @@ async function loadDailySummary() {
     const resLog = await fetch('/api/nutrition.php?action=daily', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    const dataLog = await resLog.json();
-    if (dataLog.success) {
-      renderMealsReal(dataLog.data.entries);
+    if (!resLog.ok) {
+       console.error("Daily Log Error:", await resLog.text());
+    } else {
+       const dataLog = await resLog.json();
+       if (dataLog.success) {
+         renderMealsReal(dataLog.data.entries);
+       }
     }
 
     // Cargar resumen vs objetivos
     const resSum = await fetch('/api/nutrition.php?action=summary', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    const dataSum = await resSum.json();
-    if (dataSum.success) {
-      const { totals, targets } = dataSum.data;
+    if (!resSum.ok) {
+       console.error("Summary Error:", await resSum.text());
+    } else {
+       const dataSum = await resSum.json();
+       if (dataSum.success) {
+         const { totals, targets } = dataSum.data;
       if (targets) {
         setMacroBar('bar-kcal', totals.total_calories, targets.calories, 'var(--lime)');
         setMacroBar('bar-prot', totals.total_protein, targets.protein_g, 'var(--success)');
@@ -1159,8 +1166,11 @@ async function loadDailySummary() {
         setMacroLabel('lbl-carb', Math.round(totals.total_carbs), targets.carbs_g, 'g');
         setMacroLabel('lbl-fat',  Math.round(totals.total_fat), targets.fat_g, 'g');
       }
+       }
     }
-  } catch(e) {}
+  } catch(e) {
+      console.error("Fetch Exception:", e);
+  }
 }
 
 function renderMealsReal(list) {
