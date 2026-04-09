@@ -179,6 +179,31 @@
       box-shadow: 0 8px 30px rgba(255, 107, 107, .3);
     }
 
+    .btn-switch {
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: none;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 8px;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+    }
+
+    .btn-switch:hover {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: var(--border);
+      color: var(--text);
+    }
+
+    .btn-switch span {
+      color: var(--accent);
+      font-weight: 800;
+      text-decoration: underline;
+      text-underline-offset: 4px;
+    }
+
     /* ── UI Cards (right side) ── */
     .ui-card {
       background: rgba(0, 0, 0, .82);
@@ -951,9 +976,9 @@
                 id="btn-login"
                 style="background:var(--accent);color:var(--dark);border-radius:8px;padding:12px;text-align:center;font-weight:800;font-size:13px;margin-top:4px;cursor:none;transition:opacity .2s"
                 class="btn-hover-scale" onclick="loginUser()">ENTRAR</div>
-              <div style="text-align:center;font-size:11px;color:var(--muted);cursor:none" class="btn-hover-opacity"
-                onclick="toggleForm('register')">¿Primera vez? <span
-                  style="color:var(--accent);font-weight:700">Regístrate gratis</span></div>
+              <div class="btn-switch btn-hover-opacity" onclick="toggleForm('register')">
+                ¿Primera vez? <span>Regístrate gratis</span>
+              </div>
             </div>
 
             <div id="register-view" class="form-view">
