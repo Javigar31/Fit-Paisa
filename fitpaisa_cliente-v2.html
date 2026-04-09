@@ -1033,7 +1033,7 @@ async function saveProfile(btn) {
 
     if (data.success) {
       appState.profile = { ...appState.profile, weight, height, age, objective, activity_level: activity, target_weight: targetWeight, target_time_weeks: targetWeeks };
-      appState.macros  = data.data.macro_targets;
+      appState.macros  = data.macro_targets;
       const user = JSON.parse(localStorage.getItem('fp_user') || '{}');
       populateUI(appState.profile, appState.macros, user);
       loadDailySummary();
