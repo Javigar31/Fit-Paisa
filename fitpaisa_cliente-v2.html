@@ -191,7 +191,7 @@ body.ready .sidebar, body.ready .main{opacity:1}
 .paywall-overlay{
   position:absolute; inset:0; z-index:100;
   background:rgba(8,10,15,.75); backdrop-filter:blur(8px);
-  display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:40px;
+  display:none; flex-direction:column; align-items:center; justify-content:flex-start; text-align:center; padding:120px 40px 40px;
 }
 .paywall-overlay.on{ display:flex; }
 .pw-icon{ font-size:48px; margin-bottom:16px; }
@@ -241,10 +241,10 @@ body.ready .sidebar, body.ready .main{opacity:1}
   .main { margin-left: 0; height: auto; overflow: visible; padding-top: 0; }
   .section { 
     position: relative; inset: auto; opacity: 1; pointer-events: auto; transform: none !important; 
-    min-height: 100vh; overflow: visible; 
+    min-height: 80vh; overflow: visible; 
     scroll-margin-top: 70px; 
     scroll-snap-align: start;
-    padding-top: 70px;
+    padding-top: 20px;
   }
   .section:not(.visible) .slide-hero>*, .section:not(.visible) .slide-panel>*{opacity:1;transform:none;}
   .slide-body-wrap{grid-template-columns:1fr}
