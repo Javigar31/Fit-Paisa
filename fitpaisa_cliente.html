@@ -1,10 +1,11 @@
+<!-- FitPaisa Version: 1.1.0 - Hardened Deployment -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>FitPaisa — Cliente Premium</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cabinet+Grotesk:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=1.1.0">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:var(--text);font-family:var(--fb);-webkit-font-smoothing:antialiased}
@@ -326,7 +327,7 @@ body.ready .sidebar, body.ready .main{opacity:1}
 <div id="prog"></div>
 
 <aside class="sidebar">
-  <div class="sb-logo">FITPAISA</div>
+  <div class="sb-logo">FITPAISA <span style="font-size:10px;opacity:.4;margin-left:8px">v1.1.0</span></div>
   <nav class="sb-nav">
     <div class="nav-item on" onclick="show('dashboard', this)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Dashboard</div>
     <div class="nav-item" onclick="show('training', this)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg> Entreno</div>
@@ -788,10 +789,17 @@ window.addEventListener('load', async () => {
 
 // ── Poblar toda la UI con datos reales ─
 function populateUI(profile, macros, user) {
+  // 1. Limpieza absoluta de IDs de macros para evitar parpadeos de versiones antiguas
+  ['dash-kcal','dash-prot','dash-carb','dash-fat'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = '—';
+  });
+
   // Mostrar la página inmediatamente al empezar a poblar
   document.body.classList.add('ready');
 
   const localUser = JSON.parse(localStorage.getItem('fp_user') || 'null');
+
   console.log("Starting UI Population. LocalStorage User:", localUser);
 
   const name = profile?.full_name || user?.name || localUser?.name || localUser?.full_name || 'Invitado';
