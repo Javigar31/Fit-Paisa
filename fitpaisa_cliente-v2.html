@@ -357,7 +357,7 @@ body.ready .sidebar, body.ready .main{opacity:1}
       <div class="slide-hero">
         <div class="slide-tag">Dashboard · Bienvenida</div>
         <div class="slide-title">HOLA,<br><em id="v2-hero-name-em">...</em></div>
-        <div class="slide-desc">Configura tu perfil en la sección de Dieta para ver tus macros personalizados.</div>
+        <div class="slide-desc">Visualiza tu consumo diario comparado con tus objetivos inteligentes.</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button class="btn-lime" onclick="show('training', null)">Ver mi entreno →</button>
           <button class="btn-ghost" onclick="show('messages', null)">Mensajes</button>
@@ -906,14 +906,11 @@ function populateUI(profile, macros, user) {
     subBadge.style.color = isPremium ? 'var(--lime)' : 'var(--muted)';
   }
 
-  // ── Dashboard macros
-  if (macros) {
-    const dot = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-    dot('v2-kcal',  Math.round(macros.calories));
-    dot('v2-prot',  Math.round(macros.protein_g) + 'g');
-    dot('v2-carb',  Math.round(macros.carbs_g) + 'g');
-    dot('v2-fat',   Math.round(macros.fat_g) + 'g');
-  }
+  // ── Dashboard macros (Inicializar en 0 consumido)
+  ['v2-kcal','v2-prot','v2-carb','v2-fat'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = '0' + (id==='v2-kcal'?'':'g');
+  });
 
   // ── Dieta: mostrar setup o macros según peso
   if (!hasPhysical) {

@@ -1884,7 +1884,7 @@
           const role = data.user.role;
           if      (role === 'ADMIN') window.location.href = 'fitpaisa_admin.html';
           else if (role === 'COACH') window.location.href = 'fitpaisa_entrenador.html';
-          else                       window.location.href = 'fitpaisa_cliente.html';
+          else                       window.location.href = 'fitpaisa_cliente-v2.html';
         } else {
           errEl.textContent = data.message || 'Credenciales incorrectas.';
           errEl.classList.add('on');
@@ -1945,7 +1945,7 @@
           localStorage.setItem('fp_token', data.token);
           localStorage.setItem('fp_user',  JSON.stringify(data.user));
           isRegActive = false;
-          window.location.href = 'fitpaisa_cliente.html';
+          window.location.href = 'fitpaisa_cliente-v2.html';
         } else {
           const errEl = document.getElementById('err-step2');
           errEl.textContent = data.message || 'Error al registrar. Intenta de nuevo.';
