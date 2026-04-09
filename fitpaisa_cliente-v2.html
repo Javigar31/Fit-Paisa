@@ -237,8 +237,8 @@ body.ready .sidebar, body.ready .main{opacity:1}
   .logo{display:none}
   .logo-mobile{display:block}
   #prog{left:0;top:-2px;z-index:500}
-  .main { margin-left: 0; height: auto; overflow: visible; padding-top: 140px; }
-  .section { position: relative; inset: auto; opacity: 1; pointer-events: auto; transform: none !important; min-height: auto; overflow: visible; scroll-margin-top: 140px; }
+  .main { margin-left: 0; height: auto; overflow: visible; padding-top: 80px; }
+  .section { position: relative; inset: auto; opacity: 1; pointer-events: auto; transform: none !important; min-height: auto; overflow: visible; scroll-margin-top: 80px; }
   .section:not(.visible) .slide-hero>*, .section:not(.visible) .slide-panel>*{opacity:1;transform:none;}
   .slide-body-wrap{grid-template-columns:1fr}
   .slide-panel{padding:20px 24px 110px}
@@ -754,7 +754,10 @@ function show(id, el) {
     if (next) next.scrollIntoView({ behavior: 'smooth' });
     active = id;
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('on'));
-    if (el) el.classList.add('on');
+    if (el) {
+        el.classList.add('on');
+        el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
     prog.style.width = ((ni + 1) / secs.length * 100) + '%';
     if (id === 'progress') drawChart();
     return;
@@ -1581,7 +1584,11 @@ if (window.innerWidth <= 768) {
         if (id !== active) {
           active = id;
           const ni = secs.indexOf(id);
-          document.querySelectorAll('.nav-item').forEach((n, i) => n.classList.toggle('on', i === ni));
+          document.querySelectorAll('.nav-item').forEach((n, i) => {
+            const isOn = i === ni;
+            n.classList.toggle('on', isOn);
+            if (isOn) n.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+          });
           prog.style.width = ((ni + 1) / secs.length * 100) + '%';
           if (id === 'progress') drawChart();
         }
