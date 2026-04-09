@@ -230,10 +230,10 @@ select.input{cursor:none;appearance:none}
     </div>
   </nav>
   <div class="sb-user">
-    <div class="avatar" id="coach-initials">LV</div>
+    <div class="avatar" id="coach-initials">—</div>
     <div style="flex:1">
-      <div class="uname" id="coach-name">Laura Vidal</div>
-      <div class="urole">Entrenadora</div>
+      <div class="uname" id="coach-name">Cargando...</div>
+      <div class="urole">Entrenador/a</div>
     </div>
     <button onclick="logout()" title="Cerrar sesión"
       style="background:none;border:none;color:var(--muted);cursor:none;font-size:18px;padding:4px;line-height:1;transition:color .2s"
@@ -247,39 +247,22 @@ select.input{cursor:none;appearance:none}
   <div class="section visible" id="sec-dashboard">
     <div class="page-head reveal r1"><h1>DASHBOARD</h1><p>Resumen de tu actividad como entrenadora</p></div>
     <div class="grid4 reveal r2" style="margin-bottom:20px">
-      <div class="card"><div class="stat-v">4</div><div class="stat-l">Clientes activos</div><div class="stat-s">+1 este mes</div></div>
-      <div class="card"><div class="stat-v">6</div><div class="stat-l">Planes activos</div><div class="stat-s">2 pendientes de aprobación</div></div>
-      <div class="card"><div class="stat-v">3</div><div class="stat-l">Mensajes sin leer</div><div class="stat-s">De 2 clientes</div></div>
-      <div class="card"><div class="stat-v">76%</div><div class="stat-l">Adherencia media</div><div class="stat-s">Últimos 7 días</div></div>
+      <div class="card"><div class="stat-v">—</div><div class="stat-l">Clientes activos</div><div class="stat-s">—</div></div>
+      <div class="card"><div class="stat-v">—</div><div class="stat-l">Planes activos</div><div class="stat-s">—</div></div>
+      <div class="card"><div class="stat-v">—</div><div class="stat-l">Mensajes sin leer</div><div class="stat-s">—</div></div>
+      <div class="card"><div class="stat-v">—%</div><div class="stat-l">Adherencia media</div><div class="stat-s">—</div></div>
     </div>
     <div class="grid2 reveal r3" style="margin-bottom:20px">
       <div class="card">
         <div class="card-title">Adherencia por cliente</div>
-        <div style="display:flex;flex-direction:column;gap:12px">
-          <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Javier García</span><strong>78%</strong></div><div class="bar-track"><div class="bar-fill" style="width:78%"></div></div></div>
-          <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Sofía Reyes</span><strong>62%</strong></div><div class="bar-track"><div class="bar-fill" style="width:62%;background:var(--success)"></div></div></div>
-          <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Pablo Torres</span><strong>45%</strong></div><div class="bar-track"><div class="bar-fill" style="width:45%;background:var(--warn)"></div></div></div>
-          <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Ana García</span><strong>91%</strong></div><div class="bar-track"><div class="bar-fill" style="width:91%"></div></div></div>
+        <div id="dash-adh-list" style="display:flex;flex-direction:column;gap:12px">
+          <div style="text-align:center;color:var(--muted);padding:20px;font-size:12px">Sin datos de adherencia aún</div>
         </div>
       </div>
       <div class="card">
         <div class="card-title">Planes recientes</div>
-        <div style="display:flex;flex-direction:column;gap:10px">
-          <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-            <div class="avatar" style="font-size:10px;width:28px;height:28px">JG</div>
-            <div style="flex:1"><div style="font-size:13px;font-weight:600">Javier García</div><div style="font-size:11px;color:var(--muted)">Entrenamiento · Hace 2 días</div></div>
-            <span class="badge b-lime">Activo</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-            <div class="avatar" style="font-size:10px;width:28px;height:28px">SR</div>
-            <div style="flex:1"><div style="font-size:13px;font-weight:600">Sofía Reyes</div><div style="font-size:11px;color:var(--muted)">Nutrición · Hace 1 día</div></div>
-            <span class="badge b-yellow">Pendiente</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:10px;padding:8px 0">
-            <div class="avatar" style="font-size:10px;width:28px;height:28px">PT</div>
-            <div style="flex:1"><div style="font-size:13px;font-weight:600">Pablo Torres</div><div style="font-size:11px;color:var(--muted)">Entrenamiento · Hace 4 días</div></div>
-            <span class="badge b-gray">Borrador</span>
-          </div>
+        <div id="dash-recent-plans" style="display:flex;flex-direction:column;gap:10px">
+          <div style="text-align:center;color:var(--muted);padding:20px;font-size:12px">Cargando actividad...</div>
         </div>
       </div>
     </div>
