@@ -16,17 +16,18 @@ require_once __DIR__ . '/_jwt.php';
 
 fp_cors();
 
-$payload = jwt_require(); /* 401 si no autenticado */
-$action  = fp_sanitize($_GET['action'] ?? 'get', 32);
-
-match ($action) {
-    'get'          => handle_get_profile($payload),
-    'update'       => handle_update_profile($payload),
-    'setup_macros' => handle_setup_macros($payload),
-    'log_body'     => handle_log_body($payload),
-    'history'      => handle_body_history($payload),
-    default        => fp_error(400, "Acción '{$action}' no reconocida."),
-};
+/* Solo ejecutar el enrutador si este archivo es el punto de entrada directo */
+if (strpos($_SERVER['SCRIPT_NAME'], 'profile.php') !== false) {
+    $action = fp_sanitize($_GET['action'] ?? 'get', 32);
+    match ($action) {
+        'get'          => handle_get_profile($payload),
+        'update'       => handle_update_profile($payload),
+        'setup_macros' => handle_setup_macros($payload),
+        'log_body'     => handle_log_body($payload),
+        'history'      => handle_body_history($payload),
+        default        => fp_error(400, "Acción '{$action}' no reconocida."),
+    };
+}
 
 /* ══════════════════════════════════════════════════════════════════════
    GET PROFILE
