@@ -751,6 +751,9 @@ window.addEventListener('load', async () => {
   const user = JSON.parse(localStorage.getItem('fp_user') || 'null');
   if (!user || user.role !== 'USER') { window.location.href = 'index.html'; return; }
 
+  // 1. Poblar inmediatamente con datos locales para evitar parpadeo
+  populateUI(null, null, user);
+
   try {
     const res = await fetch('/api/profile.php?action=get', {
       headers: { 'Authorization': `Bearer ${token}` }
