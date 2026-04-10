@@ -23,20 +23,38 @@ echo "PGUSER: " . (getenv('PGUSER') ? 'SÍ' : 'NO') . "\n";
 echo "PGPASSWORD: " . (getenv('PGPASSWORD') ? 'SÍ' : 'NO') . "\n";
 echo "PGDATABASE: " . (getenv('PGDATABASE') ? 'SÍ' : 'NO') . "\n";
 
-echo "\nIntentando conectar vía PDO...\n";
+echo "\nIntentando conectar vía PDO (MANUAL)...\n";
+
+$host = getenv('PGHOST')          ?: getenv('POSTGRES_HOST');
+$user = getenv('PGUSER')          ?: getenv('POSTGRES_USER');
+$pass = getenv('PGPASSWORD')      ?: getenv('POSTGRES_PASSWORD');
+$db   = getenv('PGDATABASE')      ?: getenv('POSTGRES_DATABASE');
+$port = getenv('PGPORT')          ?: '5432';
+
+echo "Host: $host | User: $user | DB: $db | Port: $port\n";
+
+$dsn = "pgsql:host={$host};port={$port};dbname={$db};sslmode=require";
 
 try {
-    $db = fp_db();
-    echo "✓ CONEXIÓN EXITOSA.\n";
-    
-    $stmt = $db->query("SELECT version()");
+    $pdo = new PDO($dsn, $user, $pass, [
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_EMULATE_PREPARES   => true,
+        PDO::ATTR_TIMEOUT            => 10,
+    ]);
+    echo "✓ CONEXIÓN MANUAL EXITOSA.\n";
+    $stmt = $pdo->query("SELECT version()");
     echo "Versión de DB: " . $stmt->fetchColumn() . "\n";
-    
-} catch (Exception $e) {
-    echo "✗ ERROR DE CONEXIÓN:\n";
+} catch (PDOException $e) {
+    echo "✗ ERROR DE CONEXIÓN MANUAL:\n";
     echo $e->getMessage() . "\n";
-    echo "\nDetalles técnicos:\n";
-    echo "Código: " . $e->getCode() . "\n";
+    echo "\nIntentando VARIACIÓN 2 (sin sslmode)...\n";
+    try {
+        $dsn2 = "pgsql:host={$host};port={$port};dbname={$db}";
+        $pdo2 = new PDO($dsn2, $user, $pass, [PDO::ATTR_TIMEOUT => 5]);
+        echo "✓ CONEXIÓN SIN SSL EXITOSA.\n";
+    } catch (PDOException $e2) {
+        echo "✗ ERROR VARIACIÓN 2: " . $e2->getMessage() . "\n";
+    }
 }
 
 echo "\n--- FIN DEL DIAGNÓSTICO ---\n";
