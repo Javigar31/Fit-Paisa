@@ -1,6 +1,6 @@
 <?php
 /**
- * FitPaisa — Script de Diagnóstico de Conexión (V3)
+ * FitPaisa — Script de Diagnóstico de Conexión (V3.1)
  */
 declare(strict_types=1);
 
@@ -13,9 +13,19 @@ echo "Fecha: " . date('Y-m-d H:i:s') . "\n\n";
 
 /* ── 1. Información de Entorno ───────────────────────────────────────── */
 $dbUrl = getenv('DATABASE_URL') ?: getenv('POSTGRES_URL');
+$pass  = getenv('PGPASSWORD')   ?: getenv('DB_PASSWORD_NUEVA');
+
 echo "[ENV] DATABASE_URL Detectada: " . ($dbUrl ? 'SÍ (L:' . strlen($dbUrl) . ')' : 'NO') . "\n";
 echo "[ENV] VERCEL_ENV: " . (getenv('VERCEL_ENV') ?: 'local') . "\n";
-echo "[ENV] DB_PASSWORD_NUEVA: " . (getenv('DB_PASSWORD_NUEVA') ? 'SÍ' : 'NO') . "\n\n";
+echo "[ENV] DB_PASSWORD_NUEVA: " . (getenv('DB_PASSWORD_NUEVA') ? 'SÍ' : 'NO') . "\n";
+
+// Máscara de seguridad para verificación visual
+$pForMask = $pass;
+if ($dbUrl) {
+    if ($p = parse_url($dbUrl)) $pForMask = $p['pass'] ?? $pass;
+}
+$masked = (strlen($pForMask ?? '') > 6) ? substr($pForMask, 0, 3) . '...' . substr($pForMask, -3) : '***';
+echo "[ENV] Password detectada en Vercel (máscara): $masked\n\n";
 
 /* ── 2. Intento vía URL (Nueva Lógica) ───────────────────────────────── */
 echo "CAPA 1: Intento vía DATABASE_URL / POSTGRES_URL\n";
@@ -45,7 +55,6 @@ echo "\n";
 echo "CAPA 2: Intento vía Componentes Manuales (Legacy)\n";
 $host = getenv('PGHOST')      ?: getenv('POSTGRES_HOST');
 $user = getenv('PGUSER')      ?: getenv('POSTGRES_USER');
-$pass = getenv('PGPASSWORD')  ?: getenv('DB_PASSWORD_NUEVA');
 $db   = getenv('PGDATABASE')  ?: getenv('POSTGRES_DATABASE');
 $port = getenv('PGPORT')      ?: '5432';
 
