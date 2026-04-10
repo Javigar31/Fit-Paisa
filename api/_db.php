@@ -237,9 +237,25 @@ function fp_ensure_schema(PDO $db): void
         $db->exec("ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS is_liquid BOOLEAN DEFAULT FALSE");
 
         // 3. Metadatos de Unidades en food_entries
-        $db->exec("ALTER TABLE food_entries ADD COLUMN IF NOT EXISTS portion_amount DECIMAL(6,2)");
-        $db->exec("ALTER TABLE food_entries ADD COLUMN IF NOT EXISTS portion_unit VARCHAR(50)");
         $db->exec("ALTER TABLE food_entries ADD COLUMN IF NOT EXISTS unit_size VARCHAR(20)");
+        
+        // 4. Enriquecer datos existentes (Una sola vez o si están NULL)
+        // Huevos
+        $db->exec("UPDATE food_catalog SET unit_name = 'Huevo', weight_std = 50, weight_small = 40, weight_medium = 50, weight_large = 60 
+                   WHERE (name ILIKE '%huevo%entero%' OR name = 'Huevo') AND unit_name IS NULL");
+        
+        // Pan
+        $db->exec("UPDATE food_catalog SET unit_name = 'Rebanada', weight_std = 30 
+                   WHERE name ILIKE '%pan%' AND unit_name IS NULL");
+        
+        // Alitas y Yemas
+        $db->exec("UPDATE food_catalog SET unit_name = 'Ala', weight_std = 35 WHERE name ILIKE '%alita%' AND unit_name IS NULL");
+        $db->exec("UPDATE food_catalog SET unit_name = 'Yema', weight_std = 17 WHERE name ILIKE '%yema%' AND unit_name IS NULL");
+
+        // Líquidos (Marcar flag is_liquid)
+        $db->exec("UPDATE food_catalog SET is_liquid = TRUE 
+                   WHERE (name ILIKE '%leche%' OR name ILIKE '%aceite%' OR name ILIKE '%vino%' OR name ILIKE '%bebida%' OR name ILIKE '%zumo%') 
+                   AND is_liquid = FALSE");
         
     } catch (PDOException $e) {
         error_log('[FitPaisa][SCHEMA] Fallo en auto-migración: ' . $e->getMessage());
