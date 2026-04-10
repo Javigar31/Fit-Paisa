@@ -44,10 +44,6 @@ function fp_db(): PDO
     $db   = getenv('PGDATABASE')      ?: getenv('POSTGRES_DATABASE');
     $port = getenv('PGPORT')          ?: '5432';
 
-    /* Redirigir automáticamente a la base de datos de pruebas si NO estamos en producción */
-    if ($env !== 'production' && ($db === 'neondb' || empty($db))) {
-        $db = 'fitpaisa_testing';
-    }
 
     if (!$host || !$user || !$pass || !$db) {
         /* Loguear el problema internamente sin revelar detalles al exterior */
