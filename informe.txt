@@ -109,3 +109,23 @@
 ## 4. Estado Final
 *   **Master**: Conectado a `neondb` - Operativa.
 *   **Testing**: Conectado a `fitpaisa_testing` - Operativa.
+
+***
+
+# Informe Técnico (Optimización): UI y Responsividad (v1.3.3)
+**Fecha:** 2026-04-10
+**Estado:** Interfaz de cliente optimizada y 100% responsiva.
+
+## 1. Mejoras en la Arquitectura Responsiva
+*   **Problema**: El diseño fijo de `100vh` en escritorio recortaba contenido en pantallas de poca altura o resoluciones bajas, perdiendo visibilidad de los macros y el calendario.
+*   **Solución (Centrado Seguro)**: Se implementó una lógica de márgenes dinámicos (`margin: auto 0`) en los paneles internos (`.slide-hero`, `.slide-panel`).
+    *   **Resultado**: El contenido se mantiene centrado si hay espacio, pero si la ventana es pequeña, el el scroll permite ver todo el contenido empezando desde el inicio (sin recortes superiores).
+*   **Estética Premium**: Se ocultaron las barras de scroll mediante CSS para mantener la sensación de aplicación nativa, manteniendo la funcionalidad de desplazamiento intacta.
+
+## 2. Correcciones en Componentes Críticos
+*   **Catálogo de Alimentos**: Se corrigió el buscador cambiando las sugerencias a `position: absolute`. Esto evita que el desplegable "empuje" el formulario hacia abajo, permitiendo una experiencia de búsqueda fluida.
+*   **Calendario Nutricional**: Se eliminó el `justify-content: space-between` para permitir un agrupamiento natural de los días y se ajustó la altura mínima para evitar saltos visuales durante la carga.
+
+## 3. Estado del Repositorio
+*   **Cambios Sincronizados**: Todas las mejoras visuales han sido fusionadas y subidas a `master` tras ser validadas en la rama `testing`.
+*   **Próximos Pasos**: Continuar con la mejora de funcionalidades backend y paneles de administración bajo esta nueva base responsiva.
