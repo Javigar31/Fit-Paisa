@@ -132,24 +132,56 @@
 
 ***
 
-# Informe Técnico (Optimización): Catálogo, Unidades y Líquidos (v1.4.0)
+***
+
+# Informe Técnico (UX & Selectores): Interfaz Premium (v1.4.7)
 **Fecha:** 2026-04-11
-**Estado:** Código implementado en `testing`. Migración automática activa (Transparente).
+**Estado:** Implementado y validado en `testing`.
 
-## 1. Evolución del Modelo de Alimentos
-*   **Soporte Multimodal**: Se ha trascendido el modelo basado únicamente en gramos. El catálogo ahora soporta:
-    *   **Unidades Discretas**: Alimentos como Huevos, Pan, Alitas o Yemas ahora se pueden registrar por "Unidad", "Rebanada" o "Ala".
-    *   **Volúmenes**: Soporte nativo para Líquidos (Mililitros y Litros) con densidad 1:1.
-*   **Tamaños Variables**: Implementada lógica para tamaños (Pequeño, Mediano, Grande) con pesos específicos por alimento (ej. Huevo S: 40g, M: 50g, L: 60g).
+## 1. Rediseño de Selectores (`Custom Select`)
+*   **Problema**: Los selects nativos del buscador de alimentos rompían la estética "Dark & Lime" de la aplicación.
+*   **Solución**: Se sustituyeron los selectores de "Medir en" y "Tamaño" por componentes personalizados (`custom-dropdown`) construidos con HTML/CSS/JS.
+    *   **Estética**: Uso de `backdrop-filter: blur`, colores `lime-600` y tipografía premium.
+    *   **UX**: El catálogo y los selectores ahora se cierran automáticamente al pulsar la tecla `Esc`, al hacer clic fuera del elemento o al pulsar la "X" del buscador.
 
-## 2. Mejoras en la Ingeniería de Datos (Backend)
-*   **Esquema Extensible**: Actualizadas las tablas `food_catalog` y `food_entries` con columnas de metadatos (`unit_name`, `weight_std`, `portion_amount`, `unit_size`, etc.).
-*   **Persistencia de Contexto**: El historial de comidas ahora guarda no solo los macros, sino la unidad y cantidad original, permitiendo una reconstrucción fiel del registro al editar.
+## 2. Correcciones de Lógica
+*   **Bug de Cálculo**: Corregido un error en la función `setCS` que impedía que los macros se actualizaran al seleccionar un alimento del catálogo debido a un desajuste en los IDs de los nuevos selectores.
 
-## 3. Experiencia de Usuario Proactiva (Frontend)
-*   **UI Adaptativa**: El modal de registro detecta el tipo de alimento y ofrece dinámicamente el selector de unidad. El selector de tamaño se oculta automáticamente si no aplica.
-*   **Historial Descriptivo**: El resumen diario ahora muestra cadenas legibles como "2 huevos medianos" o "250 ml de Leche", alineándose con el lenguaje natural del usuario.
+***
 
-## 4. Notas de Despliegue
-*   **Migración Transparente**: Se ha implementado un sistema de "Auto-Bootstrap" en `api/_db.php`. Ya **no es necesario** visitar ninguna URL para actualizar las tablas; el sistema se sincroniza solo al detectar la nueva versión.
-*   **Aceptación**: El sistema mantiene retrocompatibilidad total con los registros antiguos basados únicamente en gramos.
+# Informe Técnico (UX): Borrado Optimista (v1.5.0)
+**Fecha:** 2026-04-11
+**Estado:** Estable en Producción.
+
+## 1. Refinamiento del Borrado de Ingestas
+*   **Problema**: Los usuarios reportaban tener que pulsar "2 veces" y recibían errores 404 confusos si hacían doble clic.
+*   **Solución (Borrado Optimista)**:
+    *   El elemento nutricional se oculta **instantáneamente** en el DOM con una transición de opacidad y desplazamiento al confirmar el borrado.
+    *   **Bloqueo de UI**: El botón de la papelera se deshabilita tras el primer clic para evitar peticiones concurrentes.
+    *   **Gestión de Errores**: Si el servidor devuelve un 404 (porque el registro ya se borró en una petición anterior), la interfaz lo trata como éxito silencioso para evitar alertas innecesarias.
+
+***
+
+# Informe Técnico (Arquitectura): Blindaje de Entornos (v1.5.1)
+**Fecha:** 2026-04-11
+**Estado:** Seguridad perimetral activa.
+
+## 1. Separación de Bases de Datos
+*   **Centralización**: Se refactorizó `api/_db.php` para usar `_fp_get_db_config()`.
+*   **Entornos**:
+    *   **Producción (`master`)**: Conectado exclusivamente a `neondb`.
+    *   **Testing (`preview`)**: Forzado por código a conectar con `fitpaisa_testing` para evitar contaminación de datos reales.
+*   **Protección de Diagnóstico**: El script `api/diag_db.php` ahora está bloqueado en producción por defecto. Solo accesible mediante una llave secreta (`?key=...`) para evitar exposición de metadatos.
+
+***
+
+# Informe Técnico (Crítico): Restauración de Master (v1.5.2)
+**Fecha:** 2026-04-11
+**Estado:** Producción estabilizada. Error 500 resuelto.
+
+## 1. Resolución del Error 500 en Registro
+*   **Problema**: El registro de alimentos fallaba sistemáticamente en producción con un Error 500.
+*   **Causa Raíz**: El script de auto-migración omitía las columnas `portion_amount` y `portion_unit` en la tabla `food_entries` de la base de datos `neondb`. 
+*   **Solución**: Se completó la función `fp_ensure_schema()` en `api/_db.php`. 
+    *   Al abrir el diagnóstico o registrar un alimento, el sistema autodetecta las columnas faltantes y las crea en tiempo real sin intervención manual.
+*   **Resultado**: Registro de alimentos 100% operativo en `https://fit-paisa.vercel.app/`.
