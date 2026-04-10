@@ -1373,8 +1373,9 @@ function toggleCS(id) {
 }
 
 function setCS(id, val, text) {
+  const targetId = id === 'cs-unit' ? 'mUnitSelect' : 'mSizeSelect';
   document.getElementById(id + '-text').textContent = text;
-  document.getElementById(id.replace('cs-', 'm') + 'Select').value = val;
+  document.getElementById(targetId).value = val;
   closeAllCS();
   calcMacros();
 }
