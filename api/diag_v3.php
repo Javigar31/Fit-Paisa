@@ -66,28 +66,9 @@ foreach ($files as $file) {
     }
 }
 
-/* ── 4. Prueba de Conexión Aplicación (fp_db) ── */
-echo "\n[4] TEST DE CONEXIÓN (vía fp_db()):\n";
-if (function_exists('fp_db')) {
-    try {
-        $db = fp_db();
-        echo "  ✓ ÉXITO: fp_db() retornó instancia PDO correctamente.\n";
-        
-        $info = fp_env_info();
-        echo "    Entorno detectado por fp_db(): " . $info['env'] . "\n";
-        echo "    Base de datos apuntada: " . $info['database'] . "\n";
-        
-    } catch (Throwable $e) {
-        echo "  ✗ FALLO: " . $e->getMessage() . "\n";
-        echo "    Archivo: " . $e->getFile() . " L :" . $e->getLine() . "\n";
-    }
-} else {
-    echo "  ✗ ERROR: La función fp_db() no está disponible.\n";
-}
-
-/* ── 5. Prueba de Conexión Manual (Aislamiento) ── */
-echo "\n[5] AISLAMIENTO: TEST DE CONEXIÓN MANUAL:\n";
-// Intentamos recrear la lógica de producción si estamos en producción
+/* ── 4. Prueba de Conexión Manual (Aislamiento y Detalle) ── */
+echo "\n[4] AISLAMIENTO: TEST DE CONEXIÓN MANUAL:\n";
+$env = getenv('VERCEL_ENV') ?: 'local';
 if ($env === 'production') {
     $host = getenv('PGHOST_PROD')     ?: getenv('POSTGRES_HOST');
     $user = getenv('PGUSER_PROD')     ?: getenv('POSTGRES_USER');
@@ -110,17 +91,15 @@ if ($host && $user && $pass && $db_name) {
             PDO::ATTR_TIMEOUT => 5
         ]);
         $end = microtime(true);
-        echo "  ✓ ÉXITO: Conexión manual establecida en " . round(($end - $start) * 1000, 2) . "ms\n";
+        echo "  ✓ ÉXITO MANUAL: Conexión establecida en " . round(($end - $start) * 1000, 2) . "ms\n";
         
-        /* ── 6. Verificación de Esquema (Si conectó) ── */
-        echo "\n[6] VERIFICACIÓN DE ESQUEMA (Tabla 'users'):\n";
+        /* ── 5. Verificación de Esquema (Si conectó) ── */
+        echo "\n[5] VERIFICACIÓN DE ESQUEMA (Tabla 'users'):\n";
         try {
             $stmt = $pdo->query("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'users' ORDER BY ordinal_position");
             $columns = $stmt->fetchAll(PDO::FETCH_ASSOC);
             if (empty($columns)) {
-                echo "  ✗ ERROR: La tabla 'users' no existe o está vacía en este esquema.\n";
-                
-                // Listar tablas disponibles para ayudar
+                echo "  ✗ ERROR: La tabla 'users' no existe en '$db_name'.\n";
                 echo "    Tablas disponibles:\n";
                 $stmtTables = $pdo->query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'");
                 foreach ($stmtTables->fetchAll(PDO::FETCH_COLUMN) as $t) {
@@ -128,24 +107,32 @@ if ($host && $user && $pass && $db_name) {
                 }
             } else {
                 echo "  ✓ La tabla 'users' existe con " . count($columns) . " columnas.\n";
-                echo "    Estructura:\n";
-                foreach ($columns as $col) {
-                    echo "      - " . str_pad($col['column_name'], 18) . ": " . $col['data_type'] . "\n";
-                }
-                
-                // Prueba de conteo de usuarios
                 $count = $pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
-                echo "\n    Usuarios registrados: $count\n";
+                echo "    Usuarios registrados: $count\n";
             }
         } catch (Throwable $e) {
-            echo "  ✗ ERROR al consultar esquema: " . $e->getMessage() . "\n";
+            echo "  ✗ ERROR Esquema: " . $e->getMessage() . "\n";
         }
-        
     } catch (Throwable $e) {
-        echo "  ✗ FALLO en conexión manual: " . $e->getMessage() . "\n";
+        echo "  ✗ FALLO MANUAL CRÍTICO: " . $e->getMessage() . "\n";
+        echo "    Detalle: Probablemente las credenciales no son válidas para el host '$host' o la DB '$db_name'.\n";
     }
 } else {
-    echo "  ✗ No se pueden realizar pruebas manuales: faltan credenciales base.\n";
+    echo "  ✗ Credenciales incompletas para prueba manual.\n";
+}
+
+/* ── 6. Prueba de Conexión Aplicación (fp_db) ── */
+echo "\n[6] TEST DE CONEXIÓN (vía fp_db()):\n";
+if (function_exists('fp_db')) {
+    try {
+        // Obtenemos la instancia pero silenciamos el error si ocurre para que el script termine
+        $db = @fp_db();
+        echo "  ✓ ÉXITO: fp_db() cargado.\n";
+    } catch (Throwable $e) {
+        echo "  ✗ fp_db() falló: " . $e->getMessage() . "\n";
+    }
+} else {
+    echo "  ✗ fp_db() no disponible.\n";
 }
 
 /* ── Finalización ── */
