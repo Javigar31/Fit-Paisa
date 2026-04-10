@@ -41,7 +41,7 @@ function fp_db(): PDO
         // --- MASTER (PRODUCCIÓN) ---
         $host = getenv('PGHOST_PROD')     ?: getenv('POSTGRES_HOST');
         $user = getenv('PGUSER_PROD')     ?: getenv('POSTGRES_USER');
-        $pass = getenv('PGPASSWORD_PROD') ?: getenv('POSTGRES_PASSWORD');
+        $pass = getenv('PGPASSWORD_PROD') ?: getenv('POSTGRES_PASSWORD') ?: getenv('DB_PASSWORD_NUEVA');
         $db   = getenv('PGDATABASE_PROD') ?: 'neondb'; 
     } else {
         // --- TESTING / LOCAL ---
