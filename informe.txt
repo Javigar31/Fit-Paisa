@@ -64,3 +64,23 @@
 *   **Caché**: Se recomienda a los usuarios móviles refrescar la página una vez para cargar los nuevos estilos de `scroll-snap`.
 
 ***
+
+# Informe Técnico (Mañana): Estabilización de Producción (v1.3.1)
+**Fecha:** 2026-04-10
+**Estado:** Diagnóstico de `master` completado. `testing` estable.
+
+## 1. Diagnóstico de Producción (`master`)
+*   **Identificación de Fallos**: Detectada inconsistencia en la conexión a la base de datos de producción (`fit-paisa.vercel.app`).
+*   **Causas Probables**: 
+    1.  **Variables de Entorno**: Posible falta de configuración de credenciales de Postgres en el scope de **Production** de Vercel.
+    2.  **Desincronización de Esquema**: La tabla `profiles` en producción aún no cuenta con las columnas de objetivos nutricionales (`target_weight`, `target_time_weeks`).
+*   **Herramienta de Diagnóstico**: Se ha utilizado `api/diag_master.php` para verificar la conectividad manual y el estado de las variables en tiempo real.
+
+## 2. Acciones Correctivas Requeridas
+*   **Migración Manual**: Se requiere la ejecución de `https://fit-paisa.vercel.app/api/db_migration.php` para sincronizar el esquema de producción con las nuevas funciones de cálculo de déficit.
+*   **Configuración Vercel**: Verificar que las variables `PGHOST`, `PGUSER`, `PGDATABASE` y `PGPASSWORD` estén correctamente asignadas al entorno de producción en el panel de control de Vercel.
+
+## 3. Estado de la Rama Testing
+*   **Estabilidad Confirmada**: Todas las funciones de mensajería, guardado de perfil y cálculo de macros operan correctamente bajo el dominio de pruebas.
+
+***
