@@ -182,9 +182,52 @@ body.ready .sidebar, body.ready .main{opacity:1}
 .rec-prev{font-size:11px;color:var(--muted)}
 
 .input{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 13px;color:var(--text);font-size:13px;font-family:var(--fb);outline:none;width:100%;transition:border-color .2s}
-select.input{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:40px}
-select.input option{background:#12161e;color:#fff}
 .input:focus{border-color:var(--lime)}
+
+/* Custom Select Premium */
+.custom-select { position: relative; width: 100%; }
+.cs-trigger {
+  background: rgba(255,255,255,.05);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 13px;
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all .2s;
+}
+.cs-trigger:hover { border-color: rgba(255,255,255,0.2); }
+.cs-trigger.open { border-color: var(--lime); }
+.cs-options {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  background: rgba(18, 22, 30, 0.98);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  z-index: 1100;
+  display: none;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.cs-options.open { display: block; animation: csFadeIn .2s ease; }
+.cs-option {
+  padding: 12px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all .2s;
+  color: var(--muted);
+}
+.cs-option:hover { background: var(--lime); color: var(--dark); font-weight: 600; padding-left: 20px; }
+.cs-option.active { color: var(--lime); font-weight: 700; background: rgba(255,255,255,0.03); }
+
+@keyframes csFadeIn { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
 .input::placeholder{color:var(--muted)}
 .label{font-size:11px;color:var(--muted);margin-bottom:5px;display:block}
 .field{display:flex;flex-direction:column}
@@ -583,20 +626,32 @@ select.input option{background:#12161e;color:#fff}
               </div>
             </div>
             <div id="mManualForm" style="display:flex;flex-direction:column;gap:10px">
-              <div class="grid2" id="mUnitGroup" style="display:none">
+            <div class="grid2" id="mUnitGroup" style="display:none">
                 <div class="field">
                   <label class="label">Medir en</label>
-                  <select class="input" id="mUnitSelect" onchange="calcMacros()">
-                    <option value="g">Gramos (g)</option>
-                  </select>
+                  <div class="custom-select" id="cs-unit">
+                    <div class="cs-trigger" onclick="toggleCS('cs-unit')">
+                      <span id="cs-unit-text">Gramos (g)</span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                    </div>
+                    <div class="cs-options" id="cs-unit-options"></div>
+                    <input type="hidden" id="mUnitSelect" value="g">
+                  </div>
                 </div>
                 <div class="field" id="mSizeGroup" style="display:none">
                   <label class="label">Tamaño</label>
-                  <select class="input" id="mSizeSelect" onchange="calcMacros()">
-                    <option value="medium">Mediano</option>
-                    <option value="small">Pequeño</option>
-                    <option value="large">Grande</option>
-                  </select>
+                  <div class="custom-select" id="cs-size">
+                    <div class="cs-trigger" onclick="toggleCS('cs-size')">
+                      <span id="cs-size-text">Mediano</span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                    </div>
+                    <div class="cs-options" id="cs-size-options">
+                      <div class="cs-option" onclick="setCS('cs-size', 'medium', 'Mediano')">Mediano</div>
+                      <div class="cs-option" onclick="setCS('cs-size', 'small', 'Pequeño')">Pequeño</div>
+                      <div class="cs-option" onclick="setCS('cs-size', 'large', 'Grande')">Grande</div>
+                    </div>
+                    <input type="hidden" id="mSizeSelect" value="medium">
+                  </div>
                 </div>
               </div>
               <div class="grid2">
@@ -1263,37 +1318,34 @@ function renderSuggestions(list) {
 
 function selectFood(f) {
   selectedFood = f;
-  document.getElementById('mSearch').value = f.name;
-  document.getElementById('mSearch').readOnly = true;
+  const searchInput = document.getElementById('mSearch');
+  searchInput.value = f.name;
+  searchInput.readOnly = true;
   document.getElementById('btn-clear-food').style.display = 'block';
   document.getElementById('food-suggestions').style.display = 'none';
 
-  // Configurar selectores de unidades
+  // Configurar selectores de unidades personalizados
   const unitGroup = document.getElementById('mUnitGroup');
-  const unitSelect = document.getElementById('mUnitSelect');
-  const sizeGroup = document.getElementById('mSizeGroup');
-  const lblAmount = document.getElementById('lblAmount');
+  const optionsBox = document.getElementById('cs-unit-options');
   
-  unitSelect.innerHTML = '<option value="g">Gramos (g)</option>';
+  let html = `<div class="cs-option" onclick="setCS('cs-unit', 'g', 'Gramos (g)')">Gramos (g)</div>`;
   
   if (f.unit_name) {
-    unitSelect.innerHTML += `<option value="unit">${f.unit_name} (unidades)</option>`;
+    html += `<div class="cs-option" onclick="setCS('cs-unit', 'unit', '${f.unit_name} (unidades)')">${f.unit_name} (unidades)</div>`;
   }
   if (f.is_liquid) {
-    unitSelect.innerHTML += `<option value="ml">Mililitros (ml)</option>`;
-    unitSelect.innerHTML += `<option value="L">Litros (L)</option>`;
+    html += `<div class="cs-option" onclick="setCS('cs-unit', 'ml', 'Mililitros (ml)')">Mililitros (ml)</div>`;
+    html += `<div class="cs-option" onclick="setCS('cs-unit', 'L', 'Litros (L)')">Litros (L)</div>`;
   }
   
-  if (unitSelect.options.length > 1) {
-    unitGroup.style.display = 'grid';
-  } else {
-    unitGroup.style.display = 'none';
-  }
+  optionsBox.innerHTML = html;
+  setCS('cs-unit', 'g', 'Gramos (g)'); // Reset a gramos por defecto
+
+  const unitCount = (f.unit_name ? 1 : 0) + (f.is_liquid ? 2 : 0) + 1;
+  unitGroup.style.display = unitCount > 1 ? 'grid' : 'none';
   
-  // Por defecto gramos
-  unitSelect.value = 'g';
-  lblAmount.textContent = 'Gramos';
-  sizeGroup.style.display = 'none';
+  document.getElementById('mSizeGroup').style.display = 'none';
+  setCS('cs-size', 'medium', 'Mediano');
   document.getElementById('mGrams').value = 100;
   
   // Bloquear campos de macros
@@ -1306,12 +1358,39 @@ function selectFood(f) {
   calcMacros();
 }
 
+function toggleCS(id) {
+  const el = document.getElementById(id + '-options');
+  const trigger = document.querySelector(`#${id} .cs-trigger`);
+  const isOpen = el.classList.contains('open');
+  
+  // Cerrar todos primero
+  closeAllCS();
+  
+  if (!isOpen) {
+    el.classList.add('open');
+    trigger.classList.add('open');
+  }
+}
+
+function setCS(id, val, text) {
+  document.getElementById(id + '-text').textContent = text;
+  document.getElementById(id.replace('cs-', 'm') + 'Select').value = val;
+  closeAllCS();
+  calcMacros();
+}
+
+function closeAllCS() {
+  document.querySelectorAll('.cs-options').forEach(el => el.classList.remove('open'));
+  document.querySelectorAll('.cs-trigger').forEach(el => el.classList.remove('open'));
+}
+
 function resetFoodSearch() {
   selectedFood = null;
   const searchInput = document.getElementById('mSearch');
   searchInput.value = '';
   searchInput.readOnly = false;
   document.getElementById('btn-clear-food').style.display = 'none';
+  document.getElementById('food-suggestions').style.display = 'none'; // Asegurar cierre
   document.getElementById('mUnitGroup').style.display = 'none';
   document.getElementById('mSizeGroup').style.display = 'none';
   document.getElementById('lblAmount').textContent = 'Gramos';
@@ -1328,6 +1407,25 @@ function resetFoodSearch() {
     }
   });
 }
+
+// Escuchadores Globales para UX
+window.addEventListener('click', (e) => {
+  // Cerrar selectores si clic fue fuera
+  if (!e.target.closest('.custom-select')) {
+    closeAllCS();
+  }
+  // Cerrar sugerencias si clic fue fuera
+  if (!e.target.closest('.suggestions-box') && !e.target.closest('#mSearch')) {
+    document.getElementById('food-suggestions').style.display = 'none';
+  }
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeAllCS();
+    document.getElementById('food-suggestions').style.display = 'none';
+  }
+});
 
 let dietSelectedDate = new Date().toISOString().split('T')[0];
 
