@@ -340,10 +340,14 @@ body.ready .sidebar, body.ready .main{opacity:1}
   }
   
   /* ── Diet Picker ── */
-  .diet-picker { display: flex; gap: 8px; margin: 15px 0 25px; overflow-x: auto; padding: 4px; scrollbar-width: none; }
+  .diet-picker { 
+    display: flex; gap: 6px; margin: 15px 0 25px; 
+    overflow-x: auto; padding: 4px 0; scrollbar-width: none;
+    justify-content: space-between;
+  }
   .diet-picker::-webkit-scrollbar { display: none; }
   .diet-day { 
-    flex: 0 0 auto; width: 45px; height: 58px; 
+    flex: 1 1 0; min-width: 40px; max-width: 50px; height: 58px; 
     display: flex; flex-direction: column; align-items: center; justify-content: center; 
     background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 14px; 
     cursor: pointer; transition: all .2s cubic-bezier(0.4, 0, 0.2, 1);
