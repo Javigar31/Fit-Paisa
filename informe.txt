@@ -84,3 +84,28 @@
 *   **Estabilidad Confirmada**: Todas las funciones de mensajería, guardado de perfil y cálculo de macros operan correctamente bajo el dominio de pruebas.
 
 ***
+
+# Informe Técnico (Tarde): Resolución Definitiva de Producción (v1.3.2)
+**Fecha:** 2026-04-10
+**Estado:** Producción (`master`) 100% operativa y estabilizada.
+
+## 1. Resolución del Error 500 (Login en Producción)
+*   **Problema Detectado**: Fallo de autenticación en la base de datos (`password authentication failed`).
+*   **Causa Raíz**: Vercel inyecta automáticamente variables de entorno (`POSTGRES_PASSWORD`) que en este proyecto están obsoletas o bloqueadas y no se pueden modificar desde el panel. El código las priorizaba, causando el fallo.
+*   **Solución Técnica** (`api/_db.php`):
+    *   **Prioridad de Credenciales**: Se ha modificado la lógica para que el sistema use primero la variable manual `DB_PASSWORD_NUEVA` antes que cualquier variable automática de Vercel.
+    *   **Forzado de Base de Datos**: 
+        *   La rama `master` está forzada por código a usar la base de datos `neondb`.
+        *   La rama `testing` está forzada por código a usar `fitpaisa_testing`.
+
+## 2. Herramientas de Diagnóstico
+*   **Script Avanzado**: Se desarrolló `api/diag_v3.php` para realizar pruebas de aislamiento (PDO puro) y verificar la visibilidad de variables de entorno sin exponer secretos. 
+*   **Seguridad**: Tras la estabilización, todos los archivos `diag_*.php` han sido eliminados de las ramas para evitar vulnerabilidades de exposición de información técnica.
+
+## 3. Lecciones Aprendidas para el Futuro
+*   **Variables de Vercel**: No confiar en las variables inyectadas automáticamente por las integraciones si se han realizado cambios manuales en Neon. Siempre priorizar variables de usuario (`_PROD` o manuales).
+*   **Aislamiento de Errores**: Ante un Error 500 genérico de PHP, usar siempre un script que pruebe la conexión PDO pura fuera del framework/wrapper de la app para ver el mensaje de error real de Postgres.
+
+## 4. Estado Final
+*   **Master**: Conectado a `neondb` - Operativa.
+*   **Testing**: Conectado a `fitpaisa_testing` - Operativa.
