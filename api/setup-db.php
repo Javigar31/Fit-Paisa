@@ -204,131 +204,42 @@ run_step($db, 'TABLE: food_catalog', "
         calories_100g DECIMAL(6,2)    NOT NULL,
         protein_100g  DECIMAL(6,2)    NOT NULL,
         carbs_100g    DECIMAL(6,2)    NOT NULL,
-        fat_100g      DECIMAL(6,2)    NOT NULL
+        fat_100g      DECIMAL(6,2)    NOT NULL,
+        unit_name     VARCHAR(50),
+        weight_std    DECIMAL(5,2),
+        weight_small  DECIMAL(5,2),
+        weight_medium DECIMAL(5,2),
+        weight_large  DECIMAL(5,2),
+        is_liquid     BOOLEAN         DEFAULT FALSE
     );
 ");
 
 // Seeder para food_catalog
 $stmtCount = $db->query("SELECT COUNT(*) FROM food_catalog");
 if ((int)$stmtCount->fetchColumn() === 0) {
-    $foods = [
-        // Carnes y Aves (crudos)
-        ['Pechuga de pollo', 120, 22.5, 0, 2.6],
-        ['Muslo de pollo (sin piel)', 121, 19.3, 0, 4.8],
-        ['Ala de pollo (con piel)', 191, 17.5, 0, 12.8],
-        ['Pechuga de pavo', 104, 21.9, 0, 1.2],
-        ['Carne de res magra', 133, 21.4, 0, 5.3],
-        ['Carne de res (entrecot)', 242, 17.2, 0, 19],
-        ['Carne de res molida (10% grasa)', 176, 20, 0, 10],
-        ['Lomo de cerdo', 143, 21.1, 0, 5.5],
-        ['Chuleta de cerdo', 196, 20.3, 0, 12.1],
-        ['Tocino/Panceta', 541, 37, 1.4, 42],
-        ['Jamón cocido', 101, 18, 1, 3],
-        ['Jamón serrano', 242, 30, 0, 14],
-
-        // Pescados y Mariscos (crudos)
-        ['Salmón', 127, 20.5, 0, 4.4],
-        ['Atún fresco', 108, 23.4, 0, 0.9],
-        ['Atún en conserva (natural)', 86, 19.4, 0, 0.9],
-        ['Atún en conserva (aceite)', 198, 29, 0, 8.2],
-        ['Merluza', 72, 11.8, 0.1, 2.8],
-        ['Bacalao', 82, 17.8, 0, 0.7],
-        ['Trucha', 141, 19.9, 0, 6.2],
-        ['Sardinas', 208, 24.6, 0, 11.5],
-        ['Gambas / Langostinos', 85, 20.1, 0.2, 0.5],
-        ['Mejillones', 86, 11.9, 3.7, 2.2],
-        ['Pulpo', 82, 14.9, 2.2, 1],
-        ['Calamares', 92, 15.6, 3.1, 1.4],
+        // Carnes y Aves
+        ['Pechuga de pollo (cruda)', 120, 22.5, 0, 2.6, null, null, null, null, null, false],
+        ['Alitas de pollo (con piel)', 215, 18, 0.5, 15, 'Ala', 35, null, null, null, false],
+        ['Jamón cocido', 101, 18, 1, 3, 'Loncha', 20, null, null, null, false],
 
         // Huevos y Lácteos
-        ['Huevo entero', 143, 12.6, 0.7, 9.5],
-        ['Clara de huevo', 52, 10.9, 0.7, 0.2],
-        ['Yema de huevo', 322, 15.9, 3.6, 26.5],
-        ['Leche entera', 61, 3.2, 4.8, 3.3],
-        ['Leche semidesnatada', 46, 3.3, 4.8, 1.6],
-        ['Leche desnatada', 34, 3.4, 4.9, 0.1],
-        ['Yogur natural', 61, 3.5, 4.7, 3.3],
-        ['Yogur griego (0% grasa)', 59, 10, 3.6, 0.4],
-        ['Queso fresco / Burgos', 174, 12.5, 3.5, 12],
-        ['Queso cottage', 98, 11.1, 3.4, 4.3],
-        ['Queso mozzarella', 280, 28, 3.1, 17],
-        ['Queso parmesano', 431, 38, 4.1, 29],
-        ['Queso cheddar', 403, 25, 1.3, 33],
-        ['Mantequilla', 717, 0.9, 0.1, 81],
+        ['Huevo entero', 143, 12.6, 0.7, 9.5, 'Huevo', 50, 40, 50, 60, false],
+        ['Yema de huevo', 322, 15.9, 3.6, 26.5, 'Yema', 17, null, null, null, false],
+        ['Leche entera', 61, 3.2, 4.8, 3.3, 'Vaso', 250, null, null, null, true],
+        ['Yogur natural', 61, 3.5, 4.7, 3.3, 'Unidad', 125, null, null, null, false],
 
-        // Cereales, Tubérculos y Legumbres
-        ['Arroz blanco (crudo)', 360, 6.6, 79.3, 0.6],
-        ['Arroz integral (crudo)', 370, 7.9, 77.2, 2.9],
-        ['Pasta de trigo (cruda)', 350, 12, 71, 1.5],
-        ['Avena en copos', 389, 16.9, 66.3, 6.9],
-        ['Quinoa (cruda)', 368, 14.1, 64.2, 6.1],
-        ['Pan blanco', 265, 8.8, 49, 3.2],
-        ['Pan integral', 252, 12.4, 42.7, 3.5],
-        ['Patata / Papa (cruda)', 77, 2, 17.5, 0.1],
-        ['Boniato / Camote (crudo)', 86, 1.6, 20.1, 0.1],
-        ['Lentejas (secas)', 353, 25.8, 60.1, 1.1],
-        ['Garbanzos (secos)', 364, 19.3, 61, 6],
-        ['Alubias / Frijoles (secos)', 341, 21.6, 62.4, 1.4],
-        ['Guisantes / Arvejas', 81, 5.4, 14.5, 0.4],
-        ['Maíz dulce', 86, 3.2, 19, 1.2],
+        // Cereales y Pan
+        ['Arroz blanco (crudo)', 360, 6.6, 79.3, 0.6, 'Taza', 180, null, null, null, false],
+        ['Pan blanco', 265, 8.8, 49, 3.2, 'Rebanada', 30, null, null, null, false],
+        ['Pan integral', 252, 12.4, 42.7, 3.5, 'Rebanada', 35, null, null, null, false],
+        ['Galleta María', 440, 7, 75, 13, 'Galleta', 6, null, null, null, false],
 
-        // Verduras y Hortalizas
-        ['Brócoli', 34, 2.8, 6.6, 0.4],
-        ['Espinacas', 23, 2.9, 3.6, 0.4],
-        ['Zanahoria', 41, 0.9, 9.6, 0.2],
-        ['Tomate', 18, 0.9, 3.9, 0.2],
-        ['Lechuga', 15, 1.4, 2.9, 0.2],
-        ['Cebolla', 40, 1.1, 9.3, 0.1],
-        ['Pimiento rojo', 31, 1, 6, 0.3],
-        ['Pimiento verde', 20, 0.9, 4.6, 0.2],
-        ['Calabacín', 17, 1.2, 3.1, 0.3],
-        ['Berenjena', 25, 1, 5.9, 0.2],
-        ['Pepino', 15, 0.7, 3.6, 0.1],
-        ['Espárragos', 20, 2.2, 3.9, 0.1],
-        ['Champiñones', 22, 3.1, 3.3, 0.3],
-        ['Aguacate / Palta', 160, 2, 8.5, 14.7],
-
-        // Frutas
-        ['Plátano / Banana', 89, 1.1, 22.8, 0.3],
-        ['Manzana', 52, 0.3, 13.8, 0.2],
-        ['Pera', 57, 0.4, 15.2, 0.1],
-        ['Naranja', 47, 0.9, 11.8, 0.1],
-        ['Kiwi', 61, 1.1, 14.7, 0.5],
-        ['Piña', 50, 0.5, 13.1, 0.1],
-        ['Fresa', 32, 0.7, 7.7, 0.3],
-        ['Arándanos', 57, 0.7, 14.5, 0.3],
-        ['Uvas', 67, 0.6, 17.2, 0.4],
-        ['Sandía', 30, 0.6, 7.6, 0.2],
-        ['Melón', 34, 0.8, 8.1, 0.2],
-        ['Mango', 60, 0.8, 15, 0.4],
-        ['Melocotón / Durazno', 39, 0.9, 9.5, 0.3],
-
-        // Frutos Secos y Semillas
-        ['Almendras', 579, 21.2, 21.6, 49.9],
-        ['Nueces', 654, 15.2, 13.7, 65.2],
-        ['Avellanas', 628, 15, 16.7, 60.8],
-        ['Cacahuetes / Maní', 567, 25.8, 16.1, 49.2],
-        ['Pistachos', 562, 20.2, 27.5, 45.3],
-        ['Mantequilla de cacahuete', 588, 25, 20, 50],
-        ['Semillas de chía', 486, 16.5, 42.1, 30.7],
-        ['Semillas de calabaza', 559, 30.2, 10.7, 49.1],
-        ['Aceite de oliva', 884, 0, 0, 100],
-        ['Aceite de coco', 862, 0, 0, 100],
-
-        // Bebidas y Suplementos
-        ['Café solo', 1, 0.1, 0, 0],
-        ['Té verde', 1, 0.2, 0, 0],
-        ['Proteína de suero (Whey)', 379, 78, 8, 4],
-        ['Creatina monohidratada', 0, 0, 0, 0],
-
-        // Otros
-        ['Chocolate negro (>85%)', 598, 7.8, 46, 43],
-        ['Miel', 304, 0.3, 82.4, 0],
-        ['Azúcar blanco', 387, 0, 100, 0],
-        ['Hummous', 166, 7.9, 14.3, 9.6],
+        // Otros y Líquidos
+        ['Aceite de oliva', 884, 0, 0, 100, 'Cucharada', 15, null, null, null, true],
+        ['Vino tinto', 85, 0.1, 2.6, 0, 'Copa', 150, null, null, null, true],
     ];
 
-    $stmt = $db->prepare("INSERT INTO food_catalog (name, calories_100g, protein_100g, carbs_100g, fat_100g) VALUES (?, ?, ?, ?, ?)");
+    $stmt = $db->prepare("INSERT INTO food_catalog (name, calories_100g, protein_100g, carbs_100g, fat_100g, unit_name, weight_std, weight_small, weight_medium, weight_large, is_liquid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     foreach ($foods as $f) {
         $stmt->execute($f);
     }
@@ -350,6 +261,9 @@ run_step($db, 'TABLE: food_entries', "
         fat           DECIMAL(6,2)    NOT NULL CHECK (fat >= 0),
         meal_type     meal_type       NOT NULL,
         log_date      DATE            NOT NULL DEFAULT CURRENT_DATE,
+        portion_amount DECIMAL(6,2),
+        portion_unit   VARCHAR(50),
+        unit_size      VARCHAR(20),
         created_at    TIMESTAMPTZ     NOT NULL DEFAULT NOW()
     );
 ");

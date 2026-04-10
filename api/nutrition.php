@@ -61,6 +61,11 @@ function handle_log_food(array $payload): never
     $fat       = (float) ($body['fat']              ?? 0);
     $mealType  = fp_sanitize($body['meal_type']     ?? 'SNACK', 20);
     $logDate   = fp_sanitize($body['log_date']      ?? date('Y-m-d'), 10);
+    
+    // Metadatos de unidades
+    $pAmount   = isset($body['portion_amount']) ? (float)$body['portion_amount'] : null;
+    $pUnit     = isset($body['portion_unit'])   ? fp_sanitize($body['portion_unit'], 50) : null;
+    $uSize     = isset($body['unit_size'])     ? fp_sanitize($body['unit_size'], 20) : null;
 
     $errors = [];
     if (empty($foodName))   $errors[] = 'El nombre del alimento es obligatorio.';
@@ -86,8 +91,8 @@ function handle_log_food(array $payload): never
 
     $stmt = fp_query(
         'INSERT INTO food_entries
-            (profile_id, food_name, portion_grams, calories, protein, carbs, fat, meal_type, log_date)
-         VALUES (:pid, :fn, :pg, :cal, :pro, :car, :fat, :mt, :ld)
+            (profile_id, food_name, portion_grams, calories, protein, carbs, fat, meal_type, log_date, portion_amount, portion_unit, unit_size)
+         VALUES (:pid, :fn, :pg, :cal, :pro, :car, :fat, :mt, :ld, :pa, :pu, :us)
          RETURNING entry_id',
         [
             ':pid' => $profileId,
@@ -99,6 +104,9 @@ function handle_log_food(array $payload): never
             ':fat' => $fat,
             ':mt'  => $mealType,
             ':ld'  => $logDate,
+            ':pa'  => $pAmount,
+            ':pu'  => $pUnit,
+            ':us'  => $uSize,
         ]
     );
 
@@ -214,6 +222,11 @@ function handle_edit_entry(array $payload): never
     $carbs     = (float) ($body['carbs']            ?? 0);
     $fat       = (float) ($body['fat']              ?? 0);
 
+    // Metadatos de unidades
+    $pAmount   = isset($body['portion_amount']) ? (float)$body['portion_amount'] : null;
+    $pUnit     = isset($body['portion_unit'])   ? fp_sanitize($body['portion_unit'], 50) : null;
+    $uSize     = isset($body['unit_size'])     ? fp_sanitize($body['unit_size'], 20) : null;
+
     /* Validar propiedad */
     $owned = fp_query(
         'SELECT 1 FROM food_entries fe
@@ -229,7 +242,8 @@ function handle_edit_entry(array $payload): never
     fp_query(
         'UPDATE food_entries 
          SET food_name = :fn, portion_grams = :pg, calories = :cal, 
-             protein = :pro, carbs = :car, fat = :fat
+             protein = :pro, carbs = :car, fat = :fat,
+             portion_amount = :pa, portion_unit = :pu, unit_size = :us
          WHERE entry_id = :eid',
         [
             ':fn'  => $foodName,
@@ -238,6 +252,9 @@ function handle_edit_entry(array $payload): never
             ':pro' => $protein,
             ':car' => $carbs,
             ':fat' => $fat,
+            ':pa'  => $pAmount,
+            ':pu'  => $pUnit,
+            ':us'  => $uSize,
             ':eid' => $entryId,
         ]
     );

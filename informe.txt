@@ -129,3 +129,27 @@
 ## 3. Estado del Repositorio
 *   **Cambios Sincronizados**: Todas las mejoras visuales han sido fusionadas y subidas a `master` tras ser validadas en la rama `testing`.
 *   **Próximos Pasos**: Continuar con la mejora de funcionalidades backend y paneles de administración bajo esta nueva base responsiva.
+
+***
+
+# Informe Técnico (Optimización): Catálogo, Unidades y Líquidos (v1.4.0)
+**Fecha:** 2026-04-11
+**Estado:** Código implementado en `testing`. Pendiente de migración en servidor.
+
+## 1. Evolución del Modelo de Alimentos
+*   **Soporte Multimodal**: Se ha trascendido el modelo basado únicamente en gramos. El catálogo ahora soporta:
+    *   **Unidades Discretas**: Alimentos como Huevos, Pan, Alitas o Yemas ahora se pueden registrar por "Unidad", "Rebanada" o "Ala".
+    *   **Volúmenes**: Soporte nativo para Líquidos (Mililitros y Litros) con densidad 1:1.
+*   **Tamaños Variables**: Implementada lógica para tamaños (Pequeño, Mediano, Grande) con pesos específicos por alimento (ej. Huevo S: 40g, M: 50g, L: 60g).
+
+## 2. Mejoras en la Ingeniería de Datos (Backend)
+*   **Esquema Extensible**: Actualizadas las tablas `food_catalog` y `food_entries` con columnas de metadatos (`unit_name`, `weight_std`, `portion_amount`, `unit_size`, etc.).
+*   **Persistencia de Contexto**: El historial de comidas ahora guarda no solo los macros, sino la unidad y cantidad original, permitiendo una reconstrucción fiel del registro al editar.
+
+## 3. Experiencia de Usuario Proactiva (Frontend)
+*   **UI Adaptativa**: El modal de registro detecta el tipo de alimento y ofrece dinámicamente el selector de unidad. El selector de tamaño se oculta automáticamente si no aplica.
+*   **Historial Descriptivo**: El resumen diario ahora muestra cadenas legibles como "2 huevos medianos" o "250 ml de Leche", alineándose con el lenguaje natural del usuario.
+
+## 4. Notas de Despliegue
+*   **URL de Migración**: Es **imprescindible** ejecutar https://fitpaisa-testing.vercel.app/api/db_migration.php para sincronizar la estructura de la base de datos en testing.
+*   **Aceptación**: El sistema mantiene retrocompatibilidad total con los registros antiguos basados únicamente en gramos.
