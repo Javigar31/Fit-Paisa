@@ -1643,7 +1643,7 @@ function renderMealsReal(list) {
         <button class="m-act-btn" onclick='editMeal(${JSON.stringify(m).replace(/'/g, "&apos;")})' title="Editar">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
-        <button class="m-act-btn del" onclick="deleteMeal(${m.entry_id})" title="Eliminar">
+        <button class="m-act-btn del" onclick="deleteMeal(${m.entry_id}, this)" title="Eliminar">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
         </button>
       </div>
@@ -1651,9 +1651,17 @@ function renderMealsReal(list) {
   `).join('');
 }
 
-async function deleteMeal(id) {
+async function deleteMeal(id, btn) {
   if (!confirm('¿Seguro que quieres eliminar esta ingesta?')) return;
+  
   const token = localStorage.getItem('fp_token');
+  const item = btn.closest('.meal-item');
+  
+  // Bloqueo preventivo y feedback visual optimista
+  btn.disabled = true;
+  item.style.opacity = '0.5';
+  item.style.pointerEvents = 'none';
+
   try {
     const res = await fetch(`/api/nutrition.php?action=delete&entry_id=${id}`, {
       method: 'DELETE',
@@ -1662,14 +1670,36 @@ async function deleteMeal(id) {
         'Content-Type': 'application/json'
       }
     });
+
+    // Si la respuesta es OK o si es 404 (ya borrado en otro hilo), lo tomamos por bueno
+    if (res.ok || res.status === 404) {
+      item.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+      item.style.transform = 'translateX(20px)';
+      item.style.opacity = '0';
+      
+      setTimeout(() => {
+        item.remove();
+        loadDailySummary(); // Recarga real de fondo para actualizar macros
+        editingMealId = null;
+        document.getElementById('btn-add-meal').innerHTML = '+ Registrar en Diario';
+        resetFoodSearch();
+      }, 400);
+      return;
+    }
+
+    // Si hubo error real de servidor (500, etc), restauramos la UI
     const data = await res.json();
-    if (data.success) {
-      editingMealId = null;
-      document.getElementById('btn-add-meal').innerHTML = '+ Registrar en Diario';
-      resetFoodSearch();
-      loadDailySummary();
-    } else alert(data.message);
-  } catch(e) {}
+    alert(data.message || 'Error al eliminar');
+    item.style.opacity = '1';
+    item.style.pointerEvents = 'auto';
+    btn.disabled = false;
+
+  } catch(e) {
+    console.error("Delete Error:", e);
+    item.style.opacity = '1';
+    item.style.pointerEvents = 'auto';
+    btn.disabled = false;
+  }
 }
 
 function editMeal(m) {
