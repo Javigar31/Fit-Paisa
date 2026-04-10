@@ -257,6 +257,8 @@ function fp_ensure_schema(PDO $db): void
         $db->exec("ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS is_liquid BOOLEAN DEFAULT FALSE");
 
         // 3. Metadatos de Unidades en food_entries
+        $db->exec("ALTER TABLE food_entries ADD COLUMN IF NOT EXISTS portion_amount DECIMAL(10,2) DEFAULT 100");
+        $db->exec("ALTER TABLE food_entries ADD COLUMN IF NOT EXISTS portion_unit VARCHAR(20) DEFAULT 'g'");
         $db->exec("ALTER TABLE food_entries ADD COLUMN IF NOT EXISTS unit_size VARCHAR(20)");
         
         // 4. Enriquecer datos existentes (Una sola vez o si están NULL)
