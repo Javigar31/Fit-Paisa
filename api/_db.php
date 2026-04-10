@@ -36,12 +36,13 @@ function fp_db(): PDO
     // 1. Detectar el entorno
     $env = getenv('VERCEL_ENV') ?: 'local';
     
-    // 2. Lógica de separación automática (como antes del problema)
+    // 2. Lógica de separación automática reforzada
     if ($env === 'production') {
         // --- MASTER (PRODUCCIÓN) ---
         $host = getenv('PGHOST_PROD')     ?: getenv('POSTGRES_HOST');
         $user = getenv('PGUSER_PROD')     ?: getenv('POSTGRES_USER');
-        $pass = getenv('PGPASSWORD_PROD') ?: getenv('POSTGRES_PASSWORD') ?: getenv('DB_PASSWORD_NUEVA');
+        // Forzamos tu contraseña manual sobre la de Vercel que está dando error
+        $pass = getenv('PGPASSWORD_PROD') ?: getenv('DB_PASSWORD_NUEVA') ?: getenv('POSTGRES_PASSWORD');
         $db   = getenv('PGDATABASE_PROD') ?: 'neondb'; 
     } else {
         // --- TESTING / LOCAL ---
@@ -50,7 +51,7 @@ function fp_db(): PDO
         $pass = getenv('DB_PASSWORD_NUEVA') ?: getenv('PGPASSWORD') ?: getenv('POSTGRES_PASSWORD');
         $db   = getenv('PGDATABASE')      ?: getenv('POSTGRES_DATABASE');
         
-        // Si en testing nos llega 'neondb' o nada, forzamos 'fitpaisa_testing'
+        // Forzamos fitpaisa_testing en cualquier entorno que no sea producción
         if ($db === 'neondb' || empty($db)) {
             $db = 'fitpaisa_testing';
         }
