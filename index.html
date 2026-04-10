@@ -992,8 +992,12 @@
   <div id="env-badge">ENTORNO DE PRUEBAS</div>
 
   <div id="arrows">
-    <div class="arrow-btn" onclick="go(-1)">↑</div>
-    <div class="arrow-btn" onclick="go(1)">↓</div>
+    <div class="arrow-btn" onclick="go(-1)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+    </div>
+    <div class="arrow-btn" onclick="go(1)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
   </div>
 
   <div id="scene">
@@ -1010,7 +1014,7 @@
             <div class="slide-title">ENTRENA.<br><em>COME.</em><br>EVOLUCIONA.</div>
             <p class="slide-body">Plataforma web de entrenamiento y nutrición personalizada. Tu entrenador/a, tus planes
               y tu progreso, en un solo lugar.</p>
-            <button class="slide-cta" onclick="go(1)">Descubre más →</button>
+            <button class="slide-cta" onclick="go(1)">Descubre más <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-left:4px"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
           </div>
           <div class="ui-card">
             <div id="login-view" class="form-view is-active">
@@ -1058,14 +1062,14 @@
                     <div class="field" style="gap:2px">
                       <label class="label">Sexo</label>
                       <div style="display:flex;gap:4px">
-                        <div class="goal-card" onclick="selectGender(this, 'M')" style="flex:1;padding:6px;min-height:auto">
-                          <div class="goal-icon" style="font-size:18px;margin-bottom:0">👨</div>
+                        <div class="goal-card" onclick="selectGender(this, 'M')" style="flex:1;padding:10px;min-height:auto;display:flex;align-items:center;justify-content:center">
+                          <div class="goal-icon" style="font-size:12px;margin-bottom:0;text-transform:uppercase;font-weight:700;letter-spacing:1px">Hombre</div>
                         </div>
-                        <div class="goal-card" onclick="selectGender(this, 'F')" style="flex:1;padding:6px;min-height:auto">
-                          <div class="goal-icon" style="font-size:18px;margin-bottom:0">👩‍🦰</div>
+                        <div class="goal-card" onclick="selectGender(this, 'F')" style="flex:1;padding:10px;min-height:auto;display:flex;align-items:center;justify-content:center">
+                          <div class="goal-icon" style="font-size:12px;margin-bottom:0;text-transform:uppercase;font-weight:700;letter-spacing:1px">Mujer</div>
                         </div>
-                        <div class="goal-card" onclick="selectGender(this, 'O')" style="flex:1;padding:6px;min-height:auto">
-                          <div class="goal-icon" style="font-size:18px;margin-bottom:0">⚧️</div>
+                        <div class="goal-card" onclick="selectGender(this, 'O')" style="flex:1;padding:10px;min-height:auto;display:flex;align-items:center;justify-content:center">
+                          <div class="goal-icon" style="font-size:12px;margin-bottom:0;text-transform:uppercase;font-weight:700;letter-spacing:1px">Otro</div>
                         </div>
                       </div>
                     </div>
