@@ -21,13 +21,14 @@ echo "PGHOST: " . (getenv('PGHOST') ? 'SÍ' : 'NO') . "\n";
 echo "POSTGRES_HOST: " . (getenv('POSTGRES_HOST') ? 'SÍ' : 'NO') . "\n";
 echo "PGUSER: " . (getenv('PGUSER') ? 'SÍ' : 'NO') . "\n";
 echo "PGPASSWORD: " . (getenv('PGPASSWORD') ? 'SÍ' : 'NO') . "\n";
+echo "DB_PASSWORD_NUEVA: " . (getenv('DB_PASSWORD_NUEVA') ? 'SÍ' : 'NO') . "\n";
 echo "PGDATABASE: " . (getenv('PGDATABASE') ? 'SÍ' : 'NO') . "\n";
 
 echo "\nIntentando conectar vía PDO (MANUAL)...\n";
 
 $host = getenv('PGHOST')          ?: getenv('POSTGRES_HOST');
 $user = getenv('PGUSER')          ?: getenv('POSTGRES_USER');
-$pass = getenv('PGPASSWORD')      ?: getenv('POSTGRES_PASSWORD');
+$pass = getenv('PGPASSWORD')      ?: getenv('DB_PASSWORD_NUEVA');
 $db   = getenv('PGDATABASE')      ?: getenv('POSTGRES_DATABASE');
 $port = getenv('PGPORT')          ?: '5432';
 
