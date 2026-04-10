@@ -99,7 +99,7 @@ body.ready .sidebar, body.ready .main{opacity:1}
 .section:not(.visible) .slide-panel>*{opacity:0;transform:translateY(18px)}
 .section.visible .slide-hero>*{opacity:1;transform:translateY(0)}
 .section.visible .slide-hero>*:nth-child(1){transition-delay:.1s}
-.section.visible .slide-hero>*:nth-child(2){transition-delay:.2s}
+.section.visible .slide-hero>*:nth-child(2){transition-delay:.2s;}
 .section.visible .slide-hero>*:nth-child(3){transition-delay:.3s}
 .section.visible .slide-hero>*:nth-child(4){transition-delay:.4s}
 .section.visible .slide-panel>*{opacity:1;transform:translateY(0)}
@@ -351,6 +351,7 @@ body.ready .sidebar, body.ready .main{opacity:1}
   .diet-picker { 
     display: flex; gap: 6px; margin: 15px 0 25px; 
     overflow-x: auto; padding: 20px 0;
+    min-height: 98px;
   }
   .diet-picker::-webkit-scrollbar { display: none; }
   .diet-day { 
