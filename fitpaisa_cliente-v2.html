@@ -68,10 +68,13 @@ body.ready .sidebar, body.ready .main{opacity:1}
 
 /* left hero */
 .slide-hero{
-  padding:48px 40px;display:flex;flex-direction:column;justify-content:center;
+  padding:48px 40px;display:flex;flex-direction:column;
   border-right:1px solid var(--border);
   overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;
 }
+.slide-hero > * { margin-top: auto; margin-bottom: auto; }
+.slide-hero > *:first-child { margin-top: 40px; }
+.slide-hero > *:last-child { margin-bottom: 40px; }
 .slide-hero::-webkit-scrollbar{display:none}
 .slide-tag{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--lime);margin-bottom:14px;font-weight:700}
 .slide-title{font-family:var(--fd);font-size:clamp(44px,5.5vw,80px);line-height:.92;margin-bottom:18px}
@@ -83,6 +86,9 @@ body.ready .sidebar, body.ready .main{opacity:1}
   padding:32px 36px;overflow-y:auto;display:flex;flex-direction:column;gap:16px;
   scrollbar-width:none;-ms-overflow-style:none;
 }
+.slide-panel > * { margin-top: auto; margin-bottom: auto; }
+.slide-panel > *:first-child { margin-top: 40px; }
+.slide-panel > *:last-child { margin-bottom: 40px; }
 .slide-panel::-webkit-scrollbar{display:none}
 
 /* content reveal */
@@ -344,8 +350,7 @@ body.ready .sidebar, body.ready .main{opacity:1}
   /* ── Diet Picker ── */
   .diet-picker { 
     display: flex; gap: 6px; margin: 15px 0 25px; 
-    overflow-x: auto; padding: 20px 20px 20px 0;
-    justify-content: space-between;
+    overflow-x: auto; padding: 20px 0;
   }
   .diet-picker::-webkit-scrollbar { display: none; }
   .diet-day { 
