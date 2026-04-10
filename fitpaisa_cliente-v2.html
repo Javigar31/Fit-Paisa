@@ -263,7 +263,7 @@ body.ready .sidebar, body.ready .main{opacity:1}
   .stat-row{grid-template-columns:1fr 1fr}
 }
   .suggestions-box {
-    position: relative;
+    position: absolute;
     top: calc(100% + 5px);
     left: 0;
     right: 0;
@@ -273,11 +273,13 @@ body.ready .sidebar, body.ready .main{opacity:1}
     border-radius: 14px;
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
     z-index: 1000;
-    max-height: 300px;
+    max-height: 260px;
     overflow-y: auto;
     display: none;
     border-top: 1px solid rgba(255,255,255,0.05);
+    scrollbar-width: none;
   }
+  .suggestions-box::-webkit-scrollbar { display: none; }
   .suggestion-item {
     padding: 14px 18px;
     cursor: pointer;
@@ -342,8 +344,9 @@ body.ready .sidebar, body.ready .main{opacity:1}
   /* ── Diet Picker ── */
   .diet-picker { 
     display: flex; gap: 6px; margin: 15px 0 25px; 
-    overflow-x: auto; padding: 20px 20px 20px 0;
-    justify-content: space-between;
+    overflow-x: auto; padding: 10px 0;
+    width: 100%;
+    max-width: 400px;
   }
   .diet-picker::-webkit-scrollbar { display: none; }
   .diet-day { 
