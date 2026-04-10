@@ -36,15 +36,25 @@ function fp_db(): PDO
         return $_fp_pdo;
     }
 
-    /* ── Leer credenciales desde entorno ── */
-    $env  = getenv('VERCEL_ENV') ?: 'local';
+    // 1. Detectar el entorno
+    $env = getenv('VERCEL_ENV') ?: 'local';
     
-    // Forzamos el uso de variables individuales porque DATABASE_URL está bloqueada con credenciales viejas en Vercel.
-    $host = getenv('PGHOST')          ?: getenv('POSTGRES_HOST');
-    $user = getenv('PGUSER')          ?: getenv('POSTGRES_USER');
-    $pass = getenv('DB_PASSWORD_NUEVA') ?: getenv('PGPASSWORD') ?: getenv('POSTGRES_PASSWORD');
-    $db   = getenv('PGDATABASE')      ?: getenv('POSTGRES_DATABASE');
-    $port = getenv('PGPORT')          ?: '5432';
+    // 2. Lógica de separación blindada
+    if ($env === 'production') {
+        // --- RAMA MASTER (PRODUCCIÓN) ---
+        $host = getenv('PGHOST_PROD')     ?: getenv('POSTGRES_HOST');
+        $user = getenv('PGUSER_PROD')     ?: getenv('POSTGRES_USER');
+        $pass = getenv('PGPASSWORD_PROD') ?: getenv('POSTGRES_PASSWORD');
+        $db   = getenv('PGDATABASE_PROD') ?: 'fitpaisa_production'; // Forzamos nombre de prod
+    } else {
+        // --- RAMA TESTING / LOCAL ---
+        $host = getenv('PGHOST')          ?: getenv('POSTGRES_HOST');
+        $user = getenv('PGUSER')          ?: getenv('POSTGRES_USER');
+        $pass = getenv('DB_PASSWORD_NUEVA') ?: getenv('PGPASSWORD') ?: getenv('POSTGRES_PASSWORD');
+        $db   = getenv('PGDATABASE')      ?: 'neondb'; // Por defecto la de pruebas
+    }
+    
+    $port = getenv('PGPORT') ?: '5432';
 
 
     if (!$host || !$user || !$pass || !$db) {
