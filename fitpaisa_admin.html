@@ -142,6 +142,7 @@ select.input{appearance:none;cursor:none}
       .sb-label{display:none}
       .nav-item{flex:0 0 auto;white-space:nowrap}
       .sb-user{display:none}
+      .mobile-only { display: block !important; }
       .main{
         margin-left:0;
         padding-top:160px;
@@ -176,6 +177,7 @@ select.input{appearance:none;cursor:none}
       .grid4,.grid3,.grid2{grid-template-columns:1fr}
       table{min-width:640px}
     }
+    .mobile-only { display: none; }
 
         }
   </style>
@@ -213,6 +215,9 @@ select.input{appearance:none;cursor:none}
     </div>
     <div class="nav-item" onclick="show('config', this)">
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>Configuración
+    </div>
+    <div class="nav-item mobile-only" onclick="logout()">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Cerrar sesión
     </div>
   </nav>
   <div class="sb-user">
