@@ -338,8 +338,26 @@ body.ready .sidebar, body.ready .main{opacity:1}
   @media(max-width:768px) {
     .mobile-only { display: flex !important; }
   }
-    }
-  </style>
+  
+  /* ── Diet Picker ── */
+  .diet-picker { display: flex; gap: 8px; margin: 15px 0 25px; overflow-x: auto; padding: 4px; scrollbar-width: none; }
+  .diet-picker::-webkit-scrollbar { display: none; }
+  .diet-day { 
+    flex: 0 0 auto; width: 45px; height: 58px; 
+    display: flex; flex-direction: column; align-items: center; justify-content: center; 
+    background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 14px; 
+    cursor: pointer; transition: all .2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .diet-day:hover { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.2); }
+  .diet-day.active { 
+    background: var(--lime); border-color: var(--lime); color: #000; 
+    font-weight: 700; transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(191, 255, 0, 0.3);
+  }
+  .diet-day .d-w { font-size: 9px; text-transform: uppercase; margin-bottom: 2px; opacity: .6; letter-spacing: .05em; }
+  .diet-day.active .d-w { opacity: 1; }
+  .diet-day .d-n { font-size: 15px; font-weight: 800; }
+</style>
 </head>
 <body class="theme-dark">
   <div id="cur"></div><div id="cur-ring"></div>
@@ -1249,8 +1267,6 @@ function resetFoodSearch() {
   });
 }
 
-
-}
 let dietSelectedDate = new Date().toISOString().split('T')[0];
 
 function renderDietDatePicker() {
