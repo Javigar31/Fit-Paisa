@@ -33,31 +33,13 @@ function fp_db(): PDO
     global $_fp_pdo;
     if ($_fp_pdo instanceof PDO) return $_fp_pdo;
 
-    // 1. Detectar el entorno
-    $env = getenv('VERCEL_ENV') ?: 'local';
-    
-    // 2. Lógica de separación automática reforzada
-    if ($env === 'production') {
-        // --- MASTER (PRODUCCIÓN) ---
-        $host = getenv('PGHOST_PROD')     ?: getenv('POSTGRES_HOST');
-        $user = getenv('PGUSER_PROD')     ?: getenv('POSTGRES_USER');
-        // Forzamos tu contraseña manual sobre la de Vercel que está dando error
-        $pass = getenv('PGPASSWORD_PROD') ?: getenv('DB_PASSWORD_NUEVA') ?: getenv('POSTGRES_PASSWORD');
-        $db   = getenv('PGDATABASE_PROD') ?: 'neondb'; 
-    } else {
-        // --- TESTING / LOCAL ---
-        $host = getenv('PGHOST')          ?: getenv('POSTGRES_HOST');
-        $user = getenv('PGUSER')          ?: getenv('POSTGRES_USER');
-        $pass = getenv('DB_PASSWORD_NUEVA') ?: getenv('PGPASSWORD') ?: getenv('POSTGRES_PASSWORD');
-        $db   = getenv('PGDATABASE')      ?: getenv('POSTGRES_DATABASE');
-        
-        // Forzamos fitpaisa_testing en cualquier entorno que no sea producción
-        if ($db === 'neondb' || empty($db)) {
-            $db = 'fitpaisa_testing';
-        }
-    }
-    
-    $port = getenv('PGPORT') ?: '5432';
+    $config = _fp_get_db_config();
+    $host = $config['host'];
+    $user = $config['user'];
+    $pass = $config['pass'];
+    $db   = $config['db'];
+    $port = $config['port'];
+    $env  = $config['env'];
 
 
     if (!$host || !$user || !$pass || !$db) {
@@ -207,15 +189,53 @@ function fp_cors(): void
 }
 
 /**
- * Retorna información sobre el entorno actual.
+ * Retorna información sobre el entorno actual usando la lógica centralizada.
  */
 function fp_env_info(): array
 {
+    $config = _fp_get_db_config();
     return [
-        'env'      => getenv('VERCEL_ENV') ?: 'local',
-        'database' => getenv('PGDATABASE') ?: getenv('POSTGRES_DATABASE'),
-        'is_production' => (getenv('VERCEL_ENV') === 'production')
+        'env'           => $config['env'],
+        'database'      => $config['db'],
+        'is_production' => ($config['env'] === 'production')
     ];
+}
+
+/**
+ * Función interna para centralizar la resolución de credenciales.
+ */
+function _fp_get_db_config(): array
+{
+    $env = getenv('VERCEL_ENV') ?: 'local';
+    
+    if ($env === 'production') {
+        return [
+            'host' => getenv('PGHOST_PROD')     ?: getenv('POSTGRES_HOST'),
+            'user' => getenv('PGUSER_PROD')     ?: getenv('POSTGRES_USER'),
+            'pass' => getenv('PGPASSWORD_PROD') ?: getenv('DB_PASSWORD_NUEVA') ?: getenv('POSTGRES_PASSWORD'),
+            'db'   => getenv('PGDATABASE_PROD') ?: 'neondb',
+            'port' => getenv('PGPORT') ?: '5432',
+            'env'  => 'production'
+        ];
+    } else {
+        // Testing (preview) o Local
+        $db = getenv('PGDATABASE') ?: getenv('POSTGRES_DATABASE');
+        
+        // REGLA DE ORO: Si no estamos en producción, forzamos fitpaisa_testing 
+        // si la BD detectada es la default 'neondb' o si estamos en el entorno 'preview'.
+        if ($db === 'neondb' || empty($db) || $env === 'preview') {
+            $db = 'fitpaisa_testing';
+        }
+
+        return [
+            'host' => getenv('PGHOST')          ?: getenv('POSTGRES_HOST'),
+            'user' => getenv('PGUSER')          ?: getenv('POSTGRES_USER'),
+            'pass' => getenv('DB_PASSWORD_NUEVA') ?: getenv('PGPASSWORD') ?: getenv('POSTGRES_PASSWORD'),
+            'db'   => $db,
+            'port' => getenv('PGPORT') ?: '5432',
+            'env'  => $env
+        ];
+    }
 }
 /**
  * Asegura que las tablas y columnas necesarias existan (Auto-Migración Idempotente).
