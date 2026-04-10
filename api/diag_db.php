@@ -7,10 +7,14 @@
 declare(strict_types=1);
 require_once __DIR__ . '/_db.php';
 
-// Solo permitir en entorno de testing o local por seguridad
+// Seguridad: En producción solo se permite con una llave específica
 $env = getenv('VERCEL_ENV') ?: 'local';
-if ($env === 'production') {
-    die("Acceso denegado: Este script solo está disponible en Testing.");
+$key = $_GET['key'] ?? '';
+$secret = 'fitpaisa_master_2026';
+
+if ($env === 'production' && $key !== $secret) {
+    header('HTTP/1.1 403 Forbidden');
+    die("Acceso denegado: Este script está protegido en Producción. Por favor, usa la llave de acceso (?key=...).");
 }
 
 header('Content-Type: text/html; charset=utf-8');
