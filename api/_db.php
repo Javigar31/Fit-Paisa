@@ -22,7 +22,7 @@ $_fp_pdo = null;
  * Utiliza las variables de entorno inyectadas por Vercel:
  *  - PGHOST / POSTGRES_HOST     → host del pooler de Neon
  *  - PGUSER / POSTGRES_USER     → usuario de la BD
- *  - PGPASSWORD / POSTGRES_PASSWORD → contraseña
+ *  - PGPASSWORD / DB_PASSWORD_NUEVA → contraseña
  *  - PGDATABASE / POSTGRES_DATABASE → nombre de la base de datos
  *
  * @throws RuntimeException Si no se pueden leer las credenciales o la conexión falla.
@@ -40,7 +40,7 @@ function fp_db(): PDO
     $env  = getenv('VERCEL_ENV') ?: 'local';
     $host = getenv('PGHOST')          ?: getenv('POSTGRES_HOST');
     $user = getenv('PGUSER')          ?: getenv('POSTGRES_USER');
-    $pass = getenv('PGPASSWORD')      ?: getenv('POSTGRES_PASSWORD');
+    $pass = getenv('PGPASSWORD')      ?: getenv('DB_PASSWORD_NUEVA');
     $db   = getenv('PGDATABASE')      ?: getenv('POSTGRES_DATABASE');
     $port = getenv('PGPORT')          ?: '5432';
 
