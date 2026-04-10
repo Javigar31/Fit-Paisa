@@ -31,27 +31,29 @@ $_fp_pdo = null;
 function fp_db(): PDO
 {
     global $_fp_pdo;
-
-    if ($_fp_pdo instanceof PDO) {
-        return $_fp_pdo;
-    }
+    if ($_fp_pdo instanceof PDO) return $_fp_pdo;
 
     // 1. Detectar el entorno
     $env = getenv('VERCEL_ENV') ?: 'local';
     
-    // 2. Lógica de separación blindada
+    // 2. Lógica de separación automática (como antes del problema)
     if ($env === 'production') {
-        // --- RAMA MASTER (PRODUCCIÓN) ---
+        // --- MASTER (PRODUCCIÓN) ---
         $host = getenv('PGHOST_PROD')     ?: getenv('POSTGRES_HOST');
         $user = getenv('PGUSER_PROD')     ?: getenv('POSTGRES_USER');
         $pass = getenv('PGPASSWORD_PROD') ?: getenv('POSTGRES_PASSWORD');
-        $db   = getenv('PGDATABASE_PROD') ?: 'neondb'; // Master -> neondb
+        $db   = getenv('PGDATABASE_PROD') ?: 'neondb'; 
     } else {
-        // --- RAMA TESTING / LOCAL ---
+        // --- TESTING / LOCAL ---
         $host = getenv('PGHOST')          ?: getenv('POSTGRES_HOST');
         $user = getenv('PGUSER')          ?: getenv('POSTGRES_USER');
         $pass = getenv('DB_PASSWORD_NUEVA') ?: getenv('PGPASSWORD') ?: getenv('POSTGRES_PASSWORD');
-        $db   = getenv('PGDATABASE')      ?: 'fitpaisa_testing'; // Testing -> fitpaisa_testing
+        $db   = getenv('PGDATABASE')      ?: getenv('POSTGRES_DATABASE');
+        
+        // Si en testing nos llega 'neondb' o nada, forzamos 'fitpaisa_testing'
+        if ($db === 'neondb' || empty($db)) {
+            $db = 'fitpaisa_testing';
+        }
     }
     
     $port = getenv('PGPORT') ?: '5432';
