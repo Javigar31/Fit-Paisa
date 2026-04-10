@@ -134,7 +134,7 @@
 
 # Informe Técnico (Optimización): Catálogo, Unidades y Líquidos (v1.4.0)
 **Fecha:** 2026-04-11
-**Estado:** Código implementado en `testing`. Pendiente de migración en servidor.
+**Estado:** Código implementado en `testing`. Migración automática activa (Transparente).
 
 ## 1. Evolución del Modelo de Alimentos
 *   **Soporte Multimodal**: Se ha trascendido el modelo basado únicamente en gramos. El catálogo ahora soporta:
@@ -151,5 +151,5 @@
 *   **Historial Descriptivo**: El resumen diario ahora muestra cadenas legibles como "2 huevos medianos" o "250 ml de Leche", alineándose con el lenguaje natural del usuario.
 
 ## 4. Notas de Despliegue
-*   **URL de Migración**: Es **imprescindible** ejecutar https://fitpaisa-testing.vercel.app/api/db_migration.php para sincronizar la estructura de la base de datos en testing.
+*   **Migración Transparente**: Se ha implementado un sistema de "Auto-Bootstrap" en `api/_db.php`. Ya **no es necesario** visitar ninguna URL para actualizar las tablas; el sistema se sincroniza solo al detectar la nueva versión.
 *   **Aceptación**: El sistema mantiene retrocompatibilidad total con los registros antiguos basados únicamente en gramos.

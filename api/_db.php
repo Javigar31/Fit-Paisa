@@ -76,6 +76,8 @@ function fp_db(): PDO
             PDO::ATTR_EMULATE_PREPARES   => true,
             PDO::ATTR_TIMEOUT            => 10,
         ]);
+        /* Asegurar que el esquema esté actualizado en este entorno (Auto-Migración) */
+        fp_ensure_schema($_fp_pdo);
     } catch (PDOException $e) {
         /* Solo el log interno contiene el motivo real */
         error_log('[FitPaisa][DB] Fallo de conexión: ' . $e->getMessage());
@@ -214,4 +216,32 @@ function fp_env_info(): array
         'database' => getenv('PGDATABASE') ?: getenv('POSTGRES_DATABASE'),
         'is_production' => (getenv('VERCEL_ENV') === 'production')
     ];
+}
+/**
+ * Asegura que las tablas y columnas necesarias existan (Auto-Migración Idempotente).
+ * Se ejecuta en cada nueva conexión de forma ligera mediante 'IF NOT EXISTS'.
+ */
+function fp_ensure_schema(PDO $db): void
+{
+    try {
+        // 1. Columnas de Objetivos en Profiles
+        $db->exec("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS target_weight DECIMAL(5,2)");
+        $db->exec("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS target_time_weeks SMALLINT");
+
+        // 2. Metadatos de Unidades en food_catalog
+        $db->exec("ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS unit_name VARCHAR(50)");
+        $db->exec("ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS weight_std DECIMAL(5,2)");
+        $db->exec("ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS weight_small DECIMAL(5,2)");
+        $db->exec("ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS weight_medium DECIMAL(5,2)");
+        $db->exec("ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS weight_large DECIMAL(5,2)");
+        $db->exec("ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS is_liquid BOOLEAN DEFAULT FALSE");
+
+        // 3. Metadatos de Unidades en food_entries
+        $db->exec("ALTER TABLE food_entries ADD COLUMN IF NOT EXISTS portion_amount DECIMAL(6,2)");
+        $db->exec("ALTER TABLE food_entries ADD COLUMN IF NOT EXISTS portion_unit VARCHAR(50)");
+        $db->exec("ALTER TABLE food_entries ADD COLUMN IF NOT EXISTS unit_size VARCHAR(20)");
+        
+    } catch (PDOException $e) {
+        error_log('[FitPaisa][SCHEMA] Fallo en auto-migración: ' . $e->getMessage());
+    }
 }
