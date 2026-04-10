@@ -177,34 +177,10 @@ select.input{appearance:none;cursor:none}
       table{min-width:640px}
     }
 
-    /* ── Environment Badge ── */
-    #env-badge {
-      display: none;
-      position: fixed;
-      top: 15px;
-      right: 15px;
-      background: #ff5252;
-      color: white;
-      padding: 6px 14px;
-      border-radius: 99px;
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: .08em;
-      z-index: 9999;
-      box-shadow: 0 4px 15px rgba(255, 82, 82, 0.4);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      pointer-events: none;
-      text-transform: uppercase;
-      animation: envPulse 2s infinite;
-    }
-    @keyframes envPulse {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.05); opacity: 0.9; }
-    }
+        }
   </style>
 </head>
 <body>
-<div id="env-badge">ENTORNO DE PRUEBAS</div>
 <div id="cur"></div><div id="cur-ring"></div>
 <div id="prog" style="width:20%"></div>
 
@@ -505,13 +481,6 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelect
   document.getElementById('admin-name').textContent = name;
   const initials = name.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
   document.getElementById('admin-initials').textContent = initials;
-
-  // Check environment
-  fetch('/api/env.php').then(r=>r.json()).then(d=>{
-    if(d.success && !d.env.is_production) {
-      document.getElementById('env-badge').style.display = 'block';
-    }
-  }).catch(e=>console.log("Env check failed"));
 })();
 
 function logout(){
