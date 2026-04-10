@@ -510,7 +510,8 @@ body.ready .sidebar, body.ready .main{opacity:1}
     <!-- Diet Content UI -->
     <div class="slide-body-wrap" id="diet-content" style="display:grid">
       <div class="slide-hero">
-        <div class="slide-tag">Control nutricional · Hoy</div>
+        <div class="slide-tag" id="diet-date-label">Control nutricional · Hoy</div>
+        <div id="diet-date-picker" class="diet-picker r r1"></div>
         <div class="slide-title">COME<br>CON<br><em>DATOS.</em></div>
         <div class="slide-desc">Macros calculados con Mifflin-St Jeor. TMB: <strong style="color:var(--lime)" id="diet-tmb-val">1.910 kcal</strong>. <span id="diet-adj-val" style="opacity:.7"></span></div>
         <div style="display:flex;flex-direction:column;gap:10px;max-width:280px">
@@ -1249,6 +1250,47 @@ function resetFoodSearch() {
 }
 
 
+}
+let dietSelectedDate = new Date().toISOString().split('T')[0];
+
+function renderDietDatePicker() {
+  const picker = document.getElementById('diet-date-picker');
+  if (!picker) return;
+  
+  const dates = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    dates.push(d.toISOString().split('T')[0]);
+  }
+  
+  picker.innerHTML = dates.map(date => {
+    const dObj = new Date(date + 'T00:00:00');
+    const dayName = dObj.toLocaleDateString('es-ES', { weekday: 'short' }).replace('.', '');
+    const dayNum = dObj.getDate();
+    const isToday = date === new Date().toISOString().split('T')[0];
+    const active = date === dietSelectedDate ? 'active' : '';
+    
+    return `
+      <div class="diet-day ${active}" onclick="setDietDate('${date}')">
+        <span class="d-w">${isToday ? 'Hoy' : dayName}</span>
+        <span class="d-n">${dayNum}</span>
+      </div>
+    `;
+  }).join('');
+  
+  const label = document.getElementById('diet-date-label');
+  const dObj = new Date(dietSelectedDate + 'T00:00:00');
+  const fmt = dObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+  label.textContent = `Control nutricional · ${dietSelectedDate === new Date().toISOString().split('T')[0] ? 'Hoy' : fmt}`;
+}
+
+function setDietDate(date) {
+  dietSelectedDate = date;
+  renderDietDatePicker();
+  loadDailySummary();
+}
+
 function calcMacrosByGrams() {
   if (!selectedFood) return;
   const grams = parseFloat(document.getElementById('mGrams').value) || 0;
@@ -1277,7 +1319,8 @@ async function addMeal() {
     const endpoint = editingMealId ? '/api/nutrition.php?action=edit' : '/api/nutrition.php?action=log';
     const payload = { 
       food_name: name, portion_grams: grams, calories: kcal, 
-      protein: prot, carbs: carb, fat: fat, meal_type: 'SNACK' 
+      protein: prot, carbs: carb, fat: fat, meal_type: 'SNACK',
+      log_date: dietSelectedDate
     };
     if (editingMealId) payload.entry_id = editingMealId;
 
@@ -1304,7 +1347,7 @@ async function loadDailySummary() {
   const token = localStorage.getItem('fp_token');
   try {
     // Cargar ingestas
-    const resLog = await fetch('/api/nutrition.php?action=daily', {
+    const resLog = await fetch(`/api/nutrition.php?action=daily&date=${dietSelectedDate}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!resLog.ok) {
@@ -1317,7 +1360,7 @@ async function loadDailySummary() {
     }
 
     // Cargar resumen vs objetivos
-    const resSum = await fetch('/api/nutrition.php?action=summary', {
+    const resSum = await fetch(`/api/nutrition.php?action=summary&date=${dietSelectedDate}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!resSum.ok) {
@@ -1328,8 +1371,9 @@ async function loadDailySummary() {
         const totals = dataSum.totals;
         const targets = dataSum.targets;
 
-        // 1. Actualizar Dashboard (Datos consumidos REALES)
-        if (totals) {
+        // 1. Actualizar Dashboard (Solo si es HOY para no confundir al usuario)
+        const isToday = dietSelectedDate === new Date().toISOString().split('T')[0];
+        if (totals && isToday) {
           document.getElementById('v2-kcal').textContent = Math.round(totals.total_calories || 0);
           document.getElementById('v2-prot').textContent = Math.round(totals.total_protein || 0) + 'g';
           document.getElementById('v2-carb').textContent = Math.round(totals.total_carbs || 0) + 'g';
@@ -1367,7 +1411,7 @@ async function loadDailySummary() {
 function renderMealsReal(list) {
   const el = document.getElementById('mealList');
   if (list.length === 0) {
-    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">No hay registros hoy</div>';
+    el.innerHTML = `<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">No hay registros para este día</div>`;
     return;
   }
   el.innerHTML = list.map(m => `
@@ -1433,6 +1477,7 @@ function editMeal(m) {
 // Llamar al cargar
 window.addEventListener('load', () => {
   setTimeout(() => {
+    renderDietDatePicker();
     loadDailySummary();
   loadLastMessage();
   fetchInbox();
