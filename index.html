@@ -949,6 +949,32 @@
     .eye-toggle:hover {
       color: var(--accent);
     }
+
+    /* ── Environment Badge ── */
+    #env-badge {
+      display: none;
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: #ff5252;
+      color: white;
+      padding: 6px 14px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      z-index: 9999;
+      box-shadow: 0 4px 15px rgba(255, 82, 82, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      pointer-events: none;
+      text-transform: uppercase;
+      animation: envPulse 2s infinite;
+    }
+
+    @keyframes envPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.9; }
+    }
   </style>
 </head>
 
@@ -963,6 +989,7 @@
   <div id="logo">FITPAISA</div>
   <div id="counter"><span id="slide-cur">01</span> / <span id="tot">07</span></div>
   <div id="hint"></div>
+  <div id="env-badge">ENTORNO DE PRUEBAS</div>
 
   <div id="arrows">
     <div class="arrow-btn" onclick="go(-1)">↑</div>
@@ -1565,6 +1592,13 @@
         else if(r==='COACH')location.href='fitpaisa_entrenador.html';
         else if(r==='USER')location.href='fitpaisa_cliente-v2.html';
       }
+
+      // Check environment
+      fetch('/api/env.php').then(r=>r.json()).then(d=>{
+        if(d.success && !d.env.is_production) {
+          document.getElementById('env-badge').style.display = 'block';
+        }
+      }).catch(e=>console.log("Env check failed"));
     })();
     const TOTAL = 7;
     let current = 0;

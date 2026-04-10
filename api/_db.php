@@ -37,16 +37,22 @@ function fp_db(): PDO
     }
 
     /* ── Leer credenciales desde entorno ── */
+    $env  = getenv('VERCEL_ENV') ?: 'local';
     $host = getenv('PGHOST')          ?: getenv('POSTGRES_HOST');
     $user = getenv('PGUSER')          ?: getenv('POSTGRES_USER');
     $pass = getenv('PGPASSWORD')      ?: getenv('POSTGRES_PASSWORD');
     $db   = getenv('PGDATABASE')      ?: getenv('POSTGRES_DATABASE');
     $port = getenv('PGPORT')          ?: '5432';
 
+    /* Redirigir automáticamente a la base de datos de pruebas si NO estamos en producción */
+    if ($env !== 'production' && ($db === 'neondb' || empty($db))) {
+        $db = 'fitpaisa_testing';
+    }
+
     if (!$host || !$user || !$pass || !$db) {
         /* Loguear el problema internamente sin revelar detalles al exterior */
-        error_log('[FitPaisa][DB] Credenciales de BD no configuradas en variables de entorno.');
-        fp_error(500, 'Error interno del servidor. Contacta al administrador.');
+        error_log("[FitPaisa][DB] Credenciales incompletas (Env: $env). Host: $host, DB: $db");
+        fp_error(500, 'Error interno del servidor. Credenciales de base de datos no configuradas.');
     }
 
     $dsn = "pgsql:host={$host};port={$port};dbname={$db};sslmode=require";
@@ -185,4 +191,16 @@ function fp_cors(): void
         http_response_code(204);
         exit;
     }
+}
+
+/**
+ * Retorna información sobre el entorno actual.
+ */
+function fp_env_info(): array
+{
+    return [
+        'env'      => getenv('VERCEL_ENV') ?: 'local',
+        'database' => getenv('PGDATABASE') ?: getenv('POSTGRES_DATABASE'),
+        'is_production' => (getenv('VERCEL_ENV') === 'production')
+    ];
 }

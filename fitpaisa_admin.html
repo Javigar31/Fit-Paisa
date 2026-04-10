@@ -119,72 +119,92 @@ select.input{appearance:none;cursor:none}
 .confirm-body strong{color:var(--text)}
 .confirm-actions{display:flex;gap:10px;justify-content:center;margin-top:20px}
 
-@media (max-width: 1024px){
-  .grid4{grid-template-columns:repeat(2,1fr)}
-  .grid3{grid-template-columns:repeat(2,1fr)}
-  .grid2{grid-template-columns:1fr}
-}
+    @media (max-width: 768px){
+      html,body{height:auto;min-height:100%;overflow:visible;overflow-x:hidden}
+      .sidebar{
+        position:fixed;
+        top:0;
+        left:0;
+        right:0;
+        z-index:400;
+        width:100%;
+        height:auto;
+        border-right:none;
+        border-bottom:1px solid var(--border);
+      }
+      .sb-nav{
+        overflow-x:auto;
+        overflow-y:hidden;
+        flex-direction:row;
+        flex-wrap:nowrap;
+        padding:10px 12px 14px;
+      }
+      .sb-label{display:none}
+      .nav-item{flex:0 0 auto;white-space:nowrap}
+      .sb-user{display:none}
+      .main{
+        margin-left:0;
+        padding-top:160px;
+        height:auto;
+        min-height:calc(100vh - 140px);
+        overflow:visible;
+      }
+      .section{
+        position:relative;
+        inset:auto;
+        min-height:auto;
+        padding:20px 16px 100px;
+        overflow:visible;
+        transform:none !important;
+        scroll-margin-top:160px;
+      }
+      .section.hidden-right,.section.hidden-left,.section.visible{
+        opacity:1;
+        pointer-events:auto;
+      }
+      #prog{
+        left:0;
+        right:0;
+        z-index:500;
+      }
+      .page-head{
+        flex-direction:column;
+        align-items:flex-start;
+        gap:10px;
+      }
+      .page-head h1{font-size:28px}
+      .grid4,.grid3,.grid2{grid-template-columns:1fr}
+      table{min-width:640px}
+    }
 
-@media (max-width: 768px){
-  html,body{height:auto;min-height:100%;overflow:visible;overflow-x:hidden}
-  .sidebar{
-    position:fixed;
-    top:0;
-    left:0;
-    right:0;
-    z-index:400;
-    width:100%;
-    height:auto;
-    border-right:none;
-    border-bottom:1px solid var(--border);
-  }
-  .sb-nav{
-    overflow-x:auto;
-    overflow-y:hidden;
-    flex-direction:row;
-    flex-wrap:nowrap;
-    padding:10px 12px 14px;
-  }
-  .sb-label{display:none}
-  .nav-item{flex:0 0 auto;white-space:nowrap}
-  .sb-user{display:none}
-  .main{
-    margin-left:0;
-    padding-top:160px;
-    height:auto;
-    min-height:calc(100vh - 140px);
-    overflow:visible;
-  }
-  .section{
-    position:relative;
-    inset:auto;
-    min-height:auto;
-    padding:20px 16px 100px;
-    overflow:visible;
-    transform:none !important;
-    scroll-margin-top:160px;
-  }
-  .section.hidden-right,.section.hidden-left,.section.visible{
-    opacity:1;
-    pointer-events:auto;
-  }
-  #prog{
-    left:0;
-    right:0;
-    z-index:500;
-  }
-  .page-head{
-    flex-direction:column;
-    align-items:flex-start;
-    gap:10px;
-  }
-  .page-head h1{font-size:28px}
-  .grid4,.grid3,.grid2{grid-template-columns:1fr}
-  table{min-width:640px}
-}
-</style>
+    /* ── Environment Badge ── */
+    #env-badge {
+      display: none;
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: #ff5252;
+      color: white;
+      padding: 6px 14px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      z-index: 9999;
+      box-shadow: 0 4px 15px rgba(255, 82, 82, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      pointer-events: none;
+      text-transform: uppercase;
+      animation: envPulse 2s infinite;
+    }
+    @keyframes envPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.9; }
+    }
+  </style>
 </head>
 <body>
+<div id="env-badge">ENTORNO DE PRUEBAS</div>
 <div id="cur"></div><div id="cur-ring"></div>
 <div id="prog" style="width:20%"></div>
 
@@ -485,6 +505,13 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelect
   document.getElementById('admin-name').textContent = name;
   const initials = name.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
   document.getElementById('admin-initials').textContent = initials;
+
+  // Check environment
+  fetch('/api/env.php').then(r=>r.json()).then(d=>{
+    if(d.success && !d.env.is_production) {
+      document.getElementById('env-badge').style.display = 'block';
+    }
+  }).catch(e=>console.log("Env check failed"));
 })();
 
 function logout(){
