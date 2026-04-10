@@ -350,9 +350,9 @@ body.ready .sidebar, body.ready .main{opacity:1}
   }
   .diet-day:hover { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.2); }
   .diet-day.active { 
-    background: var(--lime); border-color: var(--lime); color: #000; 
+    background: #ff3b30; border-color: #ff3b30; color: #fff; 
     font-weight: 700; transform: translateY(-3px);
-    box-shadow: 0 8px 20px rgba(191, 255, 0, 0.3);
+    box-shadow: 0 10px 25px rgba(255, 59, 48, 0.45);
   }
   .diet-day .d-w { font-size: 9px; text-transform: uppercase; margin-bottom: 2px; opacity: .6; letter-spacing: .05em; }
   .diet-day.active .d-w { opacity: 1; }
@@ -528,7 +528,7 @@ body.ready .sidebar, body.ready .main{opacity:1}
     <!-- Diet Content UI -->
     <div class="slide-body-wrap" id="diet-content" style="display:grid">
       <div class="slide-hero">
-        <div class="slide-tag" id="diet-date-label">Control nutricional · Hoy</div>
+        <div class="slide-tag" id="diet-date-label" style="color:#ff3b30; font-weight:700">Control nutricional · Hoy</div>
         <div id="diet-date-picker" class="diet-picker r r1"></div>
         <div class="slide-title">COME<br>CON<br><em>DATOS.</em></div>
         <div class="slide-desc">Macros calculados con Mifflin-St Jeor. TMB: <strong style="color:var(--lime)" id="diet-tmb-val">1.910 kcal</strong>. <span id="diet-adj-val" style="opacity:.7"></span></div>
