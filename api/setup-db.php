@@ -217,7 +217,8 @@ run_step($db, 'TABLE: food_catalog', "
 // Seeder para food_catalog
 $stmtCount = $db->query("SELECT COUNT(*) FROM food_catalog");
 if ((int)$stmtCount->fetchColumn() === 0) {
-        // Carnes y Aves
+        $foods = [
+            // Carnes y Aves
         ['Pechuga de pollo (cruda)', 120, 22.5, 0, 2.6, null, null, null, null, null, false],
         ['Alitas de pollo (con piel)', 215, 18, 0.5, 15, 'Ala', 35, null, null, null, false],
         ['Jamón cocido', 101, 18, 1, 3, 'Loncha', 20, null, null, null, false],

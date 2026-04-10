@@ -91,7 +91,6 @@ try {
         ];
 
         $stmt = $db->prepare("INSERT INTO food_catalog (name, calories_100g, protein_100g, carbs_100g, fat_100g, unit_name, weight_std, weight_small, weight_medium, weight_large, is_liquid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-ES (?, ?, ?, ?, ?)");
         foreach ($foods as $food) {
             $stmt->execute($food);
         }
