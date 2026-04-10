@@ -1,6 +1,7 @@
 <?php
 /**
- * FitPaisa — Script de Diagnóstico de Conexión (V3.1)
+ * FitPaisa — Script de Diagnóstico de Conexión (V4)
+ * (Forzando el uso de variables manuales para esquivar el bloqueo de Vercel)
  */
 declare(strict_types=1);
 
@@ -8,81 +9,40 @@ require_once __DIR__ . '/_db.php';
 
 header('Content-Type: text/plain; charset=utf-8');
 
-echo "--- FITPAISA DB DIAGNOSTIC (TRIPLE CAPA) ---\n";
+echo "--- FITPAISA DB DIAGNOSTIC (MODO LIBERACIÓN) ---\n";
 echo "Fecha: " . date('Y-m-d H:i:s') . "\n\n";
 
-/* ── 1. Información de Entorno ───────────────────────────────────────── */
-$dbUrl = getenv('DATABASE_URL') ?: getenv('POSTGRES_URL');
-$pass  = getenv('PGPASSWORD')   ?: getenv('DB_PASSWORD_NUEVA');
+/* ── 1. Información detectada ───────────────────────────────────────── */
+$host = getenv('PGHOST')          ?: getenv('POSTGRES_HOST');
+$user = getenv('PGUSER')          ?: getenv('POSTGRES_USER');
+$pass = getenv('DB_PASSWORD_NUEVA') ?: getenv('PGPASSWORD') ?: getenv('POSTGRES_PASSWORD');
+$db   = getenv('PGDATABASE')      ?: getenv('POSTGRES_DATABASE');
+$port = getenv('PGPORT')          ?: '5432';
 
-echo "[ENV] DATABASE_URL Detectada: " . ($dbUrl ? 'SÍ (L:' . strlen($dbUrl) . ')' : 'NO') . "\n";
-echo "[ENV] VERCEL_ENV: " . (getenv('VERCEL_ENV') ?: 'local') . "\n";
-echo "[ENV] DB_PASSWORD_NUEVA: " . (getenv('DB_PASSWORD_NUEVA') ? 'SÍ' : 'NO') . "\n";
+echo "[VARS] Host: $host\n";
+echo "[VARS] User: $user\n";
+echo "[VARS] DB: $db\n";
+echo "[VARS] DB_PASSWORD_NUEVA Detectada: " . (getenv('DB_PASSWORD_NUEVA') ? 'SÍ' : 'NO') . "\n";
 
-// Máscara de seguridad para verificación visual
-$pForMask = $pass;
-if ($dbUrl) {
-    if ($p = parse_url($dbUrl)) $pForMask = $p['pass'] ?? $pass;
-}
-$masked = (strlen($pForMask ?? '') > 6) ? substr($pForMask, 0, 3) . '...' . substr($pForMask, -3) : '***';
-echo "[ENV] Password detectada en Vercel (máscara): $masked\n\n";
+$masked = (strlen($pass ?? '') > 6) ? substr($pass, 0, 3) . '...' . substr($pass, -3) : '***';
+echo "[VARS] Password ACTUAL en código (máscara): $masked\n\n";
 
-/* ── 2. Intento vía URL (Nueva Lógica) ───────────────────────────────── */
-echo "CAPA 1: Intento vía DATABASE_URL / POSTGRES_URL\n";
-if ($dbUrl) {
-    try {
-        $p = parse_url($dbUrl);
-        $h = $p['host'] ?? '';
-        $u = $p['user'] ?? '';
-        $pw = $p['pass'] ?? '';
-        $db = ltrim($p['path'] ?? '', '/');
-        $po = (string)($p['port'] ?? '5432');
-        
-        echo "   Parseado -> Host: $h | User: $u | DB: $db | Port: $po\n";
-        
-        $dsn = "pgsql:host=$h;port=$po;dbname=$db;sslmode=require";
-        $pdo = new PDO($dsn, $u, $pw, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_TIMEOUT => 5]);
-        echo "   ✓ ÉXITO: Conectado vía URL.\n";
-    } catch (PDOException $e) {
-        echo "   ✗ FALLO CAPA 1: " . $e->getMessage() . "\n";
-    }
-} else {
-    echo "   (Saltado: No hay URL configurada)\n";
-}
-echo "\n";
+/* ── 2. Intento de Conexión Real con las nuevas variables ──────────── */
+echo "INTENTO DE CONEXIÓN CON VARIABLES MANUALES:\n";
 
-/* ── 3. Intento vía Componentes Manuales ─────────────────────────────── */
-echo "CAPA 2: Intento vía Componentes Manuales (Legacy)\n";
-$host = getenv('PGHOST')      ?: getenv('POSTGRES_HOST');
-$user = getenv('PGUSER')      ?: getenv('POSTGRES_USER');
-$db   = getenv('PGDATABASE')  ?: getenv('POSTGRES_DATABASE');
-$port = getenv('PGPORT')      ?: '5432';
-
-if ($host && $user && $pass && $db) {
-    try {
-        $dsn = "pgsql:host=$host;port=$port;dbname=$db;sslmode=require";
-        $pdo = new PDO($dsn, $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_TIMEOUT => 5]);
-        echo "   ✓ ÉXITO: Conectado vía Componentes.\n";
-    } catch (PDOException $e) {
-        echo "   ✗ FALLO CAPA 2: " . $e->getMessage() . "\n";
-    }
-} else {
-    echo "   (Saltado: Faltan variables individuales)\n";
-}
-echo "\n";
-
-/* ── 4. Intento sin SSL (Diagnóstico de Certificado) ─────────────────── */
-echo "CAPA 3: Intento sin SSL (Para descartar fallos de certificado)\n";
-if ($host && $user && $pass && $db) {
-    try {
-        $dsn = "pgsql:host=$host;port=$port;dbname=$db"; // Sin sslmode=require
-        $pdo = new PDO($dsn, $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_TIMEOUT => 5]);
-        echo "   ✓ ÉXITO: Conectado sin SSL explicito (Neon podría haberlo forzado igual).\n";
-    } catch (PDOException $e) {
-        echo "   ✗ FALLO CAPA 3: " . $e->getMessage() . "\n";
-    }
-} else {
-    echo "   (Saltado)\n";
+try {
+    $dsn = "pgsql:host=$host;port=$port;dbname=$db;sslmode=require";
+    $pdo = new PDO($dsn, $user, $pass, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_TIMEOUT => 10
+    ]);
+    echo "   ✓ ÉXITO: ¡Conectado al fin! El código ya usa tus variables nuevas.\n";
+    
+    $stmt = $pdo->query("SELECT version()");
+    echo "   Versión de DB: " . $stmt->fetchColumn() . "\n";
+} catch (PDOException $e) {
+    echo "   ✗ FALLO: " . $e->getMessage() . "\n";
+    echo "\n¿Has hecho el Redeploy en Vercel tras subir este cambio?\n";
 }
 
 echo "\n--- FIN DEL DIAGNÓSTICO ---\n";
