@@ -45,13 +45,13 @@ function fp_db(): PDO
         $host = getenv('PGHOST_PROD')     ?: getenv('POSTGRES_HOST');
         $user = getenv('PGUSER_PROD')     ?: getenv('POSTGRES_USER');
         $pass = getenv('PGPASSWORD_PROD') ?: getenv('POSTGRES_PASSWORD');
-        $db   = getenv('PGDATABASE_PROD') ?: 'fitpaisa_production'; // Forzamos nombre de prod
+        $db   = getenv('PGDATABASE_PROD') ?: 'neondb'; // Master -> neondb
     } else {
         // --- RAMA TESTING / LOCAL ---
         $host = getenv('PGHOST')          ?: getenv('POSTGRES_HOST');
         $user = getenv('PGUSER')          ?: getenv('POSTGRES_USER');
         $pass = getenv('DB_PASSWORD_NUEVA') ?: getenv('PGPASSWORD') ?: getenv('POSTGRES_PASSWORD');
-        $db   = getenv('PGDATABASE')      ?: 'neondb'; // Por defecto la de pruebas
+        $db   = getenv('PGDATABASE')      ?: 'fitpaisa_testing'; // Testing -> fitpaisa_testing
     }
     
     $port = getenv('PGPORT') ?: '5432';
