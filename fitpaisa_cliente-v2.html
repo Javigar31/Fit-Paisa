@@ -1023,6 +1023,42 @@ function cancelEditProfile() {
   document.getElementById('profile-actions-edit').style.display = 'none';
 }
 
+/**
+ * Replicar exactamente la lógica de cálculo de Fitia.app (JS)
+ */
+function calculateMacrosJS(weight, height, age, gender, activity, objective) {
+  const genderConst = (gender === 'FEMALE') ? -161 : 5;
+  const bmr = (10 * weight) + (6.25 * height) - (5 * age) + genderConst;
+
+  const activityFactors = {
+    'SEDENTARY': 1.2,
+    'LIGHT': 1.375,
+    'MODERATE': 1.55,
+    'ACTIVE': 1.725,
+    'VERY_ACTIVE': 1.9
+  };
+  const tdee = bmr * (activityFactors[activity] || 1.55);
+
+  let adjustment = 0;
+  if (objective === 'LOSE_WEIGHT') adjustment = -0.20;
+  if (objective === 'GAIN_MUSCLE') adjustment = 0.10;
+  
+  const targetCalories = Math.max(1200, tdee * (1 + adjustment));
+
+  const proteinG = weight * 2.0;
+  const fatG = (targetCalories * 0.25) / 9;
+  const carbG = Math.max(0, (targetCalories - (proteinG * 4) - (fatG * 9)) / 4);
+
+  return {
+    calories: Math.round(targetCalories),
+    protein_g: Math.round(proteinG),
+    fat_g: Math.round(fatG),
+    carbs_g: Math.round(carbG),
+    tmb: Math.round(bmr),
+    tdee: Math.round(tdee)
+  };
+}
+
 async function saveProfile(btn) {
   const weight = parseFloat(document.getElementById('edit-weight').value);
   const height = parseFloat(document.getElementById('edit-height').value);
@@ -1061,19 +1097,21 @@ async function saveProfile(btn) {
     const data = await res.json();
 
     if (data.success) {
-      appState.profile = { ...appState.profile, weight, height, age, objective, activity_level: activity, target_weight: targetWeight, target_time_weeks: targetWeeks };
+      appState.profile = data.profile;
       appState.macros  = data.macro_targets;
       const user = JSON.parse(localStorage.getItem('fp_user') || '{}');
       populateUI(appState.profile, appState.macros, user);
       loadDailySummary();
       cancelEditProfile();
+      // Si estamos en móviles, forzar recarga estética
+      if (window.innerWidth <= 768) location.reload();
     } else {
-      errEl.textContent = data.message || 'Error al guardar. Inténtalo de nuevo.';
+      errEl.textContent = data.message || 'Error al guardar.';
       errEl.style.display = 'block';
     }
   } catch(e) {
     console.error("Profile Save Error:", e);
-    errEl.textContent = 'Error de conexión. Revisa la consola para más detalles.';
+    errEl.textContent = 'Error de conexión.';
     errEl.style.display = 'block';
   }
 
@@ -1105,8 +1143,7 @@ async function saveDietSetup(btn) {
   }
   
   btn.textContent = 'Calculando...';
-  btn.style.opacity = '0.6';
-  btn.style.pointerEvents = 'none';
+  btn.disabled = true;
 
   try {
     const token = localStorage.getItem('fp_token');
@@ -1118,22 +1155,16 @@ async function saveDietSetup(btn) {
     const data = await res.json();
 
     if (data.success) {
-      appState.profile = data.profile;
-      appState.macros  = data.macro_targets;
-      const user = JSON.parse(localStorage.getItem('fp_user') || '{}');
-      populateUI(appState.profile, appState.macros, user);
-      loadDailySummary(); // Cargar datos reales de nutrición
+      location.reload(); 
     } else {
       alert(data.message || 'Error.');
       btn.textContent = 'Calcular Mis Macros';
-      btn.style.opacity = '1';
-      btn.style.pointerEvents = 'auto';
+      btn.disabled = false;
     }
   } catch (e) {
     alert('Error de conexión.');
     btn.textContent = 'Calcular Mis Macros';
-    btn.style.opacity = '1';
-    btn.style.pointerEvents = 'auto';
+    btn.disabled = false;
   }
 }
 
@@ -1634,97 +1665,11 @@ function closeModal(el){el.closest('.modal-overlay').classList.remove('open')}
 document.querySelectorAll('.modal-overlay').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')})});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'))});
 
-// ── Perfil y Cierre de Sesión (Frontend) ──
-function logOut() {
-    localStorage.removeItem('fp_token');
-    localStorage.removeItem('fp_user');
-    window.location.href = 'index.html';
-}
-
-function openEditProfile() {
-    document.getElementById('profile-view').style.display = 'none';
-    document.getElementById('profile-edit').style.display = 'flex';
-    document.getElementById('profile-actions-view').style.display = 'none';
-    document.getElementById('profile-actions-edit').style.display = 'flex';
-    if (appState.profile) {
-        document.getElementById('edit-weight').value = appState.profile.weight;
-        document.getElementById('edit-height').value = appState.profile.height;
-        document.getElementById('edit-age').value = appState.profile.age;
-        document.getElementById('edit-objective').value = appState.profile.objective;
-        document.getElementById('edit-target-weight').value = appState.profile.target_weight || '';
-        document.getElementById('edit-weeks').value = appState.profile.target_time_weeks || '';
-        document.getElementById('edit-activity').value = appState.profile.activity_level;
-        toggleEditObjective();
-    }
-}
-
-function cancelEditProfile() {
-    document.getElementById('profile-view').style.display = 'block';
-    document.getElementById('profile-edit').style.display = 'none';
-    document.getElementById('profile-actions-view').style.display = 'flex';
-    document.getElementById('profile-actions-edit').style.display = 'none';
-}
-
 function toggleEditObjective() {
     const obj = document.getElementById('edit-objective').value;
     const group = document.getElementById('edit-target-group');
     if (obj === 'MAINTAIN' || obj === 'IMPROVE_HEALTH') group.style.display = 'none';
     else group.style.display = 'grid';
-}
-
-function toggleSetupObjective() {
-    const obj = document.getElementById('setup-objective').value;
-    const group = document.getElementById('setup-target-group');
-    if (obj === 'MAINTAIN' || obj === 'IMPROVE_HEALTH') group.style.display = 'none';
-    else group.style.display = 'grid';
-}
-
-async function saveProfile(btn) {
-    const payload = {
-        weight: document.getElementById('edit-weight').value,
-        height: document.getElementById('edit-height').value,
-        age: document.getElementById('edit-age').value,
-        objective: document.getElementById('edit-objective').value,
-        targetWeight: document.getElementById('edit-target-weight').value,
-        weeks: document.getElementById('edit-weeks').value,
-        activityLevel: document.getElementById('edit-activity').value
-    };
-    btn.disabled = true; btn.textContent = 'Guardando...';
-    try {
-        const res = await fetch('/api/profile.php?action=save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('fp_token')}` },
-            body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (data.success) location.reload();
-        else alert(data.message || 'Error al guardar');
-    } catch (e) { alert('Error de conexión'); }
-    finally { btn.disabled = false; btn.textContent = 'Guardar cambios'; }
-}
-
-async function saveDietSetup(btn) {
-    const payload = {
-        weight: document.getElementById('setup-weight').value,
-        height: document.getElementById('setup-height').value,
-        age: document.getElementById('setup-age').value,
-        objective: document.getElementById('setup-objective').value,
-        targetWeight: document.getElementById('setup-target-weight').value,
-        weeks: document.getElementById('setup-weeks').value,
-        activityLevel: 'MODERATE'
-    };
-    btn.disabled = true; btn.textContent = 'Calculando...';
-    try {
-        const res = await fetch('/api/profile.php?action=setup_macros', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('fp_token')}` },
-            body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (data.success) location.reload();
-        else alert(data.message || 'Error al calcular');
-    } catch (e) { alert('Error de conexión'); }
-    finally { btn.disabled = false; btn.textContent = 'Calcular Mis Macros'; }
 }
 </script>
 

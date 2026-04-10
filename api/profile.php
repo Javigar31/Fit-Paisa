@@ -22,7 +22,7 @@ if (strpos($_SERVER['SCRIPT_NAME'], 'profile.php') !== false) {
     $action = fp_sanitize($_GET['action'] ?? 'get', 32);
     match ($action) {
         'get'          => handle_get_profile($payload),
-        'update'       => handle_update_profile($payload),
+        'update', 'save' => handle_update_profile($payload),
         'setup_macros' => handle_setup_macros($payload),
         'log_body'     => handle_log_body($payload),
         'history'      => handle_body_history($payload),
@@ -301,10 +301,10 @@ function calculate_macros(
     $gender = $gender ?: 'OTHER';
     $activity = $activity ?: 'MODERATE';
     $objective = $objective ?: 'MAINTAIN';
-    $targetWeight = (float)($targetWeight ?: 0);
-    $weeks = (int)($weeks ?: 0);
 
     /* 1. TMB - Mifflin-St Jeor */
+    /* Hombres: 10 * peso + 6.25 * altura - 5 * edad + 5 */
+    /* Mujeres: 10 * peso + 6.25 * altura - 5 * edad - 161 */
     $genderConst = ($gender === 'FEMALE') ? -161 : 5;
     $tmb = (10 * $weight) + (6.25 * $height) - (5 * $age) + $genderConst;
 
@@ -319,37 +319,27 @@ function calculate_macros(
     $factor = $activityFactors[$activity] ?? 1.55;
     $tdee   = $tmb * $factor;
 
-    /* 3. Cálculo de Déficit/Superávit estilo Fitia (Diferencia de peso * 7700 kcal / Total días) */
-    $adjustment = 0;
-    if ($targetWeight > 0 && $weeks > 0 && !in_array($objective, ['MAINTAIN', 'IMPROVE_HEALTH'])) {
-        $weightDiff = $targetWeight - $weight;
-        $totalDays  = $weeks * 7;
-        $adjustment = ($weightDiff * 7700) / $totalDays;
-        
-        // Límites de seguridad para el déficit/superávit (Fitia suele limitar a +/- 1000 kcal)
-        $adjustment = max(-1000, min(1000, $adjustment));
-    }
-
-    $targetCal = $tdee + $adjustment;
+    /* 3. Ajuste por Objetivo */
+    /* Perder grasa: TDEE - 20% | Mantener: TDEE | Ganar músculo: TDEE + 10% */
+    $adjustmentPercent = match($objective) {
+        'LOSE_WEIGHT' => -0.20,
+        'GAIN_MUSCLE' => 0.10,
+        default       => 0.00
+    };
+    
+    $targetCal = $tdee * (1 + $adjustmentPercent);
     
     // Protección absoluta: Mínimo 1200 kcal
     $targetCal = max(1200, $targetCal);
 
-    /* 4. Distribución de Macros estilo Fitia
-       - Proteína: Prioridad alta (1.8g - 2.2g por kg)
-       - Grasas: 1.0g por kg para salud hormonal
-       - Carbohidratos: El resto
+    /* 4. Reparto de Macros (Configuración Pro de Fitia)
+       - Proteína: 2.0g por cada kg de peso corporal (g * 4 kcal)
+       - Grasas: 25% del total de las calorías del objetivo (cal / 9)
+       - Carbohidratos: El resto de las calorías restantes (cal / 4)
     */
     
-    // Factor Proteína según objetivo
-    $protFactor = match($objective) {
-        'LOSE_WEIGHT' => 2.2, // Mayor protección muscular en déficit
-        'GAIN_MUSCLE' => 2.0, // Suficiente para anabolismo
-        default       => 1.8  // Mantenimiento
-    };
-
-    $protGrams = $weight * $protFactor;
-    $fatGrams  = $weight * 1.0; 
+    $protGrams = $weight * 2.0;
+    $fatGrams  = ($targetCal * 0.25) / 9;
     
     // Calorías consumidas por prot y grasas
     $consumedCal = ($protGrams * 4) + ($fatGrams * 9);
@@ -365,6 +355,6 @@ function calculate_macros(
         'fat_g'      => (int)round($fatGrams),
         'tmb'        => (int)round($tmb),
         'tdee'       => (int)round($tdee),
-        'adjustment' => (int)round($adjustment)
+        'adjustment' => (int)round($targetCal - $tdee)
     ];
 }
