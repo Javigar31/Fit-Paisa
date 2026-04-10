@@ -38,11 +38,25 @@ function fp_db(): PDO
 
     /* ── Leer credenciales desde entorno ── */
     $env  = getenv('VERCEL_ENV') ?: 'local';
-    $host = getenv('PGHOST')          ?: getenv('POSTGRES_HOST');
-    $user = getenv('PGUSER')          ?: getenv('POSTGRES_USER');
-    $pass = getenv('PGPASSWORD')      ?: getenv('DB_PASSWORD_NUEVA');
-    $db   = getenv('PGDATABASE')      ?: getenv('POSTGRES_DATABASE');
-    $port = getenv('PGPORT')          ?: '5432';
+    
+    // Prioridad 1: URL Completa de Vercel/Neon
+    $dbUrl = getenv('DATABASE_URL') ?: getenv('POSTGRES_URL');
+    
+    if ($dbUrl) {
+        $p = parse_url($dbUrl);
+        $host = $p['host'] ?? null;
+        $port = (string)($p['port'] ?? '5432');
+        $user = $p['user'] ?? null;
+        $pass = $p['pass'] ?? null;
+        $db   = ltrim($p['path'] ?? '', '/');
+    } else {
+        // Prioridad 2: Variables individuales
+        $host = getenv('PGHOST')          ?: getenv('POSTGRES_HOST');
+        $user = getenv('PGUSER')          ?: getenv('POSTGRES_USER');
+        $pass = getenv('PGPASSWORD')      ?: getenv('DB_PASSWORD_NUEVA');
+        $db   = getenv('PGDATABASE')      ?: getenv('POSTGRES_DATABASE');
+        $port = getenv('PGPORT')          ?: '5432';
+    }
 
 
     if (!$host || !$user || !$pass || !$db) {
