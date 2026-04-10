@@ -267,27 +267,28 @@ function handle_edit_entry(array $payload): never
    ══════════════════════════════════════════════════════════════════════ */
 function handle_delete_entry(array $payload): never
 {
-    if ($_SERVER['REQUEST_METHOD'] !== 'DELETE' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+    $method = $_SERVER['REQUEST_METHOD'];
+    if ($method !== 'DELETE' && $method !== 'POST') {
         fp_error(405, 'Método no permitido.');
     }
 
     $body    = fp_json_body();
-    $entryId = (int) ($body['entry_id'] ?? $_GET['entry_id'] ?? 0);
+    // Priorizamos el parámetro de la URL (GET) pero aceptamos el cuerpo (POST/DELETE)
+    $entryId = (int)($_GET['entry_id'] ?? $body['entry_id'] ?? 0);
 
     if ($entryId <= 0) {
-        fp_error(400, 'ID de entrada inválido.');
+        fp_error(400, "ID de entrada inválido: $entryId");
     }
 
-    /* Verificar que la ingesta pertenece al usuario autenticado */
+    /* Verificar que la ingesta pertenece al usuario autenticado de forma directa */
     $owned = fp_query(
-        'SELECT 1 FROM food_entries fe
-         JOIN profiles p ON p.profile_id = fe.profile_id
-         WHERE fe.entry_id = :eid AND p.user_id = :uid',
+        'SELECT 1 FROM food_entries 
+         WHERE entry_id = :eid AND profile_id = (SELECT profile_id FROM profiles WHERE user_id = :uid)',
         [':eid' => $entryId, ':uid' => $payload['user_id']]
     )->fetchColumn();
 
     if (!$owned) {
-        fp_error(404, 'Ingesta no encontrada o no tienes permiso para eliminarla.');
+        fp_error(404, "No se encontró el registro #$entryId para tu usuario.");
     }
 
     fp_query('DELETE FROM food_entries WHERE entry_id = :eid', [':eid' => $entryId]);
