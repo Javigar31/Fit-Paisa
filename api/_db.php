@@ -285,6 +285,13 @@ function fp_ensure_schema(PDO $db): void
         $db->exec("UPDATE food_catalog SET unit_name = 'Ala', weight_std = 35 WHERE name ILIKE '%alita%' AND unit_name IS NULL");
         $db->exec("UPDATE food_catalog SET unit_name = 'Yema', weight_std = 17 WHERE name ILIKE '%yema%' AND unit_name IS NULL");
 
+        // 6. Índices de rendimiento para Admin
+        $db->exec("CREATE INDEX IF NOT EXISTS idx_users_role_status ON users(role, is_active)");
+        $db->exec("CREATE INDEX IF NOT EXISTS idx_users_created_at_desc ON users(created_at DESC)");
+        $db->exec("CREATE INDEX IF NOT EXISTS idx_subs_status_plan ON subscriptions(status, plan_type)");
+        $db->exec("CREATE INDEX IF NOT EXISTS idx_wp_coach_status ON workout_plans(coach_id, status)");
+        $db->exec("CREATE INDEX IF NOT EXISTS idx_subs_user_id ON subscriptions(user_id)");
+
         // Líquidos (Marcar flag is_liquid)
         $db->exec("UPDATE food_catalog SET is_liquid = TRUE 
                    WHERE (name ILIKE '%leche%' OR name ILIKE '%aceite%' OR name ILIKE '%vino%' OR name ILIKE '%bebida%' OR name ILIKE '%zumo%') 

@@ -40,33 +40,32 @@ match ($action) {
    ══════════════════════════════════════════════════════════════════════ */
 function handle_stats(): never
 {
+    // 1. Estadísticas de Usuarios
     $stats = fp_query("
         SELECT
             COUNT(*)                                                         AS total_users,
             COUNT(*) FILTER (WHERE role = 'COACH')                          AS total_coaches,
             COUNT(*) FILTER (WHERE role = 'USER')                           AS total_regular,
-            COUNT(*) FILTER (WHERE role = 'ADMIN')                          AS total_admins,
             COUNT(*) FILTER (WHERE is_active = TRUE)                         AS active_users,
             COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days') AS new_this_week
         FROM users
     ")->fetch();
 
-    $activeSubs = (int) fp_query("
-        SELECT COUNT(DISTINCT user_id)
-        FROM subscriptions
-        WHERE status = 'ACTIVE'
-    ")->fetchColumn();
-
-    $mrr = (float) fp_query("
-        SELECT
-            COALESCE(SUM(CASE
+    // 2. Suscripciones y MRR en un solo bloque (Optimizado)
+    $subData = fp_query("
+        SELECT 
+            COUNT(DISTINCT user_id) AS active_subs,
+            SUM(CASE
                 WHEN plan_type = 'PREMIUM_MONTHLY' THEN 9.99
                 WHEN plan_type = 'PREMIUM_ANNUAL'  THEN 99.99 / 12
                 ELSE 0
-            END), 0)
+            END) AS mrr
         FROM subscriptions
-        WHERE status = 'ACTIVE' AND plan_type != 'FREE'
-    ")->fetchColumn();
+        WHERE status = 'ACTIVE'
+    ")->fetch();
+
+    $activeSubs = (int) ($subData['active_subs'] ?? 0);
+    $mrr        = (float) ($subData['mrr'] ?? 0);
 
     fp_success([
         'stats' => array_merge($stats, [
