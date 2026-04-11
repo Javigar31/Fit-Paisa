@@ -185,3 +185,17 @@
 *   **Solución**: Se completó la función `fp_ensure_schema()` en `api/_db.php`. 
     *   Al abrir el diagnóstico o registrar un alimento, el sistema autodetecta las columnas faltantes y las crea en tiempo real sin intervención manual.
 *   **Resultado**: Registro de alimentos 100% operativo en `https://fit-paisa.vercel.app/`.
+
+***
+
+# Informe Técnico (Global): Soporte de Zona Horaria (v1.6.2)
+**Fecha:** 2026-04-11
+**Estado:** Desplegado. Coherencia temporal universal.
+
+## 1. Resolución del Desfase Horario (Bug UTC)
+*   **Problema**: Los usuarios en España veían registros en el día anterior durante las madrugadas debido al uso de hora UTC en el servidor y frontend.
+*   **Solución**:
+    *   **Detección Local**: Implementación de `getLocalDateString()` usando `Intl.DateTimeFormat`.
+    *   **Sincronización de Perfil**: Almacenamiento de `timezone` en la tabla `profiles`.
+    *   **Vista Céntrica en el Cliente**: Los entrenadores y administradores visualizan los datos en la zona horaria del cliente, garantizando que el "Hoy" del cliente sea el mismo para el supervisor.
+*   **Resultado**: Registro nutricional y calendario 100% precisos en cualquier zona horaria.

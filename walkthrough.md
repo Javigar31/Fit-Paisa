@@ -29,7 +29,17 @@ Se ha blindado la infraestructura para garantizar que el desarrollo no afecte a 
 
 ---
 
-## 🛠️ 3. Resoluciones Críticas (v1.5.0 - v1.5.2)
+## 🌍 3. Sincronización Global de Zona Horaria (v1.6.0 - v1.6.2)
+Hemos resuelto el problema de desfase horario para usuarios en todo el mundo (ej: España vs Colombia).
+
+- **Detección Automática**: La aplicación detecta automáticamente la zona horaria del navegador (`Intl.DateTimeFormat`) en todos los roles (Cliente, Coach, Admin).
+- **Persistencia en el Perfil**: La zona horaria se guarda en la base de datos para que el servidor siempre sepa qué día es para cada usuario.
+- **Calendario Real**: Los registros de madrugada ahora caen correctamente en el día local del usuario, eliminando la dependencia de la hora UTC del servidor.
+- **Enfoque Céntrico en el Cliente**: Los entrenadores y administradores ven los datos de los clientes en la hora local de dichos clientes para evitar confusiones en el seguimiento.
+
+---
+
+## 🛠️ 4. Resoluciones Críticas (v1.5.0 - v1.6.2)
 
 ### ✅ Borrado Optimista e Instantáneo
 - **Problema**: Retrasos visuales al borrar alimentos y errores 404 por doble clic.
