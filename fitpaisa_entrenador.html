@@ -379,11 +379,39 @@ select.input{cursor:none;appearance:none}
     window.location.href = 'index.html';
     return;
   }
-  const name = user.name || 'Coach';
-  document.getElementById('coach-name').textContent = name;
   const initials = name.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
   document.getElementById('coach-initials').textContent = initials;
+  
+  // Detección de zona horaria
+  appState.profile = user.profile || { timezone: null }; 
+  detectAndSyncTimezone();
 })();
+
+// ── Date Helpers ──────────────────────
+function getLocalDateString(date = new Date()) {
+  return date.toLocaleDateString('sv');
+}
+
+async function detectAndSyncTimezone() {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (!tz) return;
+  
+  // Si el perfil no tiene TZ o ha cambiado, sincronizamos
+  if (!appState.profile || appState.profile.timezone !== tz) {
+    try {
+      const token = localStorage.getItem('fp_token');
+      await fetch('/api/profile.php?action=update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ timezone: tz })
+      });
+      if(appState.profile) appState.profile.timezone = tz;
+    } catch(e) { console.error("TZ Sync Error:", e); }
+  }
+}
+
+// ── State ─────────────────────────────
+let appState = { profile: null };
 
 function logout(){
   localStorage.removeItem('fp_token');

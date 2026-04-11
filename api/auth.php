@@ -309,9 +309,11 @@ function handle_login(): never
     $user = fp_query(
         "SELECT u.user_id, u.email, u.password_hash, u.full_name, u.role, u.is_active,
                 u.login_attempts, u.locked_until, u.last_login,
-                s.plan_type AS subscription_plan
+                s.plan_type AS subscription_plan,
+                p.timezone
          FROM users u
          LEFT JOIN subscriptions s ON s.user_id = u.user_id AND s.status = 'ACTIVE'
+         LEFT JOIN profiles p ON p.user_id = u.user_id
          WHERE u.email = :email LIMIT 1",
         [':email' => $email]
     )->fetch();
@@ -399,6 +401,9 @@ function handle_login(): never
             'role'              => $user['role'],
             'last_login'        => $user['last_login'],
             'subscription_plan' => $user['subscription_plan'] ?? 'FREE',
+            'profile'           => [
+                'timezone' => $user['timezone'] ?? null,
+            ],
         ],
     ]);
 }

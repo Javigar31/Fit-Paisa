@@ -836,6 +836,30 @@ body.ready .sidebar, body.ready .main{opacity:1}
     }
   }
 })();
+ 
+// ── Date Helpers ──────────────────────
+function getLocalDateString(date = new Date()) {
+  // toLocaleDateString('sv') devuelve YYYY-MM-DD en la zona local
+  return date.toLocaleDateString('sv');
+}
+
+async function detectAndSyncTimezone() {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (!tz || !appState.profile) return;
+  
+  if (appState.profile.timezone !== tz) {
+    console.log(`Timezone mismatch! Local: ${tz}, Profile: ${appState.profile.timezone}. Syncing...`);
+    try {
+      const token = localStorage.getItem('fp_token');
+      await fetch('/api/profile.php?action=update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ timezone: tz })
+      });
+      appState.profile.timezone = tz;
+    } catch(e) { console.error("TZ Sync Error:", e); }
+  }
+}
 
 // ── State ─────────────────────────────
 const secs = ['dashboard', 'training', 'diet', 'messages', 'progress', 'support'];
@@ -916,6 +940,9 @@ window.addEventListener('load', async () => {
     appState.profile = data.profile;
     appState.macros  = data.macro_targets;
     populateUI(appState.profile, appState.macros, user);
+    
+    // Sincronizar zona horaria si es necesario
+    detectAndSyncTimezone();
 
   } catch (e) {
     populateUI(null, null, user);
@@ -1428,7 +1455,7 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
-let dietSelectedDate = new Date().toISOString().split('T')[0];
+let dietSelectedDate = getLocalDateString();
 
 function renderDietDatePicker() {
   const picker = document.getElementById('diet-date-picker');
@@ -1438,14 +1465,14 @@ function renderDietDatePicker() {
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    dates.push(d.toISOString().split('T')[0]);
+    dates.push(getLocalDateString(d));
   }
   
   picker.innerHTML = dates.map(date => {
     const dObj = new Date(date + 'T00:00:00');
     const dayName = dObj.toLocaleDateString('es-ES', { weekday: 'short' }).replace('.', '');
     const dayNum = dObj.getDate();
-    const isToday = date === new Date().toISOString().split('T')[0];
+    const isToday = date === getLocalDateString();
     const active = date === dietSelectedDate ? 'active' : '';
     
     return `
@@ -1459,7 +1486,7 @@ function renderDietDatePicker() {
   const label = document.getElementById('diet-date-label');
   const dObj = new Date(dietSelectedDate + 'T00:00:00');
   const fmt = dObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-  label.textContent = `Control nutricional · ${dietSelectedDate === new Date().toISOString().split('T')[0] ? 'Hoy' : fmt}`;
+  label.textContent = `Control nutricional · ${dietSelectedDate === getLocalDateString() ? 'Hoy' : fmt}`;
 }
 
 function setDietDate(date) {
@@ -1589,7 +1616,7 @@ async function loadDailySummary() {
         const targets = dataSum.targets;
 
         // 1. Actualizar Dashboard (Solo si es HOY para no confundir al usuario)
-        const isToday = dietSelectedDate === new Date().toISOString().split('T')[0];
+        const isToday = dietSelectedDate === getLocalDateString();
         if (totals && isToday) {
           document.getElementById('v2-kcal').textContent = Math.round(totals.total_calories || 0);
           document.getElementById('v2-prot').textContent = Math.round(totals.total_protein || 0) + 'g';
@@ -1807,7 +1834,7 @@ function renderWeeklyChart(trend) {
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    days.push(d.toISOString().split('T')[0]);
+    days.push(getLocalDateString(d));
   }
 
   const trendMap = {};

@@ -244,9 +244,10 @@ function _fp_get_db_config(): array
 function fp_ensure_schema(PDO $db): void
 {
     try {
-        // 1. Columnas de Objetivos en Profiles
+        // 1. Columnas de Objetivos y Ubicación en Profiles
         $db->exec("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS target_weight DECIMAL(5,2)");
         $db->exec("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS target_time_weeks SMALLINT");
+        $db->exec("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS timezone VARCHAR(50)");
 
         // 2. Metadatos de Unidades en food_catalog
         $db->exec("ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS unit_name VARCHAR(50)");

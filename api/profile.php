@@ -88,6 +88,7 @@ function handle_update_profile(array $payload): never
     $activity  = fp_sanitize($body['activity_level'] ?? '', 20);
     $targetWeight = (float) ($body['target_weight'] ?? $weight);
     $weeks = (int) ($body['target_time_weeks'] ?? 0);
+    $timezone = fp_sanitize($body['timezone'] ?? null, 50);
 
     $errors = [];
     if ($weight <= 0 || $weight > 500) $errors[] = 'Peso inválido.';
@@ -102,7 +103,9 @@ function handle_update_profile(array $payload): never
         'UPDATE profiles
          SET weight = :w, height = :h, age = :a, gender = :g,
              objective = :o, activity_level = :al, 
-             target_weight = :tw, target_time_weeks = :ttw, updated_at = NOW()
+             target_weight = :tw, target_time_weeks = :ttw,
+             timezone = COALESCE(:tz, timezone),
+             updated_at = NOW()
          WHERE user_id = :uid',
         [
             ':w'   => $weight,
@@ -113,6 +116,7 @@ function handle_update_profile(array $payload): never
             ':al'  => $activity,
             ':tw'  => $targetWeight,
             ':ttw' => $weeks,
+            ':tz'  => $timezone,
             ':uid' => $payload['user_id'],
         ]
     );
