@@ -184,7 +184,7 @@ function handle_subscriptions(): never
         FROM users u
         LEFT JOIN subscriptions s ON s.user_id = u.user_id AND s.status = 'ACTIVE'
         WHERE u.role = 'USER'
-        ORDER BY s.starts_at DESC NULLS LAST, u.created_at DESC
+        ORDER BY COALESCE(s.starts_at, u.created_at) DESC
         LIMIT 50
     ")->fetchAll();
 
