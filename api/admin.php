@@ -165,16 +165,19 @@ function handle_subscriptions(): never
 {
     $stats = fp_query("
         SELECT
-            COUNT(*) FILTER (WHERE status = 'ACTIVE')                                        AS active,
-            COUNT(*) FILTER (WHERE status = 'PENDING')                                       AS pending,
-            COUNT(*) FILTER (WHERE status = 'CANCELLED'
-                AND updated_at >= date_trunc('month', NOW()))                                AS cancelled_month,
-            COUNT(*) FILTER (WHERE plan_type = 'PREMIUM_MONTHLY' AND status = 'ACTIVE') * 9  AS mrr_monthly,
-            COUNT(*) FILTER (WHERE plan_type = 'PREMIUM_ANNUAL'  AND status = 'ACTIVE') * 1  AS mrr_annual
+            COUNT(*) FILTER (WHERE status = 'ACTIVE')  AS active,
+            COUNT(*) FILTER (WHERE status = 'PENDING') AS pending,
+            COUNT(*) FILTER (WHERE status = 'CANCELLED' 
+                AND updated_at >= date_trunc('month', NOW())) AS cancelled_month,
+            COALESCE(SUM(CASE 
+                WHEN plan_type = 'PREMIUM_MONTHLY' AND status = 'ACTIVE' THEN 9.99
+                WHEN plan_type = 'PREMIUM_ANNUAL'  AND status = 'ACTIVE' THEN 99.99 / 12
+                ELSE 0 
+            END), 0) AS mrr_estimate
         FROM subscriptions
     ")->fetch();
 
-    $mrrEstimate = ($stats['mrr_monthly'] ?? 0) + ($stats['mrr_annual'] ?? 0);
+    $mrrEstimate = (float) ($stats['mrr_estimate'] ?? 0);
 
     $subscriptions = fp_query("
         SELECT s.subscription_id, s.plan_type, s.status, s.provider,

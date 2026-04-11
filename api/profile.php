@@ -83,15 +83,17 @@ function handle_update_profile(array $payload): never
     $userId  = $payload['user_id'];
 
     // 1. Obtener valores actuales para permitir actualizaciones parciales
-    $current = fp_query('SELECT * FROM profiles WHERE user_id = :uid', [':uid' => $userId])->fetch();
+    $stmt = fp_query('SELECT * FROM profiles WHERE user_id = :uid', [':uid' => $userId]);
+    $current = $stmt->fetch() ?: [];
 
-    $weight = isset($body['weight']) ? (float)$body['weight'] : (float)($current['weight'] ?? 0);
-    $height = isset($body['height']) ? (float)$body['height'] : (float)($current['height'] ?? 0);
-    $age    = isset($body['age'])    ? (int)$body['age']      : (int)($current['age']    ?? 0);
+    // Si no existe el perfil, usamos valores por defecto válidos para pasar la validación
+    $weight = isset($body['weight']) ? (float)$body['weight'] : (float)($current['weight'] ?? 70);
+    $height = isset($body['height']) ? (float)$body['height'] : (float)($current['height'] ?? 170);
+    $age    = isset($body['age'])    ? (int)$body['age']      : (int)($current['age']    ?? 30);
 
-    $gender    = isset($body['gender'])         ? fp_sanitize($body['gender'], 10)         : ($current['gender']         ?? '');
-    $objective = isset($body['objective'])      ? fp_sanitize($body['objective'], 30)      : ($current['objective']      ?? '');
-    $activity  = isset($body['activity_level']) ? fp_sanitize($body['activity_level'], 20) : ($current['activity_level'] ?? '');
+    $gender    = isset($body['gender'])         ? fp_sanitize($body['gender'], 10)         : ($current['gender']         ?? 'OTHER');
+    $objective = isset($body['objective'])      ? fp_sanitize($body['objective'], 30)      : ($current['objective']      ?? 'MAINTAIN');
+    $activity  = isset($body['activity_level']) ? fp_sanitize($body['activity_level'], 20) : ($current['activity_level'] ?? 'MODERATE');
     
     $targetWeight = isset($body['target_weight'])      ? (float)$body['target_weight']      : (float)($current['target_weight']      ?? $weight);
     $weeks        = isset($body['target_time_weeks']) ? (int)$body['target_time_weeks']    : (int)($current['target_time_weeks']    ?? 0);
@@ -107,14 +109,25 @@ function handle_update_profile(array $payload): never
     }
 
     fp_query(
-        'UPDATE profiles
-         SET weight = :w, height = :h, age = :a, gender = :g,
-             objective = :o, activity_level = :al, 
-             target_weight = :tw, target_time_weeks = :ttw,
-             timezone = COALESCE(:tz, timezone),
-             updated_at = NOW()
-         WHERE user_id = :uid',
+        "INSERT INTO profiles (
+            user_id, weight, height, age, gender, objective, activity_level, 
+            target_weight, target_time_weeks, timezone, updated_at
+        ) VALUES (
+            :uid, :w, :h, :a, :g, :o, :al, :tw, :ttw, :tz, NOW()
+        )
+        ON CONFLICT (user_id) DO UPDATE SET
+            weight = EXCLUDED.weight,
+            height = EXCLUDED.height,
+            age = EXCLUDED.age,
+            gender = EXCLUDED.gender,
+            objective = EXCLUDED.objective,
+            activity_level = EXCLUDED.activity_level,
+            target_weight = EXCLUDED.target_weight,
+            target_time_weeks = EXCLUDED.target_time_weeks,
+            timezone = COALESCE(EXCLUDED.timezone, profiles.timezone),
+            updated_at = NOW()",
         [
+            ':uid' => $userId,
             ':w'   => $weight,
             ':h'   => $height,
             ':a'   => $age,
@@ -124,7 +137,6 @@ function handle_update_profile(array $payload): never
             ':tw'  => $targetWeight,
             ':ttw' => $weeks,
             ':tz'  => $timezone,
-            ':uid' => $payload['user_id'],
         ]
     );
 

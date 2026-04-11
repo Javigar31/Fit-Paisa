@@ -259,10 +259,19 @@ function fp_ensure_schema(PDO $db): void
 
         // 3. Metadatos de Unidades en food_entries
         $db->exec("ALTER TABLE food_entries ADD COLUMN IF NOT EXISTS portion_amount DECIMAL(10,2) DEFAULT 100");
-        $db->exec("ALTER TABLE food_entries ADD COLUMN IF NOT EXISTS portion_unit VARCHAR(20) DEFAULT 'g'");
+        $db->exec("ALTER TABLE food_entries ADD COLUMN IF NOT EXISTS portion_unit VARCHAR(50) DEFAULT 'g'");
         $db->exec("ALTER TABLE food_entries ADD COLUMN IF NOT EXISTS unit_size VARCHAR(20)");
+
+        // 4. Suscripciones - Columnas faltantes para Admin
+        $db->exec("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()");
+        $db->exec("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS starts_at TIMESTAMPTZ");
+        $db->exec("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS ends_at TIMESTAMPTZ");
         
-        // 4. Enriquecer datos existentes (Una sola vez o si están NULL)
+        // Sincronizar datos si las nuevas columnas de timestamp están vacías
+        $db->exec("UPDATE subscriptions SET starts_at = start_date::timestamptz WHERE starts_at IS NULL AND start_date IS NOT NULL");
+        $db->exec("UPDATE subscriptions SET ends_at = end_date::timestamptz WHERE ends_at IS NULL AND end_date IS NOT NULL");
+
+        // 5. Enriquecer datos existentes (Una sola vez o si están NULL)
         // Huevos
         $db->exec("UPDATE food_catalog SET unit_name = 'Huevo', weight_std = 50, weight_small = 40, weight_medium = 50, weight_large = 60 
                    WHERE (name ILIKE '%huevo%entero%' OR name = 'Huevo') AND unit_name IS NULL");
