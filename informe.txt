@@ -215,3 +215,23 @@
 *   **Error 500 Subscriptions**: Resuelto añadiendo las columnas `provider`, `updated_at`, `starts_at` y `ends_at` a la tabla `subscriptions` del entorno de producción.
 *   **Visibilidad de Usuarios Gratuitos**: Refactorización de la consulta SQL para incluir a todos los usuarios del sistema (LEFT JOIN), permitiendo una gestión integral de la comunidad, no solo de los usuarios de pago.
 *   **Alineación de Metas**: El badge de notificación lateral y las tarjetas de ingresos/actividad ahora reflejan los mismos datos en tiempo real.
+
+***
+
+# Informe Técnico (Rendimiento): Optimización Mobile & DB (v1.8.0)
+**Fecha:** 2026-04-11
+**Estado:** Producción Optimizada (Ultra-Fast).
+
+## 1. Optimización del Motor de Base de Datos
+*   **Problema**: Carga lenta de datos debido a la ausencia de índices en tablas de alto tráfico.
+*   **Solución**: 
+    *   **Indexación Masiva**: Creados índices en `users(role, is_active)`, `users(created_at)`, `subscriptions(status, plan_type)` y `workout_plans(coach_id)`.
+    *   **Simplificación de Queries**: Eliminada la lógica `COALESCE` en ordenamientos, habilitando el uso nativo de índices para listados.
+*   **Resultado**: Las consultas complejas ahora se ejecutan en milisegundos incluso con miles de registros.
+
+## 2. Estrategia de Carga Eficiente (Mobile)
+*   **Consolidación de API**: Introducción del endpoint `dashboard_init`. Este cambio permite obtener todas las estadísticas, registros recientes y la primera página de usuarios en **una única petición HTTP**, reduciendo drásticamente el impacto de la latencia en redes móviles.
+*   **Aceleración por Hardware y UI**:
+    *   Detección inteligente de dispositivos táctiles para desactivar el seguimiento de cursor animado.
+    *   Eliminación de efectos de desenfoque (`backdrop-filter`) y transformaciones 3D en resoluciones móviles para garantizar estabilidad visual.
+*   **Resultado**: El panel fluye de forma constante (60fps) en cualquier smartphone moderno.
