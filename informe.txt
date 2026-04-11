@@ -199,3 +199,19 @@
     *   **Sincronización de Perfil**: Almacenamiento de `timezone` en la tabla `profiles`.
     *   **Vista Céntrica en el Cliente**: Los entrenadores y administradores visualizan los datos en la zona horaria del cliente, garantizando que el "Hoy" del cliente sea el mismo para el supervisor.
 *   **Resultado**: Registro nutricional y calendario 100% precisos en cualquier zona horaria.
+
+***
+
+# Informe Técnico (Global): Estabilización de Dashboards y Suscripciones (v1.6.8)
+**Fecha:** 2026-04-11
+**Estado:** Sistema robustecido. Dashboards operativos.
+
+## 1. Arquitectura de Perfiles Resiliente
+*   **Problema**: Los administradores y nuevos usuarios recibían errores 400 ya que el sistema esperaba datos físicos (peso/altura) que no existían para esos roles.
+*   **Solución**: Se implementó lógica de **UPSERT** en `api/profile.php`. Si el perfil no existe, se crea automáticamente con valores seguros durante la primera sincronización de zona horaria.
+*   **Resultado**: Sincronización de localización universal sin bloqueos según el rol.
+
+## 2. Estabilización del Panel Admin
+*   **Error 500 Subscriptions**: Resuelto añadiendo las columnas `provider`, `updated_at`, `starts_at` y `ends_at` a la tabla `subscriptions` del entorno de producción.
+*   **Visibilidad de Usuarios Gratuitos**: Refactorización de la consulta SQL para incluir a todos los usuarios del sistema (LEFT JOIN), permitiendo una gestión integral de la comunidad, no solo de los usuarios de pago.
+*   **Alineación de Metas**: El badge de notificación lateral y las tarjetas de ingresos/actividad ahora reflejan los mismos datos en tiempo real.
