@@ -78,17 +78,24 @@ function handle_update_profile(array $payload): never
         fp_error(405, 'Método no permitido.');
     }
 
-    $body   = fp_json_body();
-    $weight = (float) ($body['weight'] ?? 0);
-    $height = (float) ($body['height'] ?? 0);
-    $age    = (int)   ($body['age']    ?? 0);
+    $body    = fp_json_body();
+    $db      = fp_db();
+    $userId  = $payload['user_id'];
 
-    $gender    = fp_sanitize($body['gender']         ?? '', 10);
-    $objective = fp_sanitize($body['objective']      ?? '', 30);
-    $activity  = fp_sanitize($body['activity_level'] ?? '', 20);
-    $targetWeight = (float) ($body['target_weight'] ?? $weight);
-    $weeks = (int) ($body['target_time_weeks'] ?? 0);
-    $timezone = fp_sanitize($body['timezone'] ?? null, 50);
+    // 1. Obtener valores actuales para permitir actualizaciones parciales
+    $current = fp_query('SELECT * FROM profiles WHERE user_id = :uid', [':uid' => $userId])->fetch();
+
+    $weight = isset($body['weight']) ? (float)$body['weight'] : (float)($current['weight'] ?? 0);
+    $height = isset($body['height']) ? (float)$body['height'] : (float)($current['height'] ?? 0);
+    $age    = isset($body['age'])    ? (int)$body['age']      : (int)($current['age']    ?? 0);
+
+    $gender    = isset($body['gender'])         ? fp_sanitize($body['gender'], 10)         : ($current['gender']         ?? '');
+    $objective = isset($body['objective'])      ? fp_sanitize($body['objective'], 30)      : ($current['objective']      ?? '');
+    $activity  = isset($body['activity_level']) ? fp_sanitize($body['activity_level'], 20) : ($current['activity_level'] ?? '');
+    
+    $targetWeight = isset($body['target_weight'])      ? (float)$body['target_weight']      : (float)($current['target_weight']      ?? $weight);
+    $weeks        = isset($body['target_time_weeks']) ? (int)$body['target_time_weeks']    : (int)($current['target_time_weeks']    ?? 0);
+    $timezone     = isset($body['timezone'])          ? fp_sanitize($body['timezone'], 50) : ($current['timezone']          ?? null);
 
     $errors = [];
     if ($weight <= 0 || $weight > 500) $errors[] = 'Peso inválido.';
