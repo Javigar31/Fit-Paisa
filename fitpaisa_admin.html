@@ -518,6 +518,7 @@ async function loadStats(){
     document.getElementById('stat-week').textContent        = '+'+s.new_this_week+' esta semana';
     document.getElementById('badge-users').textContent      = s.total_users;
     document.getElementById('badge-coaches').textContent    = s.total_coaches;
+    document.getElementById('badge-subs').textContent       = s.active_subscriptions;
     
     // Revenue module
     const mrr = s.mrr_estimate || "0.00";
