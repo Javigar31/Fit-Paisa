@@ -266,6 +266,7 @@ function fp_ensure_schema(PDO $db): void
         $db->exec("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()");
         $db->exec("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS starts_at TIMESTAMPTZ");
         $db->exec("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS ends_at TIMESTAMPTZ");
+        $db->exec("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS provider VARCHAR(50)");
         
         // Sincronizar datos si las nuevas columnas de timestamp están vacías
         $db->exec("UPDATE subscriptions SET starts_at = start_date::timestamptz WHERE starts_at IS NULL AND start_date IS NOT NULL");

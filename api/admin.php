@@ -180,12 +180,13 @@ function handle_subscriptions(): never
     $mrrEstimate = (float) ($stats['mrr_estimate'] ?? 0);
 
     $subscriptions = fp_query("
-        SELECT s.subscription_id, s.plan_type, s.status, s.provider,
-               s.starts_at, s.ends_at,
-               u.full_name, u.email
-        FROM subscriptions s
-        JOIN users u ON u.user_id = s.user_id
-        ORDER BY s.starts_at DESC
+        SELECT u.user_id, u.full_name, u.email,
+               s.subscription_id, s.plan_type, s.status, s.provider,
+               s.starts_at, s.ends_at
+        FROM users u
+        LEFT JOIN subscriptions s ON s.user_id = u.user_id AND s.status = 'ACTIVE'
+        WHERE u.role = 'USER'
+        ORDER BY COALESCE(s.starts_at, u.created_at) DESC
         LIMIT 50
     ")->fetchAll();
 

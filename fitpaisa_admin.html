@@ -676,16 +676,16 @@ async function loadSubscriptions(){
     if (data.subscriptions.length === 0){
       tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted)">No hay suscripciones activas todavía.</td></tr>';
     } else {
-      const planLabel={PREMIUM_MONTHLY:'Premium',PREMIUM_ANNUAL:'Anual',FREE:'Free'};
+      const planLabel={PREMIUM_MONTHLY:'Premium',PREMIUM_ANNUAL:'Anual',FREE:'Gratuito'};
       const statusLabel={ACTIVE:'Activa',CANCELLED:'Cancelada',PENDING:'Pendiente',EXPIRED:'Expirada'};
       const statusClass={ACTIVE:'b-green',CANCELLED:'b-red',PENDING:'b-yellow',EXPIRED:'b-gray'};
       tbody.innerHTML = data.subscriptions.map(s=>`<tr>
         <td>${s.full_name}</td>
-        <td><span class="badge b-lime">${planLabel[s.plan_type]||s.plan_type}</span></td>
+        <td><span class="badge ${s.plan_type?'b-lime':'b-gray'}">${planLabel[s.plan_type]||'Gratuito'}</span></td>
         <td>${s.provider||'—'}</td>
-        <td style="color:var(--muted)">${fmtDate(s.starts_at)}</td>
-        <td style="color:var(--muted)">${fmtDate(s.ends_at)}</td>
-        <td><span class="badge ${statusClass[s.status]||'b-gray'}">${statusLabel[s.status]||s.status}</span></td>
+        <td style="color:var(--muted)">${s.starts_at?fmtDate(s.starts_at):'—'}</td>
+        <td style="color:var(--muted)">${s.ends_at?fmtDate(s.ends_at):'—'}</td>
+        <td><span class="badge ${statusClass[s.status]||'b-gray'}">${statusLabel[s.status]||'Inactivo'}</span></td>
       </tr>`).join('');
     }
   } catch(e){ console.error(e); }
