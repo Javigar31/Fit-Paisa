@@ -55,7 +55,6 @@ function handle_stats(): never
         SELECT COUNT(DISTINCT user_id)
         FROM subscriptions
         WHERE status = 'ACTIVE'
-          AND plan_type != 'FREE'
     ")->fetchColumn();
 
     $mrr = (float) fp_query("
