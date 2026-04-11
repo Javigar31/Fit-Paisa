@@ -26,6 +26,7 @@ $payload = jwt_require('ADMIN'); /* 401/403 si no es ADMIN */
 $action  = fp_sanitize($_GET['action'] ?? 'stats', 32);
 
 match ($action) {
+    'dashboard_init'  => handle_dashboard_init(),
     'stats'           => handle_stats(),
     'users'           => handle_users(),
     'coaches'         => handle_coaches(),
@@ -34,6 +35,63 @@ match ($action) {
     'update_user'     => handle_update_user($payload),
     default           => fp_error(400, "Acción '{$action}' no reconocida."),
 };
+
+/** 
+ * DASHBOARD INIT — Carga masiva para minimizar latencia en móviles
+ */
+function handle_dashboard_init(): never
+{
+    // 1. Stats
+    $statsData = fp_query("
+        SELECT
+            COUNT(*)                                                         AS total_users,
+            COUNT(*) FILTER (WHERE role = 'COACH')                          AS total_coaches,
+            COUNT(*) FILTER (WHERE role = 'USER')                           AS total_regular,
+            COUNT(*) FILTER (WHERE is_active = TRUE)                         AS active_users,
+            COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days') AS new_this_week
+        FROM users
+    ")->fetch();
+
+    $subMeta = fp_query("
+        SELECT 
+            COUNT(DISTINCT user_id) AS active_subs,
+            SUM(CASE
+                WHEN plan_type = 'PREMIUM_MONTHLY' THEN 9.99
+                WHEN plan_type = 'PREMIUM_ANNUAL'  THEN 99.99 / 12
+                ELSE 0
+            END) AS mrr
+        FROM subscriptions
+        WHERE status = 'ACTIVE'
+    ")->fetch();
+
+    // 2. Recent Activity (Logs)
+    $recent = fp_query("
+        SELECT user_id, full_name, email, role, is_active, created_at, last_login
+        FROM users ORDER BY created_at DESC LIMIT 10
+    ")->fetchAll();
+
+    // 3. Initial Users (Page 1)
+    $users = fp_query("
+        SELECT u.user_id, u.full_name, u.email, u.role, u.is_active, u.created_at, u.last_login,
+               s.plan_type AS subscription_plan
+        FROM users u
+        LEFT JOIN subscriptions s ON s.user_id = u.user_id AND s.status = 'ACTIVE'
+        ORDER BY u.created_at DESC LIMIT 15
+    ")->fetchAll();
+
+    $totalUsers = (int) $statsData['total_users'];
+
+    fp_success([
+        'stats' => array_merge($statsData, [
+            'active_subscriptions' => (int) ($subMeta['active_subs'] ?? 0),
+            'mrr_estimate'         => number_format((float)($subMeta['mrr'] ?? 0), 2, '.', '')
+        ]),
+        'recent' => $recent,
+        'users'  => $users,
+        'total'  => $totalUsers,
+        'pages'  => (int) ceil($totalUsers / 15)
+    ]);
+}
 
 /* ══════════════════════════════════════════════════════════════════════
    STATS — KPIs del dashboard

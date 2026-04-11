@@ -400,11 +400,13 @@ select.input{appearance:none;cursor:none}
 
 <script>
 // ── State ─────────────────────────────
-let appState = { profile: null };
+let appState = { profile: null, isMobile: window.innerWidth <= 768 || 'ontouchstart' in window };
 
 // ── AUTH CHECK ──
 (function checkAuth(){
   document.body.classList.add('ready');
+  if (appState.isMobile) document.body.classList.add('is-mobile');
+  
   const token = localStorage.getItem('fp_token');
   const user  = JSON.parse(localStorage.getItem('fp_user') || 'null');
   if (!token || !user || user.role !== 'ADMIN') {
@@ -416,20 +418,114 @@ let appState = { profile: null };
   const initialsValue = name.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
   document.getElementById('admin-initials').textContent = initialsValue;
   
-  // Detección de zona horaria
   appState.profile = user.profile || { timezone: null }; 
   detectAndSyncTimezone();
 })();
 
-// cursor
+// cursor (Sólo en Desktop)
 const cur=document.getElementById('cur'),ring=document.getElementById('cur-ring');
-let mx=0,my=0,rx=0,ry=0;
-document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.left=mx+'px';cur.style.top=my+'px'});
-(function a(){rx+=(mx-rx)*.1;ry+=(my-ry)*.1;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(a)})();
-document.querySelectorAll('button,.nav-item').forEach(el=>{
-  el.addEventListener('mouseenter',()=>{cur.style.width='20px';cur.style.height='20px'});
-  el.addEventListener('mouseleave',()=>{cur.style.width='10px';cur.style.height='10px'});
-});
+if (appState.isMobile) {
+  cur.style.display = 'none';
+  ring.style.display = 'none';
+  document.documentElement.style.cursor = 'auto';
+} else {
+  let mx=0,my=0,rx=0,ry=0;
+  document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.left=mx+'px';cur.style.top=my+'px'});
+  (function a(){rx+=(mx-rx)*.1;ry+=(my-ry)*.1;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(a)})();
+  document.querySelectorAll('button,.nav-item').forEach(el=>{
+    el.addEventListener('mouseenter',()=>{cur.style.width='20px';cur.style.height='20px'});
+    el.addEventListener('mouseleave',()=>{cur.style.width='10px';cur.style.height='10px'});
+  });
+}
+
+// ══ INIT DASHBOARD (ULTRA FAST) ══
+async function initDashboard(){
+  try {
+    const res  = await fetch('/api/admin.php?action=dashboard_init', {headers:fpHeaders()});
+    const data = await res.json();
+    if (!data.success) return;
+    
+    // Poblar Stats
+    const s = data.stats;
+    document.getElementById('stat-total-users').textContent = s.total_users;
+    document.getElementById('stat-premium').textContent     = s.active_subscriptions;
+    document.getElementById('stat-coaches').textContent     = s.total_coaches;
+    document.getElementById('stat-week').textContent        = '+'+s.new_this_week+' esta semana';
+    document.getElementById('badge-users').textContent      = s.total_users;
+    document.getElementById('badge-coaches').textContent    = s.total_coaches;
+    document.getElementById('badge-subs').textContent       = s.active_subscriptions;
+    
+    const mrr = s.mrr_estimate || "0.00";
+    document.getElementById('stat-mrr').textContent = mrr.replace('.', ',') + '€';
+    document.getElementById('stat-mrr-desc').textContent = 'Este mes · ' + s.active_subscriptions + ' suscripciones activas';
+    const goalPct = Math.min(100, Math.round((parseFloat(mrr) / 1200) * 100));
+    document.getElementById('stat-mrr-bar').style.width = goalPct + '%';
+    document.getElementById('stat-mrr-goal').textContent = goalPct + '% del objetivo mensual (1.200€)';
+    const uc = document.getElementById('users-count');
+    if(uc) uc.textContent = s.total_users + ' registros';
+
+    // Poblar Recent Activity
+    renderRecentActivity(data.recent);
+    
+    // Poblar Users (Page 1)
+    renderUsers(data.users, data.total, data.pages, 1);
+    
+  } catch(e) { console.error("Error en initDashboard:", e); }
+}
+
+function renderRecentActivity(recent) {
+    document.getElementById('recent-tbody').innerHTML = recent.length === 0
+      ? '<tr><td colspan="5" style="text-align:center;color:var(--muted)">Sin registros aún.</td></tr>'
+      : recent.map(u=>`<tr>
+          <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:26px;height:26px;font-size:10px">${initials(u.full_name)}</div>${u.full_name}</div></td>
+          <td style="color:var(--muted)">${u.email}</td>
+          <td>${roleBadge(u.role)}</td>
+          <td style="color:var(--muted)">${fmtDate(u.created_at)}</td>
+          <td>${statusBadge(u.is_active)}</td>
+        </tr>`).join('');
+        
+    // Sidebar Logs
+    const secLogs = document.getElementById('secLogs');
+    if (secLogs) {
+        secLogs.innerHTML = recent.slice(0,5).map(u=>`
+          <div class="log-item">
+            <div class="log-dot" style="background:${u.is_active?'var(--lime)':'var(--danger)'}"></div>
+            <div class="log-time">${fmtDate(u.created_at).split(' ')[1]||'—'}</div>
+            <div style="flex:1;color:var(--muted);font-size:12px">Registro — ${u.full_name}</div>
+          </div>`).join('') || '<div style="color:var(--muted);font-size:12px">Sin registros.</div>';
+    }
+    
+    const loginLogsTbody = document.getElementById('login-logs-tbody');
+    if (loginLogsTbody) {
+        loginLogsTbody.innerHTML = recent.map(u=>`<tr>
+          <td>${u.full_name}</td>
+          <td style="color:var(--muted)">${u.email}</td>
+          <td style="color:var(--muted)">${u.last_login ? fmtDate(u.last_login) : 'Nunca'}</td>
+          <td>${statusBadge(u.is_active)}</td>
+        </tr>`).join('');
+    }
+}
+
+function renderUsers(users, total, pages, page) {
+    const tbody = document.getElementById('users-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = users.length === 0
+      ? '<tr><td colspan="6" style="text-align:center;color:var(--muted)">No se encontraron usuarios.</td></tr>'
+      : users.map(u=>`<tr>
+          <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:26px;height:26px;font-size:10px">${initials(u.full_name)}</div>${u.full_name}</div></td>
+          <td style="color:var(--muted)">${u.email}</td>
+          <td>${roleBadge(u.role)}</td>
+          <td>${subBadge(u.subscription_plan)}</td>
+          <td>${statusBadge(u.is_active)}</td>
+          <td><div style="display:flex;gap:6px">
+            <button class="btn-ghost" onclick="openEditUserModal(${u.user_id},'${u.full_name.replace(/'/g,"\\'")  }','${u.role}',${u.is_active})">Editar</button>
+            <button class="btn-danger" onclick="openSuspendModal(${u.user_id},'${u.full_name.replace(/'/g,"\\'")  }',${u.is_active})">${u.is_active?'Suspender':'Activar'}</button>
+          </div></td>
+        </tr>`).join('');
+    document.getElementById('pagination-info').textContent = `Mostrando ${users.length} de ${total}`;
+    document.getElementById('btn-prev').disabled = page <= 1;
+    document.getElementById('btn-next').disabled = page >= pages;
+}
 
 // sections
 const secs=['overview','users','coaches','subs','logs','config'];
@@ -715,10 +811,28 @@ async function loadLogs(){
 }
 
 // ══ INIT ══
-loadStats();
-loadRecentActivity();
-loadUsers();
+initDashboard();
 </script>
+
+<style>
+/* Optimizaciones de rendimiento para Móviles */
+@media (max-width: 768px) {
+  .section { 
+    transition: opacity .3s ease !important; 
+    transform: none !important;
+    perspective: none !important;
+  }
+  .modal-overlay {
+    backdrop-filter: none !important;
+    background: rgba(0,0,0,0.85) !important;
+  }
+  .card:hover {
+    transform: none !important;
+    border-color: var(--border) !important;
+  }
+  .r { animation: none !important; } /* Desactivar animaciones de entrada en móvil */
+}
+</style>
 
 <!-- ═══ MODALS ═══ -->
 
