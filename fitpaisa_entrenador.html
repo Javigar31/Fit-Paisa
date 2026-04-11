@@ -370,6 +370,9 @@ select.input{cursor:none;appearance:none}
 </div><!-- /main -->
 
 <script>
+// ── State ─────────────────────────────
+let appState = { profile: null };
+
 // ── AUTH CHECK ──
 (function checkAuth(){
   document.body.classList.add('ready');
@@ -410,8 +413,6 @@ async function detectAndSyncTimezone() {
   }
 }
 
-// ── State ─────────────────────────────
-let appState = { profile: null };
 
 function logout(){
   localStorage.removeItem('fp_token');

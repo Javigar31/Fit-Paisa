@@ -178,8 +178,6 @@ select.input{appearance:none;cursor:none}
       table{min-width:640px}
     }
     .mobile-only { display: none; }
-
-        }
   </style>
 </head>
 <body>
@@ -347,11 +345,10 @@ select.input{appearance:none;cursor:none}
       <table>
         <thead><tr><th>Usuario</th><th>Plan</th><th>Proveedor</th><th>Inicio</th><th>Renovación</th><th>Estado</th></tr></thead>
         <tbody id="subs-tbody">
-          <tr><td colspan="6" style="text-align:center;color:var(--muted)">Cargando…</td></tr>
+          <tr><td colspan="6" style="text-align:center;color:var(--muted)">No hay suscripciones activas todavía.</td></tr>
         </tbody>
       </table>
       </div>
-      <div style="margin-top:14px;padding:12px;background:rgba(255,255,255,.03);border-radius:10px;font-size:12px;color:var(--muted)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Pasarela de pagos pendiente de integración (Stripe / PayPal). Los datos financieros aquí son los registrados en la BD interna.</div>
     </div>
   </div>
 
@@ -396,37 +393,34 @@ select.input{appearance:none;cursor:none}
           <button class="btn-lime" onclick="openModal('modal-config-saved')">Guardar configuración</button>
         </div>
       </div>
-      <div class="card">
-        <div class="card-title">Integraciones activas</div>
-        <div style="display:flex;flex-direction:column;gap:12px">
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px">
-            <div><div style="font-size:13px;font-weight:700">Stripe</div><div style="font-size:11px;color:var(--muted)">Pagos · PCI-DSS</div></div>
-            <span class="badge b-green"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><polyline points="20 6 9 17 4 12"/></svg> Conectado</span>
-          </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px">
-            <div><div style="font-size:13px;font-weight:700">PayPal</div><div style="font-size:11px;color:var(--muted)">Pagos alternativos</div></div>
-            <span class="badge b-green"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><polyline points="20 6 9 17 4 12"/></svg> Conectado</span>
-          </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px">
-            <div><div style="font-size:13px;font-weight:700">Servidor SMTP</div><div style="font-size:11px;color:var(--muted)">Notificaciones por email</div></div>
-            <span class="badge b-green"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><polyline points="20 6 9 17 4 12"/></svg> Conectado</span>
-          </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px">
-            <div><div style="font-size:13px;font-weight:700">TLS 1.2+</div><div style="font-size:11px;color:var(--muted)">Cifrado en tránsito</div></div>
-            <span class="badge b-green"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><polyline points="20 6 9 17 4 12"/></svg> Activa</span>
-          </div>
-        </div>
-        <div style="margin-top:14px">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Aviso legal obligatorio</div>
-          <div style="font-size:12px;color:var(--muted);background:rgba(255,255,255,.03);padding:10px;border-radius:8px;line-height:1.6">FitPaisa no sustituye asesoramiento médico profesional ni realiza diagnósticos clínicos.</div>
-        </div>
-      </div>
     </div>
   </div>
 
 </div>
 
 <script>
+// ── State ─────────────────────────────
+let appState = { profile: null };
+
+// ── AUTH CHECK ──
+(function checkAuth(){
+  document.body.classList.add('ready');
+  const token = localStorage.getItem('fp_token');
+  const user  = JSON.parse(localStorage.getItem('fp_user') || 'null');
+  if (!token || !user || user.role !== 'ADMIN') {
+    window.location.href = 'index.html';
+    return;
+  }
+  const name = user.name || 'Admin';
+  document.getElementById('admin-name').textContent = name;
+  const initialsValue = name.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
+  document.getElementById('admin-initials').textContent = initialsValue;
+  
+  // Detección de zona horaria
+  appState.profile = user.profile || { timezone: null }; 
+  detectAndSyncTimezone();
+})();
+
 // cursor
 const cur=document.getElementById('cur'),ring=document.getElementById('cur-ring');
 let mx=0,my=0,rx=0,ry=0;
@@ -469,29 +463,6 @@ function show(id, el){
 function tick(){const n=new Date();document.getElementById('clock').textContent=n.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+' · '+n.toLocaleDateString('es-ES')}
 tick();setInterval(tick,1000);
 
-// ═══ Modals ═══
-function openModal(id){document.getElementById(id).classList.add('open')}
-function closeModal(el){el.closest('.modal-overlay').classList.remove('open')}
-document.querySelectorAll('.modal-overlay').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')})});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'))});
-
-// ══ AUTH CHECK ══
-(function checkAuth(){
-  document.body.classList.add('ready');
-  const token = localStorage.getItem('fp_token');
-  const user  = JSON.parse(localStorage.getItem('fp_user') || 'null');
-  if (!token || !user || user.role !== 'ADMIN') {
-    window.location.href = 'index.html';
-    return;
-  }
-  const initials = name.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
-  document.getElementById('admin-initials').textContent = initials;
-  
-  // Detección de zona horaria
-  appState.profile = user.profile || { timezone: null }; 
-  detectAndSyncTimezone();
-})();
-
 // ── Date Helpers ──────────────────────
 function getLocalDateString(date = new Date()) {
   return date.toLocaleDateString('sv');
@@ -514,8 +485,11 @@ async function detectAndSyncTimezone() {
   }
 }
 
-// ── State ─────────────────────────────
-let appState = { profile: null };
+// ═══ Modals ═══
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(el){el.closest('.modal-overlay').classList.remove('open')}
+document.querySelectorAll('.modal-overlay').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')})});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'))});
 
 function logout(){
   localStorage.removeItem('fp_token');
@@ -544,19 +518,6 @@ async function loadStats(){
     document.getElementById('stat-week').textContent        = '+'+s.new_this_week+' esta semana';
     document.getElementById('badge-users').textContent      = s.total_users;
     document.getElementById('badge-coaches').textContent    = s.total_coaches;
-    
-    // Update Subs badge dynamically
-    const bSubs = document.getElementById('badge-subs');
-    if (bSubs) {
-      bSubs.textContent = s.active_subscriptions;
-      if (s.active_subscriptions > 0) {
-        bSubs.style.background = 'var(--limedim)';
-        bSubs.style.color = 'var(--lime)';
-      } else {
-        bSubs.style.background = 'rgba(255,255,255,.1)';
-        bSubs.style.color = 'var(--muted)';
-      }
-    }
     
     // Revenue module
     const mrr = s.mrr_estimate || "0.00";
@@ -691,29 +652,14 @@ async function confirmSuspend(){
 }
 
 // ══ HOOK show() para cargar datos lazy ══
-const _origShow=show;
-window.show=function(id,el){
-  _origShow(id,el);
-  if(id==='users')   loadUsers(currentPage,currentSearch);
-  if(id==='coaches') loadCoaches();
+const _origShowFn = show;
+window.show = function(id, el){
+  _origShowFn(id, el);
+  if (id === 'users')   loadUsers(currentPage, currentSearch);
+  if (id === 'coaches') loadCoaches();
+  if (id === 'subs')    loadSubscriptions();
+  if (id === 'logs')    loadLogs();
 };
-
-// ══ LEGACY MODAL HELPERS (mantener compatibilidad) ══
-function openEditUser(n,e,r,s,st){ openEditUserModal(0,n,r,st==='Activo'); }
-function openConfirmSuspend(n){ openSuspendModal(0,n,true); }
-function openConfirmModal(modalId,name){
-  const el=document.getElementById(modalId).querySelector('.target-name');
-  if(el)el.textContent=name;
-  openModal(modalId);
-}
-function openConfirmDeactivate(n){openConfirmModal('modal-confirm-deactivate',n)}
-function openConfirmValidate(n){openConfirmModal('modal-confirm-validate',n)}
-function openConfirmReject(n){openConfirmModal('modal-confirm-reject',n)}
-function openViewCoach(name,email,spec,clients){
-  document.getElementById('vc-name').textContent=name;
-  document.getElementById('vc-detail').innerHTML=`<div style="display:flex;flex-direction:column;gap:10px"><div style="font-size:13px"><strong>Correo:</strong> <span style="color:var(--muted)">${email}</span></div><div style="font-size:13px"><strong>Clientes activos:</strong> <span style="color:var(--muted)">${clients}</span></div></div>`;
-  openModal('modal-view-coach');
-}
 
 // ══ LOAD SUBSCRIPTIONS ══
 async function loadSubscriptions(){
@@ -766,16 +712,6 @@ async function loadLogs(){
     </tr>`).join('');
   } catch(e){ console.error(e); }
 }
-
-// ══ HOOK show() — cargar datos lazy al navegar ══
-const _origShowFn = show;
-window.show = function(id, el){
-  _origShowFn(id, el);
-  if (id === 'users')   loadUsers(currentPage, currentSearch);
-  if (id === 'coaches') loadCoaches();
-  if (id === 'subs')    loadSubscriptions();
-  if (id === 'logs')    loadLogs();
-};
 
 // ══ INIT ══
 loadStats();
@@ -830,46 +766,20 @@ loadUsers();
 <!-- Confirm Reject -->
 <div class="modal-overlay" id="modal-confirm-reject">
   <div class="modal-box" onclick="event.stopPropagation()">
-    <div class="modal-head"><h2>Rechazar Entrenador/a</h2><button class="modal-close" onclick="closeModal(this)">✕</button></div>
-    <div class="confirm-body"><span class="ico-warn">✕</span><p>¿Rechazar a <strong class="target-name"></strong>?</p><p style="font-size:12px">Se removerá su solicitud de entrenador/a.</p></div>
-    <div class="confirm-actions"><button class="btn-ghost" onclick="closeModal(this)">Cancelar</button><button class="btn-danger" onclick="closeModal(this)" style="padding:8px 24px">Rechazar</button></div>
-  </div>
-</div>
-
-<!-- Confirm Deactivate -->
-<div class="modal-overlay" id="modal-confirm-deactivate">
-  <div class="modal-box" onclick="event.stopPropagation()">
-    <div class="modal-head"><h2>Desactivar Entrenador/a</h2><button class="modal-close" onclick="closeModal(this)">✕</button></div>
-    <div class="confirm-body"><span class="ico-warn">⚠️</span><p>¿Desactivar a <strong class="target-name"></strong>?</p><p style="font-size:12px">Perderá acceso al panel de entrenador/a.</p></div>
-    <div class="confirm-actions"><button class="btn-ghost" onclick="closeModal(this)">Cancelar</button><button class="btn-danger" onclick="closeModal(this)" style="padding:8px 24px">Desactivar</button></div>
+    <div class="modal-head"><h2>Rechazar Solicitud</h2><button class="modal-close" onclick="closeModal(this)">✕</button></div>
+    <div class="confirm-body"><span class="ico-warn">✕</span><p>¿Rechazar la solicitud de <strong class="target-name"></strong>?</p></div>
+    <div class="confirm-actions"><button class="btn-ghost" onclick="closeModal(this)">Cancelar</button><button class="btn-danger" onclick="closeModal(this)">Confirmar rechazo</button></div>
   </div>
 </div>
 
 <!-- Config Saved -->
 <div class="modal-overlay" id="modal-config-saved">
   <div class="modal-box" onclick="event.stopPropagation()">
-    <div class="modal-head"><h2>Guardado</h2><button class="modal-close" onclick="closeModal(this)">✕</button></div>
-    <div class="confirm-body"><span class="ico-warn">✓</span><p>Configuración guardada correctamente.</p></div>
+    <div class="modal-head"><h2>Éxito</h2><button class="modal-close" onclick="closeModal(this)">✕</button></div>
+    <div class="confirm-body"><span class="ico-warn">✓</span><p>La configuración global ha sido actualizada.</p></div>
     <div class="confirm-actions"><button class="btn-lime" onclick="closeModal(this)">Entendido</button></div>
-  </div>
-</div>
-
-<!-- Add Coach -->
-<div class="modal-overlay" id="modal-add-coach">
-  <div class="modal-box" onclick="event.stopPropagation()">
-    <div class="modal-head"><h2>Añadir Entrenador/a</h2><button class="modal-close" onclick="closeModal(this)">✕</button></div>
-    <div class="modal-body">
-      <label class="label">Nombre completo</label><input class="input" placeholder="Nombre del entrenador/a"
-        onkeydown="if(event.key==='Enter') closeModal(this.closest('.modal-box').querySelector('.btn-lime'))">
-      <label class="label">Correo electrónico</label><input class="input" type="email" placeholder="correo@fitpaisa.com"
-        onkeydown="if(event.key==='Enter') closeModal(this.closest('.modal-box').querySelector('.btn-lime'))">
-      <label class="label">Especialidad</label><input class="input" placeholder="Ej: Fuerza / Nutrición"
-        onkeydown="if(event.key==='Enter') closeModal(this.closest('.modal-box').querySelector('.btn-lime'))">
-    </div>
-    <div class="modal-actions"><button class="btn-ghost" onclick="closeModal(this)">Cancelar</button><button class="btn-lime" onclick="closeModal(this)">Guardar</button></div>
   </div>
 </div>
 
 </body>
 </html>
-
