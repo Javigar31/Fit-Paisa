@@ -235,3 +235,34 @@
     *   Detección inteligente de dispositivos táctiles para desactivar el seguimiento de cursor animado.
     *   Eliminación de efectos de desenfoque (`backdrop-filter`) y transformaciones 3D en resoluciones móviles para garantizar estabilidad visual.
 *   **Resultado**: El panel fluye de forma constante (60fps) en cualquier smartphone moderno.
+
+***
+
+# Informe Técnico (Seguridad): Blindaje Extremo (v2.0.0)
+**Fecha:** 2026-04-12
+**Estado:** Desplegado en `master` y `testing`. Nivel de seguridad A+.
+
+## 1. Control de Abuso (Rate Limiting)
+*   **Mecanismo**: Implementada tabla `rate_limits` y lógica en `api/_db.php`.
+*   **Alcance**: 
+    *   **Login**: 10 intentos/minuto.
+    *   **Registro**: 5 cuentas/hora.
+    *   **Mensajería**: 30 mensajes/minuto.
+*   **Resiliencia**: El sistema es "fail-open"; si la base de datos de límites falla, el servicio principal continúa operando pero se registra el error.
+
+## 2. Protección de Datos e Inyecciones
+*   **Sanitización Robusta**: Función `fp_sanitize` rediseñada con soporte para tipos (`email`, `int`, `float`, `slug`, `string`).
+    *   Auditados todos los endpoints (`auth`, `nutrition`, `workouts`, `profile`, `admin`, `messages`) para usar esta validación estricta.
+*   **Cero Hardcoding**: Eliminados secretos y "fallbacks" en el código.
+    *   **Requerimiento Crítico**: Los entornos DEBEN configurar las variables `JWT_SECRET`, `SETUP_TOKEN` y `DIAG_TOKEN`.
+
+## 3. Seguridad Perimetral (HTTP)
+*   **Headers**: Implementada la inyección de cabeceras en cada petición:
+    *   `Strict-Transport-Security` (Producción).
+    *   `Content-Security-Policy` (Ajustado para permitir Google Fonts y Vercel).
+    *   `X-Frame-Options: DENY`.
+    *   `X-Content-Type-Options: nosniff`.
+
+## 4. Auditoría de Mantenimiento
+*   **Setup Secure**: El script `setup-db.php` está protegido con rate limit tras intentos fallidos y requiere un token del entorno.
+*   **Diagnóstico Protegido**: `diag_db.php` ya no expone secretos y requiere una llave dinámica definida en el servidor.
