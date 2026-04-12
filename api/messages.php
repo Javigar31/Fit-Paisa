@@ -47,8 +47,11 @@ function handle_send(array $payload): never
     }
 
     $body       = fp_json_body();
-    $receiverId = (int) ($body['receiver_id'] ?? 0);
-    $content    = fp_sanitize($body['content'] ?? '', 2000);
+    $receiverId = fp_sanitize($body['receiver_id'] ?? 0, 0, 'int');
+    $content    = fp_sanitize($body['content']     ?? '', 2000);
+
+    // Seguridad: Límite de 30 mensajes por minuto por IP para evitar SPAM
+    fp_rate_limit('messages_send', 30, 60);
 
     if ($receiverId <= 0) {
         fp_error(400, 'ID de destinatario inválido.');

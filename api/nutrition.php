@@ -54,18 +54,18 @@ function handle_log_food(array $payload): never
 
     $body      = fp_json_body();
     $foodName  = fp_sanitize($body['food_name']     ?? '', 200);
-    $portion   = (float) ($body['portion_grams']    ?? 0);
-    $calories  = (float) ($body['calories']         ?? 0);
-    $protein   = (float) ($body['protein']          ?? 0);
-    $carbs     = (float) ($body['carbs']            ?? 0);
-    $fat       = (float) ($body['fat']              ?? 0);
-    $mealType  = fp_sanitize($body['meal_type']     ?? 'SNACK', 20);
+    $portion   = fp_sanitize($body['portion_grams']    ?? 0, 0, 'float');
+    $calories  = fp_sanitize($body['calories']         ?? 0, 0, 'float');
+    $protein   = fp_sanitize($body['protein']          ?? 0, 0, 'float');
+    $carbs     = fp_sanitize($body['carbs']            ?? 0, 0, 'float');
+    $fat       = fp_sanitize($body['fat']              ?? 0, 0, 'float');
+    $mealType  = fp_sanitize($body['meal_type']     ?? 'SNACK', 20, 'slug');
     $logDate   = fp_sanitize($body['log_date']      ?? date('Y-m-d'), 10);
     
     // Metadatos de unidades
-    $pAmount   = isset($body['portion_amount']) ? (float)$body['portion_amount'] : null;
+    $pAmount   = isset($body['portion_amount']) ? fp_sanitize($body['portion_amount'], 0, 'float') : null;
     $pUnit     = isset($body['portion_unit'])   ? fp_sanitize($body['portion_unit'], 50) : null;
-    $uSize     = isset($body['unit_size'])     ? fp_sanitize($body['unit_size'], 20) : null;
+    $uSize     = isset($body['unit_size'])     ? fp_sanitize($body['unit_size'], 20, 'slug') : null;
 
     $errors = [];
     if (empty($foodName))   $errors[] = 'El nombre del alimento es obligatorio.';
@@ -211,21 +211,21 @@ function handle_edit_entry(array $payload): never
     }
 
     $body    = fp_json_body();
-    $entryId = (int) ($body['entry_id'] ?? 0);
+    $entryId = fp_sanitize($body['entry_id'] ?? 0, 0, 'int');
     
     if ($entryId <= 0) fp_error(400, 'ID de entrada inválido.');
 
     $foodName  = fp_sanitize($body['food_name']     ?? '', 200);
-    $portion   = (float) ($body['portion_grams']    ?? 0);
-    $calories  = (float) ($body['calories']         ?? 0);
-    $protein   = (float) ($body['protein']          ?? 0);
-    $carbs     = (float) ($body['carbs']            ?? 0);
-    $fat       = (float) ($body['fat']              ?? 0);
+    $portion   = fp_sanitize($body['portion_grams']    ?? 0, 0, 'float');
+    $calories  = fp_sanitize($body['calories']         ?? 0, 0, 'float');
+    $protein   = fp_sanitize($body['protein']          ?? 0, 0, 'float');
+    $carbs     = fp_sanitize($body['carbs']            ?? 0, 0, 'float');
+    $fat       = fp_sanitize($body['fat']              ?? 0, 0, 'float');
 
     // Metadatos de unidades
-    $pAmount   = isset($body['portion_amount']) ? (float)$body['portion_amount'] : null;
+    $pAmount   = isset($body['portion_amount']) ? fp_sanitize($body['portion_amount'], 0, 'float') : null;
     $pUnit     = isset($body['portion_unit'])   ? fp_sanitize($body['portion_unit'], 50) : null;
-    $uSize     = isset($body['unit_size'])     ? fp_sanitize($body['unit_size'], 20) : null;
+    $uSize     = isset($body['unit_size'])     ? fp_sanitize($body['unit_size'], 20, 'slug') : null;
 
     /* Validar propiedad */
     $owned = fp_query(

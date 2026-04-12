@@ -7,14 +7,24 @@
 declare(strict_types=1);
 require_once __DIR__ . '/_db.php';
 
-// Seguridad: En producción solo se permite con una llave específica
+// Seguridad: En producción solo se permite con una llave específica (Env Var: DIAG_TOKEN)
 $env = getenv('VERCEL_ENV') ?: 'local';
-$key = $_GET['key'] ?? '';
-$secret = 'fitpaisa_master_2026';
+$providedKey = $_GET['key'] ?? '';
+$secret = getenv('DIAG_TOKEN');
 
-if ($env === 'production' && $key !== $secret) {
-    header('HTTP/1.1 403 Forbidden');
-    die("Acceso denegado: Este script está protegido en Producción. Por favor, usa la llave de acceso (?key=...).");
+// Seguridad: Límite estricto de diagnóstico para evitar recolección de info
+fp_rate_limit('diag_db', 5, 3600);
+
+if ($env === 'production') {
+    if (!$secret || strlen($secret) < 16) {
+        error_log('[FitPaisa][SECURITY] DIAG_TOKEN no configurado o muy corto.');
+        fp_error(500, 'Diagnóstico deshabilitado por razones de seguridad.');
+    }
+    
+    if (!hash_equals($secret, $providedKey)) {
+        header('HTTP/1.1 403 Forbidden');
+        die("Acceso denegado: Este script está protegido.");
+    }
 }
 
 header('Content-Type: text/html; charset=utf-8');

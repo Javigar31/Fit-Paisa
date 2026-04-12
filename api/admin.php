@@ -139,7 +139,7 @@ function handle_stats(): never
 function handle_users(): never
 {
     $search = fp_sanitize($_GET['search'] ?? '', 150);
-    $page   = max(1, (int) ($_GET['page'] ?? 1));
+    $page   = max(1, fp_sanitize($_GET['page'] ?? 1, 0, 'int'));
     $limit  = 15;
     $offset = ($page - 1) * $limit;
 
@@ -267,8 +267,8 @@ function handle_update_user(array $adminPayload): never
     }
 
     $body     = fp_json_body();
-    $userId   = (int) ($body['user_id'] ?? 0);
-    $role     = fp_sanitize($body['role']      ?? '', 10);
+    $userId   = fp_sanitize($body['user_id'] ?? 0, 0, 'int');
+    $role     = fp_sanitize($body['role']      ?? '', 10, 'slug');
     $isActive = $body['is_active'] ?? null;
 
     if ($userId <= 0) {

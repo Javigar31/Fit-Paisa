@@ -31,10 +31,10 @@ function jwt_secret(): string
         return $secret;
     }
 
-    /* Fallback derivado: consistente en el mismo deployment pero más débil.
-     * Se recomienda SIEMPRE configurar JWT_SECRET en Vercel. */
-    $base = getenv('PGPASSWORD') ?: getenv('POSTGRES_PASSWORD') ?: 'fitpaisa-changeme-2026';
-    return hash('sha256', 'fitpaisa:' . $base);
+    /* Ya no permitiremos fallbacks derivados por seguridad. 
+     * El administrador DEBE configurar JWT_SECRET en el entorno. */
+    error_log('[FitPaisa][SECURITY] JWT_SECRET no configurado o muy corto.');
+    fp_error(500, 'Error de configuración de seguridad. Contacta al soporte.');
 }
 
 /**

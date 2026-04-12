@@ -56,14 +56,14 @@ function handle_get_profile(array $payload): never
     }
 
     $macros = calculate_macros(
-        (float) $profile['weight'],
-        (float) $profile['height'],
-        (int)   $profile['age'],
+        fp_sanitize($profile['weight'], 0, 'float'),
+        fp_sanitize($profile['height'], 0, 'float'),
+        fp_sanitize($profile['age'], 0, 'int'),
         $profile['gender'] ?: 'OTHER',
         $profile['objective'] ?: 'MAINTAIN',
         $profile['activity_level'] ?: 'MODERATE',
-        (float) ($profile['target_weight'] ?? 0),
-        (int) ($profile['target_time_weeks'] ?? 0)
+        fp_sanitize($profile['target_weight'] ?? 0, 0, 'float'),
+        fp_sanitize($profile['target_time_weeks'] ?? 0, 0, 'int')
     );
 
     fp_success(['profile' => $profile, 'macro_targets' => $macros]);
@@ -87,16 +87,16 @@ function handle_update_profile(array $payload): never
     $current = $stmt->fetch() ?: [];
 
     // Si no existe el perfil, usamos valores por defecto válidos para pasar la validación
-    $weight = isset($body['weight']) ? (float)$body['weight'] : (float)($current['weight'] ?? 70);
-    $height = isset($body['height']) ? (float)$body['height'] : (float)($current['height'] ?? 170);
-    $age    = isset($body['age'])    ? (int)$body['age']      : (int)($current['age']    ?? 30);
+    $weight = isset($body['weight']) ? fp_sanitize($body['weight'], 0, 'float') : fp_sanitize($current['weight'] ?? 70, 0, 'float');
+    $height = isset($body['height']) ? fp_sanitize($body['height'], 0, 'float') : fp_sanitize($current['height'] ?? 170, 0, 'float');
+    $age    = isset($body['age'])    ? fp_sanitize($body['age'], 0, 'int')     : fp_sanitize($current['age']    ?? 30, 0, 'int');
 
-    $gender    = isset($body['gender'])         ? fp_sanitize($body['gender'], 10)         : ($current['gender']         ?? 'OTHER');
-    $objective = isset($body['objective'])      ? fp_sanitize($body['objective'], 30)      : ($current['objective']      ?? 'MAINTAIN');
-    $activity  = isset($body['activity_level']) ? fp_sanitize($body['activity_level'], 20) : ($current['activity_level'] ?? 'MODERATE');
+    $gender    = isset($body['gender'])         ? fp_sanitize($body['gender'], 10, 'slug')         : ($current['gender']         ?? 'OTHER');
+    $objective = isset($body['objective'])      ? fp_sanitize($body['objective'], 30, 'slug')      : ($current['objective']      ?? 'MAINTAIN');
+    $activity  = isset($body['activity_level']) ? fp_sanitize($body['activity_level'], 20, 'slug') : ($current['activity_level'] ?? 'MODERATE');
     
-    $targetWeight = isset($body['target_weight'])      ? (float)$body['target_weight']      : (float)($current['target_weight']      ?? $weight);
-    $weeks        = isset($body['target_time_weeks']) ? (int)$body['target_time_weeks']    : (int)($current['target_time_weeks']    ?? 0);
+    $targetWeight = isset($body['target_weight'])      ? fp_sanitize($body['target_weight'], 0, 'float')      : fp_sanitize($current['target_weight'] ?? $weight, 0, 'float');
+    $weeks        = isset($body['target_time_weeks']) ? fp_sanitize($body['target_time_weeks'], 0, 'int')    : fp_sanitize($current['target_time_weeks'] ?? 0, 0, 'int');
     $timezone     = isset($body['timezone'])          ? fp_sanitize($body['timezone'], 50) : ($current['timezone']          ?? null);
 
     $errors = [];
@@ -162,12 +162,12 @@ function handle_setup_macros(array $payload): never
     }
 
     $body   = fp_json_body();
-    $weight = (float) ($body['weight'] ?? 0);
-    $height = (float) ($body['height'] ?? 0);
-    $age    = (int)   ($body['age'] ?? 0);
-    $objective = fp_sanitize($body['objective'] ?? 'MAINTAIN', 30);
-    $targetWeight = (float) ($body['target_weight'] ?? $weight);
-    $weeks = (int) ($body['target_time_weeks'] ?? 0);
+    $weight = fp_sanitize($body['weight'] ?? 0, 0, 'float');
+    $height = fp_sanitize($body['height'] ?? 0, 0, 'float');
+    $age    = fp_sanitize($body['age'] ?? 0, 0, 'int');
+    $objective = fp_sanitize($body['objective'] ?? 'MAINTAIN', 30, 'slug');
+    $targetWeight = fp_sanitize($body['target_weight'] ?? $weight, 0, 'float');
+    $weeks = fp_sanitize($body['target_time_weeks'] ?? 0, 0, 'int');
 
     if ($weight <= 0 || $weight > 500) fp_error(400, 'Peso inválido.');
     if ($height <= 0 || $height > 300) fp_error(400, 'Altura inválida.');
@@ -249,7 +249,7 @@ function handle_log_body(array $payload): never
     }
 
     $body   = fp_json_body();
-    $weight = (float) ($body['weight'] ?? 0);
+    $weight = fp_sanitize($body['weight'] ?? 0, 0, 'float');
 
     if ($weight <= 0) {
         fp_error(400, 'El peso es obligatorio y debe ser mayor a 0.');
@@ -290,7 +290,7 @@ function handle_log_body(array $payload): never
    ══════════════════════════════════════════════════════════════════════ */
 function handle_body_history(array $payload): never
 {
-    $days = min((int) ($_GET['days'] ?? 30), 365);
+    $days = min(fp_sanitize($_GET['days'] ?? 30, 0, 'int'), 365);
 
     $rows = fp_query(
         'SELECT bl.log_date, bl.weight, bl.waist, bl.hips, bl.chest
@@ -318,9 +318,9 @@ function calculate_macros(
     $targetWeight = 0.0,
     $weeks = 0
 ): array {
-    $weight = (float)($weight ?: 0);
-    $height = (float)($height ?: 0);
-    $age    = (int)($age ?: 25);
+    $weight = fp_sanitize($weight ?: 0, 0, 'float');
+    $height = fp_sanitize($height ?: 0, 0, 'float');
+    $age    = fp_sanitize($age ?: 25, 0, 'int');
     $gender = $gender ?: 'OTHER';
     $activity = $activity ?: 'MODERATE';
     $objective = $objective ?: 'MAINTAIN';

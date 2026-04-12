@@ -22,10 +22,18 @@ require_once __DIR__ . '/_db.php';
 header('Content-Type: application/json; charset=utf-8');
 
 /* ── Protección por token ─────────────────────────────────────────────── */
-$setupToken   = getenv('SETUP_TOKEN') ?: 'FITPAISA_SETUP_2026';
+$setupToken   = getenv('SETUP_TOKEN');
+
+if (!$setupToken || strlen($setupToken) < 16) {
+    error_log('[FitPaisa][SECURITY] SETUP_TOKEN no configurado o muy corto.');
+    fp_error(500, 'Error de configuración de seguridad. El setup está deshabilitado.');
+}
+
 $providedToken = $_GET['token'] ?? '';
 
 if (!hash_equals($setupToken, $providedToken)) {
+    // Seguridad: Límite muy estricto para intentos fallidos de setup
+    fp_rate_limit('setup_db_fail', 3, 3600);
     fp_error(403, 'Token inválido. Acceso denegado.');
 }
 

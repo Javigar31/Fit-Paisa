@@ -60,7 +60,7 @@ function handle_my_plans(array $payload): never
    ══════════════════════════════════════════════════════════════════════ */
 function handle_get_plan(array $payload): never
 {
-    $planId = (int) ($_GET['id'] ?? 0);
+    $planId = fp_sanitize($_GET['id'] ?? 0, 0, 'int');
     if ($planId <= 0) {
         fp_error(400, 'ID de plan inválido.');
     }
@@ -109,7 +109,7 @@ function handle_create_plan(array $payload): never
     }
 
     $body      = fp_json_body();
-    $userId    = (int) ($body['user_id']    ?? 0);
+    $userId    = fp_sanitize($body['user_id']    ?? 0, 0, 'int');
     $name      = fp_sanitize($body['name']  ?? '', 200);
     $startDate = fp_sanitize($body['start_date'] ?? date('Y-m-d'), 10);
     $endDate   = fp_sanitize($body['end_date']   ?? '', 10) ?: null;
@@ -160,13 +160,13 @@ function handle_add_exercise(array $payload): never
     }
 
     $body       = fp_json_body();
-    $planId     = (int) ($body['plan_id']      ?? 0);
+    $planId     = fp_sanitize($body['plan_id']      ?? 0, 0, 'int');
     $name       = fp_sanitize($body['name']    ?? '', 200);
-    $sets       = (int) ($body['sets']         ?? 0);
-    $reps       = (int) ($body['reps']         ?? 0);
-    $loadKg     = isset($body['load_kg'])  ? (float) $body['load_kg']  : null;
-    $restSecs   = (int) ($body['rest_seconds'] ?? 60);
-    $day        = fp_sanitize($body['day_of_week'] ?? '', 5);
+    $sets       = fp_sanitize($body['sets']         ?? 0, 0, 'int');
+    $reps       = fp_sanitize($body['reps']         ?? 0, 0, 'int');
+    $loadKg     = isset($body['load_kg'])  ? fp_sanitize($body['load_kg'], 0, 'float')  : null;
+    $restSecs   = fp_sanitize($body['rest_seconds'] ?? 60, 0, 'int');
+    $day        = fp_sanitize($body['day_of_week'] ?? '', 5, 'slug');
     $notes      = fp_sanitize($body['notes']   ?? '', 1000);
 
     $validDays = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
@@ -229,7 +229,7 @@ function handle_approve_plan(array $payload): never
     }
 
     $body   = fp_json_body();
-    $planId = (int) ($body['plan_id'] ?? 0);
+    $planId = fp_sanitize($body['plan_id'] ?? 0, 0, 'int');
 
     if ($planId <= 0) {
         fp_error(400, 'ID de plan inválido.');

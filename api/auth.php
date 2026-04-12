@@ -55,15 +55,18 @@ function handle_register(): never
 
     $body = fp_json_body();
 
+    // Seguridad: Límite de 5 registros por hora por IP para prevenir bots
+    fp_rate_limit('auth_register', 5, 3600);
+
     /* ── Validar y sanitizar campos obligatorios ── */
     $name       = fp_sanitize($body['name']      ?? '', 200);
-    $email      = fp_sanitize($body['email']     ?? '', 150);
+    $email      = fp_sanitize($body['email']     ?? '', 150, 'email');
     $phone      = fp_sanitize($body['phone']     ?? '', 30);
     $password   = $body['password'] ?? '';            /* No sanitizar: solo hashear */
     $gender     = fp_sanitize($body['gender']    ?? '', 10);
     $objectiveInput  = fp_sanitize($body['objective'] ?? '', 30);
-    $rawWeight       = (float) ($body['weight'] ?? 0);
-    $rawHeight       = (float) ($body['height'] ?? 0);
+    $rawWeight       = fp_sanitize($body['weight'] ?? 0, 0, 'float');
+    $rawHeight       = fp_sanitize($body['height'] ?? 0, 0, 'float');
     $plan            = fp_sanitize($body['plan'] ?? 'FREE', 20);
 
     if (!in_array($plan, ['FREE', 'PREMIUM_MONTHLY', 'PREMIUM_ANNUAL'], true)) {
@@ -294,8 +297,11 @@ function handle_login(): never
     }
 
     $body     = fp_json_body();
-    $email    = strtolower(fp_sanitize($body['email']    ?? '', 150));
+    $email    = strtolower(fp_sanitize($body['email']    ?? '', 150, 'email'));
     $password = $body['password'] ?? '';
+
+    // Seguridad: Límite de 10 intentos de login por minuto por IP
+    fp_rate_limit('auth_login', 10, 60);
 
     if (empty($email) || empty($password)) {
         fp_error(400, 'El correo electrónico y la contraseña son obligatorios.');

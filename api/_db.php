@@ -16,6 +16,9 @@ declare(strict_types=1);
 /** Instancia PDO compartida en el ciclo de vida de la función serverless */
 $_fp_pdo = null;
 
+// Seguridad: Cabeceras globales obligatorias
+fp_secure_headers();
+
 /**
  * Retorna (o crea) la conexión PDO a Neon PostgreSQL.
  *
@@ -128,18 +131,124 @@ function fp_success(array $data = [], int $code = 200): never
 }
 
 /**
- * Sanitiza y valida un string de entrada para prevenir XSS.
+ * Sanitiza una entrada de forma robusta según su tipo esperado.
  *
  * @param mixed  $value   Valor a sanitizar.
  * @param int    $maxLen  Longitud máxima permitida.
- * @return string         String limpio.
+ * @param string $type    Tipo esperado: 'string', 'email', 'int', 'float', 'slug'.
+ * @return mixed          Valor limpio.
  */
-function fp_sanitize(mixed $value, int $maxLen = 255): string
+function fp_sanitize(mixed $value, int $maxLen = 255, string $type = 'string'): mixed
 {
-    $str = trim((string) $value);
-    $str = strip_tags($str);
-    $str = htmlspecialchars($str, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-    return mb_substr($str, 0, $maxLen);
+    $val = trim((string) ($value ?? ''));
+    
+    switch ($type) {
+        case 'email':
+            $val = filter_var($val, FILTER_SANITIZE_EMAIL);
+            break;
+        case 'int':
+            return (int) $val;
+        case 'float':
+            return (float) $val;
+        case 'slug':
+            $val = preg_replace('/[^a-z0-9\-_]/', '', strtolower($val));
+            break;
+        default:
+            // XSS Prevention: remove tags and encode HTML entities
+            $val = strip_tags($val);
+            $val = htmlspecialchars($val, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            break;
+    }
+    
+    return mb_substr($val, 0, $maxLen);
+}
+
+/**
+ * Añade cabeceras de seguridad HTTP robustas.
+ * Se llama al inicio de cada petición.
+ */
+function fp_secure_headers(): void
+{
+    if (headers_sent()) return;
+
+    // Prevenir Clickjacking
+    header('X-Frame-Options: DENY');
+    // Prevenir sniffing de MIME types
+    header('X-Content-Type-Options: nosniff');
+    // Forzar HTTPS (HSTS) - solo en producción
+    $env = getenv('VERCEL_ENV') ?: 'local';
+    if ($env === 'production') {
+        header('Strict-Transport-Security: max-age=31536000; includeSubDomains; preload');
+    }
+    // Protección XSS básica del navegador (obsoleta pero ayuda en navegadores viejos)
+    header('X-XSS-Protection: 1; mode=block');
+    // Referrer Policy
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+    // Content Security Policy (Básica - ajustar según necesidades)
+    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.vercel.app");
+}
+
+/**
+ * Controla el límite de peticiones por IP y Endpoint.
+ *
+ * @param string $endpoint Identificador del recurso (ej: 'auth_login').
+ * @param int    $limit    Máximo de peticiones permitidas.
+ * @param int    $seconds  Ventana de tiempo en segundos.
+ * @return void            Aborta con 429 si se excede el límite.
+ */
+function fp_rate_limit(string $endpoint, int $limit = 60, int $seconds = 60): void
+{
+    $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    // Tomamos solo la primera IP si hay una lista (Vercel/Proxy)
+    $ip = trim(explode(',', $ip)[0]);
+    $key = hash('sha256', "rate:{$ip}:{$endpoint}");
+    
+    $now = date('Y-m-d H:i:s');
+    
+    // 1. Limpiar registros expirados (Opcional: hacerlo periódicamente, aquí por simplicidad)
+    // 2. Transacción de chequeo
+    try {
+        $db = fp_db();
+        $record = fp_query(
+            "SELECT hits, reset_at FROM rate_limits WHERE rate_key = :key",
+            [':key' => $key]
+        )->fetch();
+
+        if (!$record) {
+            // Primer hit
+            $resetAt = date('Y-m-d H:i:s', time() + $seconds);
+            fp_query(
+                "INSERT INTO rate_limits (rate_key, hits, reset_at) VALUES (:key, 1, :reset)",
+                [':key' => $key, ':reset' => $resetAt]
+            );
+            return;
+        }
+
+        if (time() > strtotime($record['reset_at'])) {
+            // Ventana expirada: resetear
+            $resetAt = date('Y-m-d H:i:s', time() + $seconds);
+            fp_query(
+                "UPDATE rate_limits SET hits = 1, reset_at = :reset WHERE rate_key = :key",
+                [':key' => $key, ':reset' => $resetAt]
+            );
+            return;
+        }
+
+        if ($record['hits'] >= $limit) {
+            header('Retry-After: ' . (strtotime($record['reset_at']) - time()));
+            fp_error(429, 'Demasiadas peticiones. Por favor, espera un momento.');
+        }
+
+        // Incrementar hit
+        fp_query(
+            "UPDATE rate_limits SET hits = hits + 1 WHERE rate_key = :key",
+            [':key' => $key]
+        );
+
+    } catch (Exception $e) {
+        // En caso de error de BD en rate limiting, fallar silenciosamente (fail-open) para no romper la app
+        error_log("[FitPaisa][RATE_LIMIT] " . $e->getMessage());
+    }
 }
 
 /**
@@ -297,6 +406,13 @@ function fp_ensure_schema(PDO $db): void
         $db->exec("UPDATE food_catalog SET is_liquid = TRUE 
                    WHERE (name ILIKE '%leche%' OR name ILIKE '%aceite%' OR name ILIKE '%vino%' OR name ILIKE '%bebida%' OR name ILIKE '%zumo%') 
                    AND is_liquid = FALSE");
+
+        // 7. Rate Limiting Table
+        $db->exec("CREATE TABLE IF NOT EXISTS rate_limits (
+            rate_key VARCHAR(255) PRIMARY KEY,
+            hits INTEGER DEFAULT 1,
+            reset_at TIMESTAMPTZ NOT NULL
+        )");
         
     } catch (PDOException $e) {
         error_log('[FitPaisa][SCHEMA] Fallo en auto-migración: ' . $e->getMessage());
