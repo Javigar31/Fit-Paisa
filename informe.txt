@@ -287,3 +287,8 @@ Se realiza un `git reset --hard 79defe0` para limpiar la rama de pruebas de traz
 ## 3. Estado del Repositorio
 *   **Testing**: Actualizada con `diag_v3_testing.php`.
 *   **Master**: Actualizada con `diag_v3_prod.php`.
+
+## 4. Backup de Seguridad 🛡️
+*   **Rama**: `backup-safe-2026-04-13`.
+*   **Tag**: `stable-v3-pre-refactor`.
+*   **Propósito**: Punto de retorno garantizado antes de iniciar la refactorización monolítica de controladores.
