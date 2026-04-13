@@ -266,3 +266,24 @@ Se intentó estabilizar la autenticación y los paneles de control en el entorno
 
 ## 4. Decisión Técnica
 Se realiza un `git reset --hard 79defe0` para limpiar la rama de pruebas de trazados de depuración (`try-catch` masivos) y archivos temporales (`auth_direct.php`, `check_files.php`).
+
+***
+
+# Informe Técnico (Diagnóstico): Validación de Infraestructura (v3.0.0)
+**Fecha:** 2026-04-13
+**Estado:** Estable. Diagnósticos en verde en Testing y Producción.
+
+## 1. Implementación de Diagnóstico v3
+*   **Aislamiento**: Se han desplegado `api/diag_v3_testing.php` y `api/diag_v3_prod.php`. Son scripts monolíticos que no dependen de inclusiones externas.
+*   **Resultados**:
+    *   **Conexión**: 100% exitosa en ambos entornos (~650ms).
+    *   **Prioridad de Credenciales**: Se confirma que `DB_PASSWORD_NUEVA` es la llave maestra para evitar fallos de autenticación en Neon/Vercel.
+    *   **Entorno**: PHP 8.3.8 detectado con extensiones `mbstring` y `pdo_pgsql` operativas.
+
+## 2. Hallazgos Estratégicos
+*   **Causa de Errores 500**: La disparidad entre el éxito de los diagnósticos (1 archivo) y el fallo de la web (múltiples `require_once`) apunta a una inestabilidad en el sistema de archivos o límites de recursos en Vercel al procesar inclusiones profundas.
+*   **Estrategia Confirmada**: La solución para mañana será la "Consolidación Monolítica": inyectar la lógica de conexión y JWT directamente en los controladores críticos (`coach.php`, `workouts.php`) eliminando los `require_once` de archivos base.
+
+## 3. Estado del Repositorio
+*   **Testing**: Actualizada con `diag_v3_testing.php`.
+*   **Master**: Actualizada con `diag_v3_prod.php`.
