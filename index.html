@@ -2191,26 +2191,30 @@
       if (currentObject) scene.remove(currentObject);
     }
 
+    const createFPTexture = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+      // Resplandor blanco
+      ctx.shadowColor = 'white';
+      ctx.shadowBlur = 45;
+      ctx.fillStyle = 'white';
+      ctx.font = 'bold 130px "Bebas Neue", Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('FP', 128, 128);
+      
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.needsUpdate = true;
+      return texture;
+    };
+
     let currentMode = 'particle_dumbbell';
     function setMode(mode) {
       currentMode = mode;
       clearCurrent();
       const group = new THREE.Group();
-
-      // Glass Material Base
-      const glassMat = new THREE.MeshPhysicalMaterial({
-        color: accentColor,
-        metalness: 0.1,
-        roughness: 0.1,
-        transmission: 0.7,
-        thickness: 0.5,
-        transparent: true,
-        opacity: 0.5,
-        clearcoat: 1,
-        clearcoatRoughness: 0.1,
-        emissive: accentColor,
-        emissiveIntensity: 0.1
-      });
 
       if (mode === 'particle_dumbbell') {
         // Escena Oficial: Mancuerna de Partículas (Fondo)
@@ -2281,6 +2285,28 @@
 
         const particles = new THREE.Points(geom, shaderMat);
         group.add(particles);
+
+        // --- Adición de Monograma FP Brillante en los Discos ---
+        const fpTex = createFPTexture();
+        const fpGeom = new THREE.PlaneGeometry(1.6, 1.6);
+        const fpMat = new THREE.MeshBasicMaterial({ 
+          map: fpTex, 
+          transparent: true, 
+          opacity: 0.95,
+          side: THREE.DoubleSide
+        });
+
+        // Plano Izquierdo (Cara exterior)
+        const fpLeft = new THREE.Mesh(fpGeom, fpMat);
+        fpLeft.position.set(-2.8, 0, 0);
+        fpLeft.rotation.y = -Math.PI / 2;
+        group.add(fpLeft);
+
+        // Plano Derecho (Cara exterior)
+        const fpRight = new THREE.Mesh(fpGeom, fpMat);
+        fpRight.position.set(2.8, 0, 0);
+        fpRight.rotation.y = Math.PI / 2;
+        group.add(fpRight);
       }
 
       // Centrado absoluto para el fondo
