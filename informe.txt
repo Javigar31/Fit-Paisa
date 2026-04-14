@@ -319,3 +319,26 @@ Se realiza un `git reset --hard 79defe0` para limpiar la rama de pruebas de traz
 *   **Backup**: Se mantiene el punto de restauración `stable-v3-pre-refactor` como medida de seguridad adicional.
 
 ***
+
+# Informe Técnico (Branding): Identidad 3D y Optimizaciones (v3.2.0)
+**Fecha:** 2026-04-14
+**Estado:** PRODUCCIÓN ESTABLE. Mejoras visuales desplegadas en `master` y `testing`.
+
+## 1. Consolidación de Identidad Visual (Favicon)
+*   **Formato SVG Dinámico**: Se ha implementado un favicon basado en SVG vectorial para garantizar la máxima nitidez en todas las resoluciones.
+*   **Efectos de Brillo**: Uso de filtros `drop-shadow` en el monograma FP, logrando un resplandor blanco/rojo que destaca en las pestañas del navegador (modo oscuro y claro).
+*   **Compatibilidad**: El archivo `favicon.png` de alta resolución se mantiene en el servidor como recurso alternativo.
+
+## 2. Renovación del Motor de Fondo 3D (`index.html`)
+*   **Monograma FP de Partículas**: Se ha sustituido la geometría plana del logo por un sistema dinámico de partículas muestreadas mediante canvas en tiempo real.
+*   **Sincronización de Pulso**: El monograma utiliza ahora la misma lógica de onda que la mancuerna principal. Las partículas blancas palpitan y vibran en perfecta sintonía con el latido del modelo 3D.
+*   **Incrustación Volumétrica**: 
+    *   Se ha inyectado profundidad aleatoria (eje Z) a las partículas del logo.
+    *   El texto ya no se ve como una "pegatina" externa, sino que está físicamente integrado dentro de la nube de partículas de los discos laterales.
+*   **Dinámica de Color**: Implementación de un shader personalizado que interpola el color de las partículas entre el rojo corporativo (`accentColor`) y el blanco puro durante la fase de pulsación intensa.
+
+## 3. Estado del Repositorio
+*   **Despliegue General**: Se han sincronizado las ramas `testing` y `master`.
+*   **Rendimiento**: Se han optimizado los shaders 3D para mantener ~60 FPS incluso con el triple de densidad de partículas en los monogramas de marca.
+
+***
