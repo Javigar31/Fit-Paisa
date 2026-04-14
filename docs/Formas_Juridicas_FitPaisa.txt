@@ -1,0 +1,53 @@
+TAREA 05.02: FORMAS JURIDICAS - FITPAISA
+
+Proyecto: FitPaisa (Plataforma SaaS de Fitness y Nutricion)
+Promotor: Javier Andres Garcia Vargas
+Fecha: 14 de abril de 2026
+
+========================================================================
+1. ELECCION DE LA FORMA JURIDICA DE LA EMPRESA
+========================================================================
+
+Para el proyecto FitPaisa, se ha seleccionado la forma juridica de SOCIEDAD DE RESPONSABILIDAD LIMITADA (S.L.).
+
+Justificacion de la eleccion:
+-----------------------------
+* Responsabilidad Limitada: Como plataforma tecnologica que gestiona datos de salud, suscripciones y planes de entrenamiento, es vital proteger el patrimonio personal del socio. En una S.L., la responsabilidad se limita al capital aportado.
+
+* Imagen Profesional: Al interactuar con entrenadores (Coaches) y potenciales socios corporativos, la figura de S.L. aporta mayor credibilidad y solidez que la de empresario individual (Autonomo).
+
+* Escalabilidad: Esta estructura permite la entrada de futuros inversores o socios mediante la transmision de participaciones sociales, facilitando el crecimiento de la plataforma.
+
+* Coste de Constitucion: El capital minimo requerido (3.000 euros) es accesible para una startup de software y los costes de gestion son asimilables una vez la plataforma genera ingresos recurrentes.
+
+
+========================================================================
+2. TRAMITACION Y PASOS PARA LA CONSTITUCION DE FITPAISA S.L.
+========================================================================
+
+Para constituir legalmente la empresa en España, los pasos a seguir son los siguientes:
+
+PASO 1: Certificacion Negativa de Denominacion
+Solicitud en el Registro Mercantil Central de un certificado que acredite que el nombre "FitPaisa S.L." no esta siendo utilizado por otra sociedad.
+
+PASO 2: Apertura de Cuenta Bancaria y Deposito de Capital
+Apertura de una cuenta a nombre de la sociedad en formacion y deposito del capital social minimo (3.000 euros). El banco emitira un certificado de deposito necesario para el notario.
+
+PASO 3: Redaccion de los Estatutos Sociales
+Elaboracion de las normas que regiran la empresa (objeto social, domicilio, sistema de administracion, etc.).
+
+PASO 4: Escritura Publica ante Notario
+Firma de la escritura de constitucion por parte de los socios ante notario. Se debe aportar el certificado de nombre, los estatutos y el certificado bancario.
+
+PASO 5: Obtencion del NIF Provisional
+Solicitud en la Agencia Tributaria del Numero de Identificacion Fiscal (NIF) provisional para poder operar inmediatamente.
+
+PASO 6: Inscripcion en el Registro Mercantil
+Presentacion de la escritura en el Registro Mercantil de la provincia correspondiente para obtener la personalidad juridica definitiva.
+
+PASO 7: Alta en el IAE y Seguridad Social
+Alta en el Censo de Empresarios (Modelo 036) y alta de los socios en el regimen correspondiente de la Seguridad Social (RETA).
+
+------------------------------------------------------------------------
+Nota: Se recomienda realizar gran parte de estos tramites a traves del sistema CIRCE mediante el Documento Unico Electronico (DUE) para agilizar tiempos y reducir costes.
+------------------------------------------------------------------------
