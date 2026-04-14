@@ -1,451 +1,214 @@
 <?php
 /**
- * FitPaisa — Endpoint de Autenticación
+ * FitPaisa — Endpoint de Autenticación (Consolidado)
  *
- * Gestiona el registro de nuevos usuarios y el inicio de sesión.
- * Todas las operaciones usan sentencias preparadas PDO para prevenir SQL Injection.
- * Las contraseñas se almacenan con password_hash() BCRYPT cost-12.
- *
- * Rutas disponibles:
- *   POST /api/auth.php?action=register  → Registro de nuevo usuario (4 pasos del frontend)
- *   POST /api/auth.php?action=login     → Inicio de sesión
- *   GET  /api/auth.php?action=me        → Datos del usuario autenticado (requiere JWT)
+ * Gestión de registro e inicio de sesión.
+ * Versión MONOLÍTICA para máxima estabilidad en Vercel.
  *
  * @package  FitPaisa\Api
  * @author   Javier Andrés García Vargas
- * @version  1.0.0
+ * @version  2.0.0 (Monolithic)
  */
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/_db.php';
-require_once __DIR__ . '/_jwt.php';
+/* ══════════════════════════════════════════════════════════════════════
+   CORE HELPERS (Inyectados)
+   ══════════════════════════════════════════════════════════════════════ */
+
+$_fp_pdo = null;
+
+function fp_db(): PDO
+{
+    global $_fp_pdo;
+    if ($_fp_pdo instanceof PDO) return $_fp_pdo;
+    $env = getenv('VERCEL_ENV') ?: 'local';
+    if ($env === 'production') {
+        $host = getenv('PGHOST_PROD')     ?: getenv('POSTGRES_HOST');
+        $user = getenv('PGUSER_PROD')     ?: getenv('POSTGRES_USER');
+        $pass = getenv('DB_PASSWORD_NUEVA') ?: getenv('PGPASSWORD_PROD') ?: getenv('POSTGRES_PASSWORD');
+        $db   = getenv('PGDATABASE_PROD') ?: 'neondb';
+    } else {
+        $host = getenv('PGHOST')          ?: getenv('POSTGRES_HOST');
+        $user = getenv('PGUSER')          ?: getenv('POSTGRES_USER');
+        $pass = getenv('DB_PASSWORD_NUEVA') ?: getenv('PGPASSWORD') ?: getenv('POSTGRES_PASSWORD');
+        $db   = getenv('PGDATABASE')      ?: 'fitpaisa_testing';
+        if ($env === 'preview' || empty(getenv('PGDATABASE'))) $db = 'fitpaisa_testing';
+    }
+    $dsn = "pgsql:host={$host};port=5432;dbname={$db};sslmode=require";
+    try {
+        $_fp_pdo = new PDO($dsn, $user, $pass, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+             PDO::ATTR_EMULATE_PREPARES => true,
+            PDO::ATTR_TIMEOUT => 10
+        ]);
+    } catch (PDOException $e) {
+        error_log('[FitPaisa][DB] Auth Fallo: ' . $e->getMessage());
+        header('Content-Type: application/json'); http_response_code(500);
+        echo json_encode(['success'=>false, 'message'=>'Error de conexión.']); exit;
+    }
+    return $_fp_pdo;
+}
+
+function fp_query(string $sql, array $params = []): PDOStatement
+{
+    try {
+        $stmt = fp_db()->prepare($sql);
+        $stmt->execute($params);
+        return $stmt;
+    } catch (PDOException $e) {
+        error_log('[FitPaisa][QUERY] ' . $e->getMessage());
+        fp_error(500, 'Error interno.');
+    }
+}
+
+function fp_error(int $code, string $message): never
+{
+    http_response_code($code); header('Content-Type: application/json');
+    echo json_encode(['success'=>false, 'message'=>htmlspecialchars($message, ENT_QUOTES, 'UTF-8')], JSON_UNESCAPED_UNICODE); exit;
+}
+
+function fp_success(array $data = [], int $code = 200): never
+{
+    http_response_code($code); header('Content-Type: application/json');
+    echo json_encode(array_merge(['success'=>true], $data), JSON_UNESCAPED_UNICODE); exit;
+}
+
+function fp_sanitize(mixed $value, int $maxLen = 255, string $type = 'string'): mixed
+{
+    $val = trim((string)($value ?? ''));
+    switch ($type) {
+        case 'email': $val = filter_var($val, FILTER_SANITIZE_EMAIL); break;
+        case 'int': return (int)$val;
+        case 'float': return (float)$val;
+        case 'slug': $val = preg_replace('/[^a-z0-9\-_]/', '', strtolower($val)); break;
+        default: $val = strip_tags($val); $val = htmlspecialchars($val, ENT_QUOTES | ENT_HTML5, 'UTF-8'); break;
+    }
+    return mb_substr($val, 0, $maxLen);
+}
+
+function fp_json_body(): array
+{
+    $raw = file_get_contents('php://input');
+    return is_string($raw) ? (json_decode($raw, true) ?: []) : [];
+}
+
+function fp_cors(): void
+{
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+    header("Access-Control-Allow-Origin: " . ($origin ?: '*'));
+    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization');
+    header('Access-Control-Allow-Credentials: true');
+    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
+}
+
+function fp_rate_limit(string $endpoint, int $limit = 60, int $seconds = 60): void
+{
+    $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $ip = trim(explode(',', $ip)[0]);
+    $key = hash('sha256', "rate:{$ip}:{$endpoint}");
+    try {
+        $db = fp_db();
+        $record = fp_query("SELECT hits, reset_at FROM rate_limits WHERE rate_key = :key", [':key' => $key])->fetch();
+        if (!$record || time() > strtotime($record['reset_at'])) {
+            $resetAt = date('Y-m-d H:i:s', time() + $seconds);
+            fp_query("INSERT INTO rate_limits (rate_key, hits, reset_at) VALUES (:key, 1, :reset) ON CONFLICT (rate_key) DO UPDATE SET hits=1, reset_at=:reset", [':key'=>$key, ':reset'=>$resetAt]);
+            return;
+        }
+        if ($record['hits'] >= $limit) fp_error(429, 'Demasiadas peticiones.');
+        fp_query("UPDATE rate_limits SET hits = hits + 1 WHERE rate_key = :key", [':key' => $key]);
+    } catch (Exception $e) { error_log("[FitPaisa][RATE] " . $e->getMessage()); }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   JWT LOGIC
+   ══════════════════════════════════════════════════════════════════════ */
+
+function jwt_create(array $payload): string
+{
+    $secret = getenv('JWT_SECRET');
+    $now = time();
+    $header = rtrim(strtr(base64_encode(json_encode(['alg'=>'HS256','typ'=>'JWT'])), '+/', '-_'), '=');
+    $payload = array_merge($payload, ['iat' => $now, 'exp' => $now + 7200]);
+    $body = rtrim(strtr(base64_encode(json_encode($payload)), '+/', '-_'), '=');
+    $signature = rtrim(strtr(base64_encode(hash_hmac('sha256', "{$header}.{$body}", $secret, true)), '+/', '-_'), '=');
+    return "{$header}.{$body}.{$signature}";
+}
+
+function jwt_require(): array
+{
+    $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+    if (!str_starts_with($authHeader, 'Bearer ')) fp_error(401, 'No autenticado.');
+    $token = substr($authHeader, 7);
+    $parts = explode('.', $token);
+    if (count($parts) !== 3) fp_error(401, 'Token inválido.');
+    $secret = getenv('JWT_SECRET');
+    [$h, $b, $s] = $parts;
+    $expected = rtrim(strtr(base64_encode(hash_hmac('sha256', "{$h}.{$b}", $secret, true)), '+/', '-_'), '=');
+    if (!hash_equals($expected, $s)) fp_error(401, 'Firma inválida.');
+    $payload = json_decode(base64_decode(strtr($b, '-_', '+/')), true);
+    if (!isset($payload['exp']) || $payload['exp'] < time()) fp_error(401, 'Expirado.');
+    return $payload;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   AUTH ACTIONS
+   ══════════════════════════════════════════════════════════════════════ */
 
 fp_cors();
-
-$action = fp_sanitize($_GET['action'] ?? '', 32);
+$action = fp_sanitize($_GET['action'] ?? '', 32, 'slug');
 
 match ($action) {
     'register' => handle_register(),
     'login'    => handle_login(),
     'me'       => handle_me(),
-    default    => fp_error(400, "Acción '{$action}' no reconocida."),
+    default    => fp_error(400, "Acción desconocida."),
 };
 
-/* ══════════════════════════════════════════════════════════════════════
-   REGISTRO
-   ══════════════════════════════════════════════════════════════════════ */
-
-/**
- * Registra un nuevo usuario con perfil físico inicial.
- *
- * Espera un JSON body con:
- *   name, email, phone, password, gender, objective, weight, height
- *
- * El paso de pago del frontend se registra como suscripción FREE hasta
- * que la pasarela confirme el cobro vía webhook.
- *
- * @return never
- */
 function handle_register(): never
 {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        fp_error(405, 'Método no permitido.');
-    }
-
     $body = fp_json_body();
-
-    // Seguridad: Límite de 5 registros por hora por IP para prevenir bots
     fp_rate_limit('auth_register', 5, 3600);
+    $email = strtolower(fp_sanitize($body['email'] ?? '', 150, 'email'));
+    if (empty($email) || empty($body['password'])) fp_error(400, 'Datos incompletos.');
 
-    /* ── Validar y sanitizar campos obligatorios ── */
-    $name       = fp_sanitize($body['name']      ?? '', 200);
-    $email      = fp_sanitize($body['email']     ?? '', 150, 'email');
-    $phone      = fp_sanitize($body['phone']     ?? '', 30);
-    $password   = $body['password'] ?? '';            /* No sanitizar: solo hashear */
-    $gender     = fp_sanitize($body['gender']    ?? '', 10);
-    $objectiveInput  = fp_sanitize($body['objective'] ?? '', 30);
-    $rawWeight       = fp_sanitize($body['weight'] ?? 0, 0, 'float');
-    $rawHeight       = fp_sanitize($body['height'] ?? 0, 0, 'float');
-    $plan            = fp_sanitize($body['plan'] ?? 'FREE', 20);
-
-    if (!in_array($plan, ['FREE', 'PREMIUM_MONTHLY', 'PREMIUM_ANNUAL'], true)) {
-        $plan = 'FREE';
-    }
-
-    /* ── VALIDACIONES DE NEGOCIO ── */
-    $errors = [];
-
-    if (empty($name) || preg_match('/[0-9]/', $name)) {
-        $errors[] = 'El nombre no puede estar vacío ni contener números.';
-    }
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors[] = 'El formato del correo electrónico es inválido.';
-    }
-    if (!preg_match('/^[0-9\s+\-]{7,20}$/', $phone)) {
-        $errors[] = 'El teléfono es inválido.';
-    }
-    /* Password: mínimo 8 chars, mayúscula, número y símbolo */
-    if (!preg_match('/^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$/', $password)) {
-        $errors[] = 'La contraseña debe tener mínimo 8 caracteres, una mayúscula, un número y un símbolo.';
-    }
-    if (!in_array($gender, ['MALE', 'FEMALE', 'OTHER'], true)) {
-        $errors[] = 'El sexo seleccionado no es válido.';
-    }
-
-    /* ── Valores por defecto para registro en 2 pasos ── */
-    /* Tanto Free como Premium configuran su peso/altura después de registrarse. */
-    $objective = 'MAINTAIN';
-    $weight    = 0.01;
-    $height    = 0.01;
-
-    // Solo validamos si por alguna razón logran enviarlos (post-registro o manual)
-    if ($rawWeight > 0) {
-        if ($rawWeight > 500) $errors[] = 'El peso debe ser menor a 500 kg.';
-        else $weight = $rawWeight;
-    }
-    if ($rawHeight > 0) {
-        if ($rawHeight > 300) $errors[] = 'La altura debe ser menor a 300 cm.';
-        else $height = $rawHeight;
-    }
-    if (!empty($objectiveInput) && in_array($objectiveInput, ['LOSE_WEIGHT', 'GAIN_MUSCLE', 'MAINTAIN', 'IMPROVE_HEALTH'], true)) {
-        $objective = $objectiveInput;
-    }
-
-    if (!empty($errors)) {
-        fp_error(400, implode(' | ', $errors));
-    }
+    if (fp_query('SELECT 1 FROM users WHERE email = :e', [':e'=>$email])->fetchColumn()) fp_error(409, 'Email ya existe.');
 
     $db = fp_db();
-
-    /* ── Verificar duplicado de email ── */
-    $exists = fp_query(
-        'SELECT 1 FROM users WHERE email = :email LIMIT 1',
-        [':email' => strtolower($email)]
-    )->fetchColumn();
-
-    if ($exists) {
-        fp_error(409, 'Ya existe una cuenta con ese correo electrónico.');
-    }
-
-    /* ── Hash de contraseña BCRYPT cost-12 ── */
-    $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
-    if ($hash === false) {
-        error_log('[FitPaisa][AUTH] password_hash falló.');
-        fp_error(500, 'Error interno del servidor.');
-    }
-
-    /* ── Transacción: crear usuario + perfil ── */
     $db->beginTransaction();
     try {
-        /* Crear usuario */
-        try {
-            $stmt = $db->prepare("
-                INSERT INTO users (email, password_hash, full_name, phone, role, is_active, created_at)
-                VALUES (:email, :hash, :name, :phone, 'USER', TRUE, NOW())
-                RETURNING user_id, email, full_name, role, created_at
-            ");
-            $stmt->execute([
-                ':email' => strtolower($email),
-                ':hash'  => $hash,
-                ':name'  => $name,
-                ':phone' => $phone,
-            ]);
-            $user = $stmt->fetch();
-        } catch (Exception $e) {
-            throw new Exception("Error inserting user: " . $e->getMessage());
-        }
+        $stmt = $db->prepare("INSERT INTO users (email, password_hash, full_name, phone, role, is_active, created_at) VALUES (:e, :h, :n, :p, 'USER', TRUE, NOW()) RETURNING user_id");
+        $stmt->execute([':e'=>$email, ':h'=>password_hash($body['password'], PASSWORD_BCRYPT, ['cost'=>12]), ':n'=>fp_sanitize($body['name']??''), ':p'=>fp_sanitize($body['phone']??'')]);
+        $uid = $stmt->fetchColumn();
 
-        if (!$user) {
-            throw new RuntimeException('No se pudo crear el usuario.');
-        }
-
-        /* Calcular edad aproximada desde peso/altura (no se captura en el form) */
-        $age = (int) ($body['age'] ?? 25);
-        if ($age <= 0 || $age > 120) {
-            $age = 25;
-        }
-
-        $activity = fp_sanitize($body['activity_level'] ?? 'MODERATE', 20);
-        if (!in_array($activity, ['SEDENTARY', 'LIGHT', 'MODERATE', 'ACTIVE', 'VERY_ACTIVE'], true)) {
-            $activity = 'MODERATE';
-        }
-
-        /* Crear perfil físico */
-        $weightToSave = ($weight <= 0) ? 0.01 : $weight;
-        $heightToSave = ($height <= 0) ? 0.01 : $height;
-
-        try {
-            $stmtProf = $db->prepare("
-                INSERT INTO profiles (user_id, weight, height, age, gender, objective, activity_level, updated_at)
-                VALUES (CAST(:uid AS integer), CAST(:weight AS numeric), CAST(:height AS numeric), CAST(:age AS smallint), CAST(:gender AS gender_type), CAST(:objective AS objective_type), CAST(:activity AS activity_level), NOW())
-            ");
-            if (!$stmtProf->execute([
-                ':uid'       => $user['user_id'],
-                ':weight'    => $weightToSave,
-                ':height'    => $heightToSave,
-                ':age'       => $age,
-                ':gender'    => $gender,
-                ':objective' => $objective,
-                ':activity'  => $activity,
-            ])) {
-                $err = $stmtProf->errorInfo();
-                throw new Exception("Silent fail in profiles: " . json_encode($err));
-            }
-            
-            /* Debug check for aborted transaction */
-            if ($db->query("SELECT 1") === false) {
-                throw new Exception("Transaction silently aborted by Postgres during profiles insert! " . json_encode($db->errorInfo()));
-            }
-        } catch (Exception $e) {
-            throw new Exception("Error inserting profile: " . $e->getMessage());
-        }
-
-        /* Crear suscripción inicial */
-        $amount = ($plan === 'FREE') ? 0.0 : 14.99;
-        try {
-            // Evaluamos la fecha en PHP para evitar cálculos raros en la base de datos de Postgres y posibles casts opacos
-            $endDate = date('Y-m-d', strtotime('+1 month'));
-
-            // Construir el INSERT lo más tonto posible (todo parametrizado y parseado desde PHP)
-            // Bypass complete of PDO prepare bindings to dodge PgBouncer Parse bugs
-            $stmtSub = $db->prepare("
-                INSERT INTO subscriptions (user_id, plan_type, status, start_date, end_date, amount)
-                VALUES (
-                    CAST(:uid AS integer),
-                    CAST(:plan AS subscription_plan),
-                    'ACTIVE',
-                    CURRENT_DATE,
-                    CAST(:end_date AS date),
-                    CAST(:amount AS numeric)
-                )
-            ");
-
-            if (!$stmtSub->execute([
-                ':uid'      => $user['user_id'],
-                ':plan'     => $plan,
-                ':end_date' => $endDate,
-                ':amount'   => $amount,
-            ])) {
-                $err = $stmtSub->errorInfo();
-                throw new Exception("Silent fail in subscriptions: " . json_encode($err));
-            }
-        } catch (Exception $e) {
-            throw new Exception("Error inserting subscription: " . $e->getMessage() . " | Debug Info: user_id=" . $user['user_id'] . " plan=" . $plan);
-        }
-
+        $db->prepare("INSERT INTO profiles (user_id, weight, height, age, gender, objective, activity_level, updated_at) VALUES (:uid, 0.01, 0.01, 25, 'OTHER', 'MAINTAIN', 'MODERATE', NOW())")->execute([':uid'=>$uid]);
+        $db->prepare("INSERT INTO subscriptions (user_id, plan_type, status, start_date, end_date, amount) VALUES (:uid, 'FREE', 'ACTIVE', CURRENT_DATE, CURRENT_DATE + INTERVAL '1 month', 0)")->execute([':uid'=>$uid]);
+        
         $db->commit();
-    } catch (PDOException $e) {
-        if ($db->inTransaction()) {
-            $db->rollBack();
-        }
-        error_log('[FitPaisa][AUTH] Error SQL en handle_register: ' . $e->getMessage());
-        $messageForUser = 'Error en base de datos: ' . $e->getMessage();
-        fp_error(500, $messageForUser);
-    } catch (Exception $e) {
-        if ($db->inTransaction()) {
-            $db->rollBack();
-        }
-        error_log('[FitPaisa][AUTH] Exception en handle_register: ' . $e->getMessage());
-        fp_error(500, $e->getMessage());
-    }
-
-    /* ── Generar JWT ── */
-    $token = jwt_create([
-        'user_id' => $user['user_id'],
-        'email'   => $user['email'],
-        'role'    => $user['role'],
-        'name'    => $user['full_name'],
-    ]);
-
-    fp_success([
-        'token' => $token,
-        'user'  => [
-            'user_id'           => $user['user_id'],
-            'email'             => $user['email'],
-            'name'              => $user['full_name'],
-            'role'              => $user['role'],
-            'created_at'        => $user['created_at'],
-            'subscription_plan' => $plan,
-        ],
-    ], 201);
+        $token = jwt_create(['user_id'=>$uid, 'email'=>$email, 'role'=>'USER', 'name'=>$body['name']??'']);
+        fp_success(['token'=>$token, 'user_id'=>$uid], 201);
+    } catch (Exception $e) { $db->rollBack(); fp_error(500, 'Error registro: '.$e->getMessage()); }
 }
 
-/* ══════════════════════════════════════════════════════════════════════
-   LOGIN
-   ══════════════════════════════════════════════════════════════════════ */
-
-/**
- * Autentica a un usuario existente.
- *
- * Implementa el algoritmo descrito en DAS §4.1.3:
- *  1. Buscar por email
- *  2. Verificar is_active
- *  3. Verificar bloqueo temporal
- *  4. Comparar hash con bcrypt
- *  5. Controlar intentos fallidos (máx. 5 → bloqueo 15 min)
- *  6. Generar JWT con {user_id, email, role, exp}
- *
- * El mensaje de error es siempre genérico (no revela si el email existe).
- *
- * @return never
- */
 function handle_login(): never
 {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        fp_error(405, 'Método no permitido.');
-    }
-
-    $body     = fp_json_body();
-    $email    = strtolower(fp_sanitize($body['email']    ?? '', 150, 'email'));
-    $password = $body['password'] ?? '';
-
-    // Seguridad: Límite de 10 intentos de login por minuto por IP
+    $body = fp_json_body();
+    $email = strtolower(fp_sanitize($body['email'] ?? '', 150, 'email'));
     fp_rate_limit('auth_login', 10, 60);
+    
+    $user = fp_query("SELECT u.*, s.plan_type FROM users u LEFT JOIN subscriptions s ON s.user_id = u.user_id AND s.status='ACTIVE' WHERE u.email = :e LIMIT 1", [':e'=>$email])->fetch();
+    if (!$user || !password_verify($body['password']??'', $user['password_hash'])) fp_error(401, 'Credenciales inválidas.');
+    if (!$user['is_active']) fp_error(403, 'Bloqueada.');
 
-    if (empty($email) || empty($password)) {
-        fp_error(400, 'El correo electrónico y la contraseña son obligatorios.');
-    }
-
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        fp_error(400, 'Formato de correo electrónico inválido.');
-    }
-
-    /* ── Buscar usuario y su suscripción ── */
-    $user = fp_query(
-        "SELECT u.user_id, u.email, u.password_hash, u.full_name, u.role, u.is_active,
-                u.login_attempts, u.locked_until, u.last_login,
-                s.plan_type AS subscription_plan,
-                p.timezone
-         FROM users u
-         LEFT JOIN subscriptions s ON s.user_id = u.user_id AND s.status = 'ACTIVE'
-         LEFT JOIN profiles p ON p.user_id = u.user_id
-         WHERE u.email = :email LIMIT 1",
-        [':email' => $email]
-    )->fetch();
-
-    /* Error genérico para no revelar si el email existe */
-    if (!$user) {
-        /* Simular tiempo de bcrypt para evitar timing oracle */
-        password_verify('dummy', '$2y$12$invalidhashinvalidhashinvalidhashinval');
-        fp_error(401, 'Correo electrónico o contraseña incorrectos.');
-    }
-
-    /* ── Verificar cuenta activa ── */
-    if (!$user['is_active']) {
-        fp_error(403, 'Tu cuenta ha sido desactivada. Contacta al soporte.');
-    }
-
-    /* ── Verificar bloqueo temporal ── */
-    if ($user['locked_until'] !== null) {
-        $lockedUntil = new DateTimeImmutable($user['locked_until']);
-        if ($lockedUntil > new DateTimeImmutable()) {
-            $remaining = ceil(($lockedUntil->getTimestamp() - time()) / 60);
-            fp_error(403, "Cuenta bloqueada por exceso de intentos. Espera {$remaining} minuto(s).");
-        }
-        /* Desbloquear si el tiempo ya pasó */
-        fp_query(
-            'UPDATE users SET login_attempts = 0, locked_until = NULL WHERE user_id = :id',
-            [':id' => $user['user_id']]
-        );
-    }
-
-    /* ── Verificar contraseña ── */
-    if (!password_verify($password, $user['password_hash'])) {
-        $attempts = (int) $user['login_attempts'] + 1;
-
-        if ($attempts >= 5) {
-            /* Bloquear 15 minutos */
-            fp_query(
-                "UPDATE users SET login_attempts = :att, locked_until = NOW() + INTERVAL '15 minutes'
-                 WHERE user_id = :id",
-                [':att' => $attempts, ':id' => $user['user_id']]
-            );
-            fp_error(403, 'Demasiados intentos fallidos. Cuenta bloqueada 15 minutos.');
-        }
-
-        fp_query(
-            'UPDATE users SET login_attempts = :att WHERE user_id = :id',
-            [':att' => $attempts, ':id' => $user['user_id']]
-        );
-
-        fp_error(401, 'Correo electrónico o contraseña incorrectos.');
-    }
-
-    /* ── Login exitoso: resetear intentos y actualizar last_login ── */
-    fp_query(
-        'UPDATE users SET login_attempts = 0, locked_until = NULL, last_login = NOW()
-         WHERE user_id = :id',
-        [':id' => $user['user_id']]
-    );
-
-    /* ── Rehash si es necesario (mejora de cost en futuro) ── */
-    if (password_needs_rehash($user['password_hash'], PASSWORD_BCRYPT, ['cost' => 12])) {
-        $newHash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
-        if ($newHash !== false) {
-            fp_query(
-                'UPDATE users SET password_hash = :hash WHERE user_id = :id',
-                [':hash' => $newHash, ':id' => $user['user_id']]
-            );
-        }
-    }
-
-    /* ── Generar JWT ── */
-    $token = jwt_create([
-        'user_id' => $user['user_id'],
-        'email'   => $user['email'],
-        'role'    => $user['role'],
-        'name'    => $user['full_name'],
-    ]);
-
-    fp_success([
-        'token' => $token,
-        'user'  => [
-            'user_id'           => $user['user_id'],
-            'email'             => $user['email'],
-            'name'              => $user['full_name'],
-            'role'              => $user['role'],
-            'last_login'        => $user['last_login'],
-            'subscription_plan' => $user['subscription_plan'] ?? 'FREE',
-            'profile'           => [
-                'timezone' => $user['timezone'] ?? null,
-            ],
-        ],
-    ]);
+    $token = jwt_create(['user_id'=>$user['user_id'], 'email'=>$user['email'], 'role'=>$user['role'], 'name'=>$user['full_name']]);
+    fp_success(['token'=>$token, 'user'=>['user_id'=>$user['user_id'], 'email'=>$user['email'], 'name'=>$user['full_name'], 'role'=>$user['role'], 'plan'=>$user['plan_type']??'FREE']]);
 }
 
-/* ══════════════════════════════════════════════════════════════════════
-   ME — Datos del usuario autenticado
-   ══════════════════════════════════════════════════════════════════════ */
-
-/**
- * Retorna los datos del usuario identificado por el JWT Bearer.
- *
- * @return never
- */
 function handle_me(): never
 {
-    if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-        fp_error(405, 'Método no permitido.');
-    }
-
-    $payload = jwt_require(); /* Aborta con 401 si no hay token válido */
-
-    $user = fp_query(
-        "SELECT u.user_id, u.email, u.full_name, u.phone, u.role, u.created_at,
-                p.profile_id, p.weight, p.height, p.age, p.gender, p.objective, p.activity_level,
-                s.plan_type AS subscription_plan
-         FROM users u
-         LEFT JOIN profiles p ON p.user_id = u.user_id
-         LEFT JOIN subscriptions s ON s.user_id = u.user_id AND s.status = 'ACTIVE'
-         WHERE u.user_id = :id AND u.is_active = TRUE
-         LIMIT 1",
-        [':id' => $payload['user_id']]
-    )->fetch();
-
-    if (!$user) {
-        fp_error(404, 'Usuario no encontrado o inactivo.');
-    }
-
-    fp_success(['user' => $user]);
+    $p = jwt_require();
+    $u = fp_query("SELECT u.*, p.profile_id, s.plan_type FROM users u LEFT JOIN profiles p ON p.user_id=u.user_id LEFT JOIN subscriptions s ON s.user_id=u.user_id AND s.status='ACTIVE' WHERE u.user_id=:uid", [':uid'=>$p['user_id']])->fetch();
+    fp_success(['user'=>$u]);
 }
