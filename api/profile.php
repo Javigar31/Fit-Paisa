@@ -1,25 +1,160 @@
 <?php
 /**
- * FitPaisa — Endpoint de Gestión de Perfiles
+ * FitPaisa — Endpoint de Gestión de Perfiles (Consolidado)
  *
  * CRUD del perfil físico del usuario autenticado.
  * Algoritmo de macros estilo Fitia: Déficit/Superávit exacto por peso objetivo.
  *
+ * Esta versión es MONOLÍTICA para evitar errores 500 causados por el sistema 
+ * de archivos de Vercel al procesar múltiples 'require_once'.
+ *
  * @package  FitPaisa\Api
  * @author   Javier Andrés García Vargas
+ * @version  2.0.0 (Monolithic)
  */
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/_db.php';
-require_once __DIR__ . '/_jwt.php';
+/* ══════════════════════════════════════════════════════════════════════
+   CORE HELPERS (Inyectados de _db.php y _jwt.php)
+   ══════════════════════════════════════════════════════════════════════ */
+
+$_fp_pdo = null;
+
+function fp_db(): PDO
+{
+    global $_fp_pdo;
+    if ($_fp_pdo instanceof PDO) return $_fp_pdo;
+
+    $env = getenv('VERCEL_ENV') ?: 'local';
+    
+    // Resolución de credenciales con prioridad DB_PASSWORD_NUEVA
+    if ($env === 'production') {
+        $host = getenv('PGHOST_PROD')     ?: getenv('POSTGRES_HOST');
+        $user = getenv('PGUSER_PROD')     ?: getenv('POSTGRES_USER');
+        $pass = getenv('DB_PASSWORD_NUEVA') ?: getenv('PGPASSWORD_PROD') ?: getenv('POSTGRES_PASSWORD');
+        $db   = getenv('PGDATABASE_PROD') ?: 'neondb';
+    } else {
+        $host = getenv('PGHOST')          ?: getenv('POSTGRES_HOST');
+        $user = getenv('PGUSER')          ?: getenv('POSTGRES_USER');
+        $pass = getenv('DB_PASSWORD_NUEVA') ?: getenv('PGPASSWORD') ?: getenv('POSTGRES_PASSWORD');
+        $db   = getenv('PGDATABASE')      ?: 'fitpaisa_testing';
+        if ($env === 'preview' || empty(getenv('PGDATABASE'))) $db = 'fitpaisa_testing';
+    }
+
+    $dsn = "pgsql:host={$host};port=5432;dbname={$db};sslmode=require";
+
+    try {
+        $_fp_pdo = new PDO($dsn, $user, $pass, [
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES   => true,
+            PDO::ATTR_TIMEOUT            => 10,
+        ]);
+    } catch (PDOException $e) {
+        error_log('[FitPaisa][DB] Fallo de conexión: ' . $e->getMessage());
+        header('Content-Type: application/json; charset=utf-8');
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Error de conexión a la base de datos.']);
+        exit;
+    }
+
+    return $_fp_pdo;
+}
+
+function fp_query(string $sql, array $params = []): PDOStatement
+{
+    try {
+        $stmt = fp_db()->prepare($sql);
+        $stmt->execute($params);
+        return $stmt;
+    } catch (PDOException $e) {
+        error_log('[FitPaisa][QUERY] ' . $e->getMessage() . ' | SQL: ' . $sql);
+        fp_error(500, 'Error interno en la consulta.');
+    }
+}
+
+function fp_error(int $code, string $message): never
+{
+    http_response_code($code);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['success' => false, 'message' => htmlspecialchars($message, ENT_QUOTES, 'UTF-8')], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+function fp_success(array $data = [], int $code = 200): never
+{
+    http_response_code($code);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(array_merge(['success' => true], $data), JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+function fp_sanitize(mixed $value, int $maxLen = 255, string $type = 'string'): mixed
+{
+    $val = trim((string) ($value ?? ''));
+    switch ($type) {
+        case 'int': return (int)$val;
+        case 'float': return (float)$val;
+        case 'slug': $val = preg_replace('/[^a-z0-9\-_]/', '', strtolower($val)); break;
+        default: $val = strip_tags($val); $val = htmlspecialchars($val, ENT_QUOTES | ENT_HTML5, 'UTF-8'); break;
+    }
+    return ($maxLen > 0) ? mb_substr($val, 0, $maxLen) : $val;
+}
+
+function fp_json_body(): array
+{
+    $raw = file_get_contents('php://input');
+    return is_string($raw) ? (json_decode($raw, true) ?: []) : [];
+}
+
+function fp_cors(): void
+{
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+    header("Access-Control-Allow-Origin: " . ($origin ?: '*'));
+    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization');
+    header('Access-Control-Allow-Credentials: true');
+    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   JWT LOGIC (Inyectada de _jwt.php)
+   ══════════════════════════════════════════════════════════════════════ */
+
+function jwt_require(): array
+{
+    $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+    if (!str_starts_with($authHeader, 'Bearer ')) {
+        fp_error(401, 'No autenticado. Inicia sesión.');
+    }
+    $token = substr($authHeader, 7);
+    $parts = explode('.', $token);
+    if (count($parts) !== 3) fp_error(401, 'Token inválido.');
+
+    [$header, $body, $signature] = $parts;
+    $secret = getenv('JWT_SECRET');
+    if (!$secret || strlen($secret) < 32) fp_error(500, 'Security configuration error.');
+
+    $expected = rtrim(strtr(base64_encode(hash_hmac('sha256', "{$header}.{$body}", $secret, true)), '+/', '-_'), '=');
+    if (!hash_equals($expected, $signature)) fp_error(401, 'Firma de token inválida.');
+
+    $payload = json_decode(base64_decode(strtr($body, '-_', '+/')), true);
+    if (!isset($payload['exp']) || $payload['exp'] < time()) fp_error(401, 'Token expirado.');
+
+    return $payload;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   ROUTER & ACTIONS
+   ══════════════════════════════════════════════════════════════════════ */
 
 fp_cors();
 
-/* Solo ejecutar el enrutador si este archivo es el punto de entrada directo */
 if (strpos($_SERVER['SCRIPT_NAME'], 'profile.php') !== false) {
-    $payload = jwt_require(); /* 401 si no autenticado */
-    $action = fp_sanitize($_GET['action'] ?? 'get', 32);
+    $payload = jwt_require();
+    $action = fp_sanitize($_GET['action'] ?? 'get', 32, 'slug');
+    
     match ($action) {
         'get'          => handle_get_profile($payload),
         'update', 'save' => handle_update_profile($payload),
@@ -30,354 +165,128 @@ if (strpos($_SERVER['SCRIPT_NAME'], 'profile.php') !== false) {
     };
 }
 
-/* ══════════════════════════════════════════════════════════════════════
-   GET PROFILE
-   ══════════════════════════════════════════════════════════════════════ */
 function handle_get_profile(array $payload): never
 {
     $profile = fp_query(
-        'SELECT p.*,
-                u.full_name, u.email, u.phone,
-                s.plan_type AS subscription_plan,
-                s.status    AS subscription_status,
-                s.end_date  AS subscription_end_date
+        "SELECT p.*, u.full_name, u.email, u.phone, s.plan_type AS subscription_plan, s.status AS subscription_status
          FROM profiles p
          JOIN users u ON u.user_id = p.user_id
-         LEFT JOIN subscriptions s
-           ON s.user_id = p.user_id AND s.status = \'ACTIVE\'
-         WHERE p.user_id = :uid
-         ORDER BY s.created_at DESC
-         LIMIT 1',
+         LEFT JOIN subscriptions s ON s.user_id = p.user_id AND s.status = 'ACTIVE'
+         WHERE p.user_id = :uid LIMIT 1",
         [':uid' => $payload['user_id']]
     )->fetch();
 
-    if (!$profile) {
-        fp_error(404, 'Perfil no encontrado. Completa tu registro.');
-    }
+    if (!$profile) fp_error(404, 'Perfil no encontrado.');
 
     $macros = calculate_macros(
-        fp_sanitize($profile['weight'], 0, 'float'),
-        fp_sanitize($profile['height'], 0, 'float'),
-        fp_sanitize($profile['age'], 0, 'int'),
-        $profile['gender'] ?: 'OTHER',
-        $profile['objective'] ?: 'MAINTAIN',
-        $profile['activity_level'] ?: 'MODERATE',
-        fp_sanitize($profile['target_weight'] ?? 0, 0, 'float'),
-        fp_sanitize($profile['target_time_weeks'] ?? 0, 0, 'int')
+        (float)$profile['weight'], (float)$profile['height'], (int)$profile['age'],
+        $profile['gender'], $profile['objective'], $profile['activity_level'],
+        (float)($profile['target_weight'] ?? 0), (int)($profile['target_time_weeks'] ?? 0)
     );
 
     fp_success(['profile' => $profile, 'macro_targets' => $macros]);
 }
 
-/* ══════════════════════════════════════════════════════════════════════
-   UPDATE PROFILE
-   ══════════════════════════════════════════════════════════════════════ */
 function handle_update_profile(array $payload): never
 {
-    if ($_SERVER['REQUEST_METHOD'] !== 'PUT' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
-        fp_error(405, 'Método no permitido.');
-    }
+    $body   = fp_json_body();
+    $userId = $payload['user_id'];
 
-    $body    = fp_json_body();
-    $db      = fp_db();
-    $userId  = $payload['user_id'];
+    $current = fp_query('SELECT * FROM profiles WHERE user_id = :uid', [':uid' => $userId])->fetch() ?: [];
 
-    // 1. Obtener valores actuales para permitir actualizaciones parciales
-    $stmt = fp_query('SELECT * FROM profiles WHERE user_id = :uid', [':uid' => $userId]);
-    $current = $stmt->fetch() ?: [];
+    $weight = isset($body['weight']) ? (float)$body['weight'] : (float)($current['weight'] ?? 70);
+    $height = isset($body['height']) ? (float)$body['height'] : (float)($current['height'] ?? 170);
+    $age    = isset($body['age'])    ? (int)$body['age']     : (int)($current['age'] ?? 30);
 
-    // Si no existe el perfil, usamos valores por defecto válidos para pasar la validación
-    $weight = isset($body['weight']) ? fp_sanitize($body['weight'], 0, 'float') : fp_sanitize($current['weight'] ?? 70, 0, 'float');
-    $height = isset($body['height']) ? fp_sanitize($body['height'], 0, 'float') : fp_sanitize($current['height'] ?? 170, 0, 'float');
-    $age    = isset($body['age'])    ? fp_sanitize($body['age'], 0, 'int')     : fp_sanitize($current['age']    ?? 30, 0, 'int');
+    $gender    = $body['gender']         ?? $current['gender']         ?? 'OTHER';
+    $objective = $body['objective']      ?? $current['objective']      ?? 'MAINTAIN';
+    $activity  = $body['activity_level'] ?? $current['activity_level'] ?? 'MODERATE';
+    $targetWeight = isset($body['target_weight']) ? (float)$body['target_weight'] : (float)($current['target_weight'] ?? $weight);
+    $weeks        = isset($body['target_time_weeks']) ? (int)$body['target_time_weeks'] : (int)($current['target_time_weeks'] ?? 0);
+    $timezone     = $body['timezone'] ?? $current['timezone'] ?? null;
 
-    $gender    = isset($body['gender'])         ? fp_sanitize($body['gender'], 10, 'slug')         : ($current['gender']         ?? 'OTHER');
-    $objective = isset($body['objective'])      ? fp_sanitize($body['objective'], 30, 'slug')      : ($current['objective']      ?? 'MAINTAIN');
-    $activity  = isset($body['activity_level']) ? fp_sanitize($body['activity_level'], 20, 'slug') : ($current['activity_level'] ?? 'MODERATE');
-    
-    $targetWeight = isset($body['target_weight'])      ? fp_sanitize($body['target_weight'], 0, 'float')      : fp_sanitize($current['target_weight'] ?? $weight, 0, 'float');
-    $weeks        = isset($body['target_time_weeks']) ? fp_sanitize($body['target_time_weeks'], 0, 'int')    : fp_sanitize($current['target_time_weeks'] ?? 0, 0, 'int');
-    $timezone     = isset($body['timezone'])          ? fp_sanitize($body['timezone'], 50) : ($current['timezone']          ?? null);
-
-    $errors = [];
-    if ($weight <= 0 || $weight > 500) $errors[] = 'Peso inválido.';
-    if ($height <= 0 || $height > 300) $errors[] = 'Altura inválida.';
-    if ($age    <= 0 || $age    > 120) $errors[] = 'Edad inválida.';
-    
-    if (!empty($errors)) {
-        fp_error(400, implode(' | ', $errors));
-    }
+    if ($weight <= 0 || $height <= 0 || $age <= 0) fp_error(400, 'Datos físicos inválidos.');
 
     fp_query(
-        "INSERT INTO profiles (
-            user_id, weight, height, age, gender, objective, activity_level, 
-            target_weight, target_time_weeks, timezone, updated_at
-        ) VALUES (
-            :uid, :w, :h, :a, :g, :o, :al, :tw, :ttw, :tz, NOW()
-        )
-        ON CONFLICT (user_id) DO UPDATE SET
-            weight = EXCLUDED.weight,
-            height = EXCLUDED.height,
-            age = EXCLUDED.age,
-            gender = EXCLUDED.gender,
-            objective = EXCLUDED.objective,
-            activity_level = EXCLUDED.activity_level,
-            target_weight = EXCLUDED.target_weight,
-            target_time_weeks = EXCLUDED.target_time_weeks,
-            timezone = COALESCE(EXCLUDED.timezone, profiles.timezone),
-            updated_at = NOW()",
-        [
-            ':uid' => $userId,
-            ':w'   => $weight,
-            ':h'   => $height,
-            ':a'   => $age,
-            ':g'   => $gender,
-            ':o'   => $objective,
-            ':al'  => $activity,
-            ':tw'  => $targetWeight,
-            ':ttw' => $weeks,
-            ':tz'  => $timezone,
-        ]
+        "INSERT INTO profiles (user_id, weight, height, age, gender, objective, activity_level, target_weight, target_time_weeks, timezone, updated_at)
+         VALUES (:uid, :w, :h, :a, :g, :o, :al, :tw, :ttw, :tz, NOW())
+         ON CONFLICT (user_id) DO UPDATE SET
+            weight = EXCLUDED.weight, height = EXCLUDED.height, age = EXCLUDED.age, gender = EXCLUDED.gender,
+            objective = EXCLUDED.objective, activity_level = EXCLUDED.activity_level,
+            target_weight = EXCLUDED.target_weight, target_time_weeks = EXCLUDED.target_time_weeks,
+            timezone = COALESCE(EXCLUDED.timezone, profiles.timezone), updated_at = NOW()",
+        [':uid'=>$userId, ':w'=>$weight, ':h'=>$height, ':a'=>$age, ':g'=>$gender, ':o'=>$objective, ':al'=>$activity, ':tw'=>$targetWeight, ':ttw'=>$weeks, ':tz'=>$timezone]
     );
 
     $macros = calculate_macros($weight, $height, $age, $gender, $objective, $activity, $targetWeight, $weeks);
-    
-    /* Retornar el perfil actualizado para que el frontend se refresque */
-    $profile = fp_query('SELECT * FROM profiles WHERE user_id = :uid', [':uid' => $payload['user_id']])->fetch();
-    
-    fp_success([
-        'message' => 'Perfil actualizado correctamente.', 
-        'macro_targets' => $macros,
-        'profile' => $profile
-    ]);
+    $profile = fp_query('SELECT * FROM profiles WHERE user_id = :uid', [':uid' => $userId])->fetch();
+
+    fp_success(['message' => 'Perfil actualizado correctamente.', 'macro_targets' => $macros, 'profile' => $profile]);
 }
 
-/* ══════════════════════════════════════════════════════════════════════
-   SETUP MACROS (Primer inicio post-registro)
-   ══════════════════════════════════════════════════════════════════════ */
 function handle_setup_macros(array $payload): never
 {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $_SERVER['REQUEST_METHOD'] !== 'PUT') {
-        fp_error(405, 'Método no permitido.');
-    }
+    $body = fp_json_body();
+    $w = (float)($body['weight'] ?? 0);
+    $h = (float)($body['height'] ?? 0);
+    $a = (int)($body['age'] ?? 0);
+    $obj = $body['objective'] ?? 'MAINTAIN';
+    $tw = (float)($body['target_weight'] ?? $w);
+    $weeks = (int)($body['target_time_weeks'] ?? 0);
 
-    $body   = fp_json_body();
-    $weight = fp_sanitize($body['weight'] ?? 0, 0, 'float');
-    $height = fp_sanitize($body['height'] ?? 0, 0, 'float');
-    $age    = fp_sanitize($body['age'] ?? 0, 0, 'int');
-    $objective = fp_sanitize($body['objective'] ?? 'MAINTAIN', 30, 'slug');
-    $targetWeight = fp_sanitize($body['target_weight'] ?? $weight, 0, 'float');
-    $weeks = fp_sanitize($body['target_time_weeks'] ?? 0, 0, 'int');
+    if ($w <= 0 || $h <= 0 || $a <= 0) fp_error(400, 'Datos inválidos.');
 
-    if ($weight <= 0 || $weight > 500) fp_error(400, 'Peso inválido.');
-    if ($height <= 0 || $height > 300) fp_error(400, 'Altura inválida.');
-    if ($age <= 0 || $age > 120) fp_error(400, 'Edad inválida.');
+    fp_query(
+        "INSERT INTO profiles (user_id, weight, height, age, objective, target_weight, target_time_weeks, updated_at)
+         VALUES (:uid, :w, :h, :a, :o, :tw, :ttw, NOW())
+         ON CONFLICT (user_id) DO UPDATE SET
+            weight=EXCLUDED.weight, height=EXCLUDED.height, age=EXCLUDED.age, objective=EXCLUDED.objective, 
+            target_weight=EXCLUDED.target_weight, target_time_weeks=EXCLUDED.target_time_weeks, updated_at=NOW()",
+        [':uid'=>$payload['user_id'], ':w'=>$w, ':h'=>$h, ':a'=>$a, ':o'=>$obj, ':tw'=>$tw, ':ttw'=>$weeks]
+    );
 
-    /* Obtener género y actividad actuales */
-    $current = fp_query(
-        'SELECT gender, activity_level FROM profiles WHERE user_id = :uid',
-        [':uid' => $payload['user_id']]
-    )->fetch();
+    $gender = fp_query('SELECT gender FROM profiles WHERE user_id=:uid',[':uid'=>$payload['user_id']])->fetchColumn() ?: 'OTHER';
+    $activity = fp_query('SELECT activity_level FROM profiles WHERE user_id=:uid',[':uid'=>$payload['user_id']])->fetchColumn() ?: 'MODERATE';
 
-    $gender   = ($current && isset($current['gender']))         ? $current['gender']         : 'OTHER';
-    $activity = ($current && isset($current['activity_level'])) ? $current['activity_level'] : 'MODERATE';
-
-    /* FASE 1: Guardar datos básicos (Columnas que sabemos que existen) */
-    try {
-        fp_query(
-            'INSERT INTO profiles (user_id, weight, height, age, gender, objective, activity_level, updated_at)
-             VALUES (:uid, :w, :h, :a, :g, :o, :al, NOW())
-             ON CONFLICT (user_id) DO UPDATE SET
-                weight = EXCLUDED.weight,
-                height = EXCLUDED.height,
-                age = EXCLUDED.age,
-                objective = EXCLUDED.objective,
-                activity_level = EXCLUDED.activity_level,
-                updated_at = NOW()',
-            [
-                ':uid' => $payload['user_id'],
-                ':w'   => $weight,
-                ':h'   => $height,
-                ':a'   => $age,
-                ':g'   => $gender,
-                ':o'   => $objective,
-                ':al'  => $activity
-            ]
-        );
-
-        /* FASE 2: Intentar guardar datos de objetivo (Columnas nuevas) - FALLO SILENCIOSO */
-        try {
-            $db = fp_db();
-            $st = $db->prepare('UPDATE profiles SET target_weight = :tw, target_time_weeks = :ttw WHERE user_id = :uid');
-            $st->execute([
-                ':tw'  => $targetWeight,
-                ':ttw' => $weeks,
-                ':uid' => $payload['user_id']
-            ]);
-        } catch (Exception $e) {
-            // Si las columnas no existen, simplemente ignorar y continuar el proceso
-            error_log("[FitPaisa][MIGRATION_PENDING] " . $e->getMessage());
-        }
-
-    } catch (Exception $e) {
-        fp_error(500, 'Error crítico al guardar el perfil básico.');
-    }
-
-    $macros = calculate_macros($weight, $height, $age, $gender, $objective, $activity, $targetWeight, $weeks);
-    
-    fp_success([
-        'message' => 'Macros configurados correctamente.',
-        'profile' => [
-            'weight' => $weight,
-            'height' => $height,
-            'age' => $age,
-            'objective' => $objective,
-            'target_weight' => $targetWeight,
-            'target_time_weeks' => $weeks
-        ],
-        'macro_targets' => $macros
-    ]);
+    $macros = calculate_macros($w, $h, $a, $gender, $obj, $activity, $tw, $weeks);
+    fp_success(['message' => 'Configurado.', 'macro_targets' => $macros]);
 }
 
-/* ══════════════════════════════════════════════════════════════════════
-   LOG BODY MEASUREMENTS
-   ══════════════════════════════════════════════════════════════════════ */
 function handle_log_body(array $payload): never
 {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        fp_error(405, 'Método no permitido.');
-    }
+    $body = fp_json_body();
+    $w = (float)($body['weight'] ?? 0);
+    if ($w <= 0) fp_error(400, 'Peso inválido.');
 
-    $body   = fp_json_body();
-    $weight = fp_sanitize($body['weight'] ?? 0, 0, 'float');
+    $pid = fp_query('SELECT profile_id FROM profiles WHERE user_id = :uid', [':uid' => $payload['user_id']])->fetchColumn();
+    if (!$pid) fp_error(404, 'Perfil no encontrado.');
 
-    if ($weight <= 0) {
-        fp_error(400, 'El peso es obligatorio y debe ser mayor a 0.');
-    }
-
-    $profile = fp_query(
-        'SELECT profile_id FROM profiles WHERE user_id = :uid',
-        [':uid' => $payload['user_id']]
-    )->fetchColumn();
-
-    if (!$profile) {
-        fp_error(404, 'Perfil no encontrado.');
-    }
-
-    fp_query(
-        'INSERT INTO body_logs (profile_id, weight, waist, hips, chest, log_date)
-         VALUES (:pid, :w, :waist, :hips, :chest, CURRENT_DATE)',
-        [
-            ':pid'   => $profile,
-            ':w'     => $weight,
-            ':waist' => ($body['waist'] ?? null) ?: null,
-            ':hips'  => ($body['hips']  ?? null) ?: null,
-            ':chest' => ($body['chest'] ?? null) ?: null,
-        ]
-    );
-
-    /* Actualizar peso actual en perfil */
-    fp_query(
-        'UPDATE profiles SET weight = :w, updated_at = NOW() WHERE profile_id = :pid',
-        [':w' => $weight, ':pid' => $profile]
-    );
-
-    fp_success(['message' => 'Medidas registradas correctamente.'], 201);
+    fp_query("INSERT INTO body_logs (profile_id, weight, log_date) VALUES (:pid, :w, CURRENT_DATE)", [':pid'=>$pid, ':w'=>$w]);
+    fp_query("UPDATE profiles SET weight = :w, updated_at = NOW() WHERE profile_id = :pid", [':w'=>$w, ':pid'=>$pid]);
+    fp_success(['message' => 'Registrado.']);
 }
 
-/* ══════════════════════════════════════════════════════════════════════
-   HISTORIAL CORPORAL
-   ══════════════════════════════════════════════════════════════════════ */
 function handle_body_history(array $payload): never
 {
-    $days = min(fp_sanitize($_GET['days'] ?? 30, 0, 'int'), 365);
-
+    $days = (int)($_GET['days'] ?? 30);
     $rows = fp_query(
-        'SELECT bl.log_date, bl.weight, bl.waist, bl.hips, bl.chest
-         FROM body_logs bl
-         JOIN profiles p ON p.profile_id = bl.profile_id
-         WHERE p.user_id = :uid
-           AND bl.log_date >= CURRENT_DATE - :days * INTERVAL \'1 day\'
-         ORDER BY bl.log_date ASC',
+        "SELECT bl.log_date, bl.weight FROM body_logs bl JOIN profiles p ON p.profile_id = bl.profile_id
+         WHERE p.user_id = :uid AND bl.log_date >= CURRENT_DATE - :days * INTERVAL '1 day' ORDER BY bl.log_date ASC",
         [':uid' => $payload['user_id'], ':days' => $days]
     )->fetchAll();
-
-    fp_success(['history' => $rows, 'days' => $days]);
+    fp_success(['history' => $rows]);
 }
 
-/**
- * Calcula los objetivos diarios de macronutrientes según el método de Fitia.
- */
-function calculate_macros(
-    $weight,
-    $height,
-    $age,
-    $gender,
-    $objective,
-    $activity,
-    $targetWeight = 0.0,
-    $weeks = 0
-): array {
-    $weight = fp_sanitize($weight ?: 0, 0, 'float');
-    $height = fp_sanitize($height ?: 0, 0, 'float');
-    $age    = fp_sanitize($age ?: 25, 0, 'int');
-    $gender = $gender ?: 'OTHER';
-    $activity = $activity ?: 'MODERATE';
-    $objective = $objective ?: 'MAINTAIN';
-
-    /* 1. TMB - Mifflin-St Jeor */
-    /* Hombres: 10 * peso + 6.25 * altura - 5 * edad + 5 */
-    /* Mujeres: 10 * peso + 6.25 * altura - 5 * edad - 161 */
+function calculate_macros($weight, $height, $age, $gender, $objective, $activity, $targetWeight=0, $weeks=0): array 
+{
     $genderConst = ($gender === 'FEMALE') ? -161 : 5;
     $tmb = (10 * $weight) + (6.25 * $height) - (5 * $age) + $genderConst;
-
-    /* 2. Factor de actividad (GET/TDEE) */
-    $activityFactors = [
-        'SEDENTARY'   => 1.2,
-        'LIGHT'       => 1.375,
-        'MODERATE'    => 1.55,
-        'ACTIVE'      => 1.725,
-        'VERY_ACTIVE' => 1.9,
-    ];
-    $factor = $activityFactors[$activity] ?? 1.55;
-    $tdee   = $tmb * $factor;
-
-    /* 3. Ajuste por Objetivo */
-    /* Perder grasa: TDEE - 20% | Mantener: TDEE | Ganar músculo: TDEE + 10% */
-    $adjustmentPercent = match($objective) {
-        'LOSE_WEIGHT' => -0.20,
-        'GAIN_MUSCLE' => 0.10,
-        default       => 0.00
-    };
-    
-    $targetCal = $tdee * (1 + $adjustmentPercent);
-    
-    // Protección absoluta: Mínimo 1200 kcal
-    $targetCal = max(1200, $targetCal);
-
-    /* 4. Reparto de Macros (Configuración Pro de Fitia)
-       - Proteína: 2.0g por cada kg de peso corporal (g * 4 kcal)
-       - Grasas: 25% del total de las calorías del objetivo (cal / 9)
-       - Carbohidratos: El resto de las calorías restantes (cal / 4)
-    */
-    
-    $protGrams = $weight * 2.0;
-    $fatGrams  = ($targetCal * 0.25) / 9;
-    
-    // Calorías consumidas por prot y grasas
-    $consumedCal = ($protGrams * 4) + ($fatGrams * 9);
-    
-    // Resto a carbohidratos
-    $carbCal = max(0, $targetCal - $consumedCal);
-    $carbGrams = $carbCal / 4;
-
-    return [
-        'calories'   => (int)round($targetCal),
-        'protein_g'  => (int)round($protGrams),
-        'carbs_g'    => (int)round($carbGrams),
-        'fat_g'      => (int)round($fatGrams),
-        'tmb'        => (int)round($tmb),
-        'tdee'       => (int)round($tdee),
-        'adjustment' => (int)round($targetCal - $tdee)
-    ];
+    $factors = ['SEDENTARY'=>1.2, 'LIGHT'=>1.375, 'MODERATE'=>1.55, 'ACTIVE'=>1.725, 'VERY_ACTIVE'=>1.9];
+    $tdee = $tmb * ($factors[$activity] ?? 1.55);
+    $adj = match($objective) { 'LOSE_WEIGHT'=>-0.20, 'GAIN_MUSCLE'=>0.10, default=>0.00 };
+    $cal = max(1200, $tdee * (1 + $adj));
+    $prot = $weight * 2.0;
+    $fat = ($cal * 0.25) / 9;
+    $carb = ($cal - ($prot*4 + $fat*9)) / 4;
+    return ['calories' => (int)round($cal), 'protein_g' => (int)round($prot), 'carbs_g' => (int)round($carb), 'fat_g' => (int)round($fat), 'tmb' => (int)round($tmb), 'tdee' => (int)round($tdee), 'adjustment' => (int)round($cal - $tdee)];
 }

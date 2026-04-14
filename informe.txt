@@ -292,3 +292,30 @@ Se realiza un `git reset --hard 79defe0` para limpiar la rama de pruebas de traz
 *   **Rama**: `backup-safe-2026-04-13`.
 *   **Tag**: `stable-v3-pre-refactor`.
 *   **Propósito**: Punto de retorno garantizado antes de iniciar la refactorización monolítica de controladores.
+
+***
+
+# Informe Técnico (Estabilización): Arquitectura Monolítica (v3.1.0)
+**Fecha:** 2026-04-14
+**Estado:** PRODUCCIÓN ESTABLE. Consolidación de controladores completada.
+
+## 1. Resolución de Errores 500 y SyntaxErrors
+*   **Problema Crítico**: Se reportaron fallos al guardar perfil y errores de JSON ("Unexpected token <") en el panel nutricional.
+*   **Causa Técnica**: 
+    1.  **Vercel/PHP 8.3**: El sistema de `require_once` demostró ser inestable en picos de tráfico serverless, devolviendo errores 500 aleatorios.
+    2.  **Conflictos de Redemarcación**: Al intentar arreglar un archivo, el sistema de inclusiones provocaba errores de "Cannot redeclare function", rompiendo la respuesta JSON y devolviendo HTML de error.
+
+## 2. Solución: Consolidación Monolítica
+*   **Estrategia**: Se han refactorizado los 4 controladores más críticos para convertirlos en **unidades autónomas (Monolíticas)**:
+    1.  `api/auth.php` (Acceso y Registro)
+    2.  `api/profile.php` (Perfil y Macros)
+    3.  `api/nutrition.php` (Diario y Resumen)
+    4.  `api/workouts.php` (Entrenamientos)
+*   **Implementación**: Cada archivo contiene ahora su propia copia de los helpers de base de datos (`fp_db`), seguridad (`jwt_require`) y sanitización. Esto elimina la dependencia del sistema de archivos de Vercel y garantiza una respuesta Error 200 constante.
+
+## 3. Estado Final de Despliegue
+*   **Merge**: Todos los cambios de la rama `testing` han sido fusionados a `master`.
+*   **Estabilidad**: El sistema es ahora resiliente ante la latencia de Neon y la inestabilidad de inclusiones de Vercel.
+*   **Backup**: Se mantiene el punto de restauración `stable-v3-pre-refactor` como medida de seguridad adicional.
+
+***
