@@ -32,10 +32,14 @@ function fp_db(): PDO
         $host = getenv('PGHOST')          ?: getenv('POSTGRES_HOST');
         $user = getenv('PGUSER')          ?: getenv('POSTGRES_USER');
         $pass = getenv('DB_PASSWORD_NUEVA') ?: getenv('PGPASSWORD') ?: getenv('POSTGRES_PASSWORD');
-        $db   = getenv('PGDATABASE')      ?: 'fitpaisa_testing';
-        if ($env === 'preview' || empty(getenv('PGDATABASE'))) $db = 'fitpaisa_testing';
+        $db   = getenv('PGDATABASE')      ?: getenv('POSTGRES_DATABASE');
+        $port = getenv('PGPORT')          ?: '5432';
+
+        if ($db === 'neondb' || empty($db) || $env === 'preview') {
+            $db = 'fitpaisa_testing';
+        }
     }
-    $dsn = "pgsql:host={$host};port=5432;dbname={$db};sslmode=require";
+    $dsn = "pgsql:host={$host};port={$port};dbname={$db};sslmode=require";
     try {
         $_fp_pdo = new PDO($dsn, $user, $pass, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -188,7 +192,16 @@ function handle_register(): never
         
         $db->commit();
         $token = jwt_create(['user_id'=>$uid, 'email'=>$email, 'role'=>'USER', 'name'=>$body['name']??'']);
-        fp_success(['token'=>$token, 'user_id'=>$uid], 201);
+        fp_success([
+            'token' => $token,
+            'user'  => [
+                'user_id' => $uid,
+                'email'   => $email,
+                'name'    => $body['name'] ?? '',
+                'role'    => 'USER',
+                'plan'    => 'FREE' // New users start free in this logic
+            ]
+        ], 201);
     } catch (Exception $e) { $db->rollBack(); fp_error(500, 'Error registro: '.$e->getMessage()); }
 }
 

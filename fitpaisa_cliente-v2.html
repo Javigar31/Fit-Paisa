@@ -920,7 +920,12 @@ window.addEventListener('load', async () => {
   const token = localStorage.getItem('fp_token');
   if (!token) { window.location.href = 'index.html'; return; }
 
-  const user = JSON.parse(localStorage.getItem('fp_user') || 'null');
+  let user = null;
+  try {
+    const rawUser = localStorage.getItem('fp_user');
+    if (rawUser && rawUser !== 'undefined') user = JSON.parse(rawUser);
+  } catch (e) { console.error("User parse error:", e); }
+
   if (!user || user.role !== 'USER') { window.location.href = 'index.html'; return; }
 
   // 1. Poblar inmediatamente con datos locales para evitar parpadeo
@@ -970,7 +975,11 @@ function populateUI(profile, macros, user) {
   // Mostrar la página inmediatamente al empezar a poblar
   document.body.classList.add('ready');
 
-  const localUser = JSON.parse(localStorage.getItem('fp_user') || 'null');
+  const rawUser = localStorage.getItem('fp_user');
+  let localUser = null;
+  try {
+    if (rawUser && rawUser !== 'undefined') localUser = JSON.parse(rawUser);
+  } catch (e) {}
 
   console.log("Starting UI Population. LocalStorage User:", localUser);
 
