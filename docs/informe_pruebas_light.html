@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informe Técnico FitPaisa - Versión Corporativa</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #fcfcfc;
+            --accent: #d32f2f; /* Un rojo un poco más oscuro para impresión legislativa */
+            --text-color: #1a1a1a;
+            --text-light: #555;
+            --border-color: #ddd;
+            --section-bg: #fff;
+        }
+
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.5;
+            padding: 50px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        header {
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 20px;
+            margin-bottom: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .header-content h1 {
+            font-family: 'Bebas Neue', cursive;
+            font-size: 3.5rem;
+            color: var(--text-color);
+            line-height: 1;
+        }
+
+        .header-meta {
+            text-align: right;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .intro {
+            font-style: italic;
+            color: var(--text-light);
+            margin-bottom: 40px;
+            font-size: 1.1rem;
+        }
+
+        section {
+            margin-bottom: 40px;
+            page-break-inside: avoid;
+        }
+
+        h2 {
+            font-size: 1.25rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            color: var(--accent);
+        }
+
+        h3 {
+            font-size: 1.1rem;
+            margin: 20px 0 10px;
+            color: #000;
+        }
+
+        p, li {
+            font-size: 1rem;
+            color: #333;
+            margin-bottom: 12px;
+        }
+
+        ul {
+            list-style-type: none;
+            padding-left: 5px;
+        }
+
+        li::before {
+            content: "•";
+            color: var(--accent);
+            font-weight: bold;
+            display: inline-block; 
+            width: 1em;
+            margin-left: -1em;
+        }
+        li { padding-left: 1em; }
+
+        .callout {
+            background-color: #fef2f2;
+            border-left: 5px solid var(--accent);
+            padding: 20px;
+            margin: 25px 0;
+        }
+
+        .callout strong {
+            color: var(--accent);
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            background: #fff;
+        }
+
+        .card h4 {
+            font-size: 0.85rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        footer {
+            margin-top: 80px;
+            font-size: 0.8rem;
+            color: #888;
+            border-top: 1px solid var(--border-color);
+            padding-top: 10px;
+            text-align: center;
+        }
+
+        @media print {
+            body { padding: 0; background: #fff; }
+            header { margin-top: 0; }
+            .container { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <h1>FITPAISA 3D</h1>
+            </div>
+            <div class="header-meta">
+                Planificación de Pruebas<br>v3.2.0 • 2026
+            </div>
+        </header>
+
+        <p class="intro">Reflexión técnica sobre los protocolos de control de calidad y estabilidad arquitectónica para el sistema de gestión deportiva y nutricional.</p>
+
+        <section>
+            <h2>01. Objetivos Estratégicos</h2>
+            <p>La prioridad es la consolidación del núcleo del sistema tras la implementación de los controladores monolíticos.</p>
+            <ul>
+                <li>Validación de la conectividad resiliente con Neon DB.</li>
+                <li>Auditoría de rendimiento del motor gráfico en entornos de baja potencia.</li>
+                <li>Blindaje de accesos mediante decodificación JWT redundante.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>02. Arquitectura Monolítica</h2>
+            <div class="callout">
+                <strong>Enfoque en Estabilidad:</strong>
+                Se ha diseñado un sistema de autonomía por archivo para evitar fallos por redemarcación de funciones en entornos PHP 8.3 (Vercel).
+            </div>
+            <h3>Protocolo de Auditoría:</h3>
+            <ul>
+                <li>Validación de independencia física de los controladores críticos.</li>
+                <li>Verificación de consistencia en las copias locales de helpers de sistema.</li>
+                <li>Análisis de impacto volumétrico en la latencia de primer byte.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>03. Metodología de Pruebas</h2>
+            <div class="grid">
+                <div class="card">
+                    <h4>Pruebas Estructurales</h4>
+                    <p>Análisis de Caja Blanca sobre los flujos lógicos y control de excepciones interno.</p>
+                </div>
+                <div class="card">
+                    <h4>Pruebas Funcionales</h4>
+                    <p>Validación de Caja Negra sobre la integridad de las respuestas JSON del servidor.</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>04. Protocolo de Depuración</h2>
+            <p>Estructura de diagnóstico basada en tres ejes procedimentales:</p>
+            <ul>
+                <li><strong>Procesal</strong>: Uso de scripts diag_*.php como examinadores constantes.</li>
+                <li><strong>Ambiental</strong>: Ejecución en aislamiento para descartar colisiones de entorno.</li>
+                <li><strong>De Datos</strong>: Auditoría de variables de entorno mediante volcados seguros de sistema.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>05. Recursos Críticos para el Éxito</h2>
+            <div class="grid">
+                <div class="card">
+                    <h4>Logs de Sistema</h4>
+                    <p>Monitorización activa del entorno Master para detección temprana de fallos.</p>
+                </div>
+                <div class="card">
+                    <h4>Matriz de Hardware</h4>
+                    <p>Validación cruzada en iOS y Android para asegurar la fluidez de interfaz.</p>
+                </div>
+                <div class="card">
+                    <h4>Datos Golden</h4>
+                    <p>Conjunto de datos maestros para la validación del algoritmo nutricional.</p>
+                </div>
+                <div class="card">
+                    <h4>Tiempos de Asentamiento</h4>
+                    <p>Margen de 24h entre despliegues para estabilización de latencia DB.</p>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            Documento de uso interno exclusivo para FitPaisa. Generado para Javier García.
+        </footer>
+    </div>
+</body>
+</html>

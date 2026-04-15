@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planificación de Pruebas FitPaisa - Dark Edition</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Bebas+Neue&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --accent: #ff3b3b;
+            --text-color: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --border-color: #333;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+            padding-bottom: 30px;
+            border-bottom: 2px solid var(--accent);
+        }
+
+        h1 {
+            font-family: 'Bebas Neue', cursive;
+            font-size: 4rem;
+            letter-spacing: 2px;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .version {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+
+        .section {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        h2 {
+            font-family: 'Bebas Neue', cursive;
+            font-size: 2rem;
+            color: var(--accent);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        h2::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 24px;
+            background-color: var(--accent);
+            margin-right: 15px;
+            border-radius: 4px;
+        }
+
+        h3 {
+            color: #fff;
+            margin: 20px 0 10px;
+        }
+
+        p, li {
+            font-size: 1.05rem;
+            margin-bottom: 15px;
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 10px;
+        }
+
+        li::before {
+            content: '→';
+            color: var(--accent);
+            margin-right: 10px;
+            font-weight: bold;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #2c1a1a 0%, #1e1e1e 100%);
+            border-left: 4px solid var(--accent);
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .critical-badge {
+            display: inline-block;
+            background-color: var(--accent);
+            color: #fff;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .needs-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .need-card {
+            background-color: #252525;
+            padding: 20px;
+            border-radius: 8px;
+            border-top: 3px solid var(--accent);
+        }
+
+        .need-card h4 {
+            color: #fff;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 60px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        @media print {
+            body { padding: 0; background-color: #fff; color: #000; }
+            .section { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
+            h1, h2, h3, .subtitle { color: #000; border-color: #000; }
+            .highlight-box { background: #f9f9f9; border-color: #000; }
+            .critical-badge { border: 1px solid #000; color: #000; background: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="subtitle">Estrategia de Control de Calidad</div>
+            <h1>FITPAISA 3D</h1>
+            <div class="version">v3.2.0 • Informe Técnico Premium</div>
+        </header>
+
+        <div class="section">
+            <h2>01. Objetivos de Estabilidad</h2>
+            <p>El foco principal es garantizar la <strong>resiliencia absoluta</strong> tras la migración a controladores monolíticos.</p>
+            <ul>
+                <li>Validar la conexión a Neon DB ante latencias críticas de Vercel (PHP 8.3).</li>
+                <li>Asegurar un rendimiento constante de 60 FPS en el motor de partículas 3D.</li>
+                <li>Garantizar que el sistema JWT bloquea accesos no autorizados en los nuevos endpoints consolidados.</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <div class="critical-badge">Foco Arquitectónico</div>
+            <h2>02. Arquitectura Monolítica</h2>
+            <div class="highlight-box">
+                <p>Nuestra mayor defensa contra los errores 500 es la autonomía de los controladores críticos (auth, profile, nutrition, workouts).</p>
+            </div>
+            <h3>Protocolo de Validación Atómica:</h3>
+            <ul>
+                <li><strong>Test de Aislamiento</strong>: Los controladores deben operar correctamente incluso si los archivos base (_db.php, _jwt.php) son removidos.</li>
+                <li><strong>Sincronía de Helpers</strong>: Auditoría de las funciones duplicadas para evitar divergencias lógicas.</li>
+                <li><strong>Métricas de Latencia</strong>: Evaluación del impacto del tamaño de archivo en los Cold Starts de Vercel.</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>03. Tipos de Pruebas (Metodología)</h2>
+            <div class="needs-section">
+                <div class="need-card">
+                    <h4>Caja Blanca</h4>
+                    <p>Auditoría de los flujos try-catch internos y la lógica de saneamiento de datos en el backend.</p>
+                </div>
+                <div class="need-card">
+                    <h4>Caja Negra</h4>
+                    <p>Validación de la integridad del JSON de salida independientemente de la estructura interna del archivo.</p>
+                </div>
+                <div class="need-card">
+                    <h4>Regresión</h4>
+                    <p>Uso estricto de la rama 'testing' para asegurar que el motor 3D y la API v3.2 son estables.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>04. Protocolo de Depuración</h2>
+            <p>Estructuramos nuestras herramientas bajo tres dimensiones críticas:</p>
+            <ul>
+                <li><strong>Dónde</strong>: Scripts dinámicos diag_*.php como puntos de ruptura virtuales.</li>
+                <li><strong>Cómo</strong>: Ejecución en aislamiento monolítico para detectar colisiones de redemarcación.</li>
+                <li><strong>Qué</strong>: Examinadores de variables mediante logs controlados y respuestas JSON detalladas.</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>05. Necesidades Críticas de Éxito</h2>
+            <div class="needs-section">
+                <div class="need-card">
+                    <h4>Acceso a Logs</h4>
+                    <p>Identificación de errores en tiempo real en el entorno Master de Vercel.</p>
+                </div>
+                <div class="need-card">
+                    <h4>Dispositivos</h4>
+                    <p>Validación obligatoria en iOS (Safari) y Android para el motor 3D y Scroll-Snap.</p>
+                </div>
+                <div class="need-card">
+                    <h4>Datos Golden</h4>
+                    <p>Set de 10 alimentos con valores conocidos para auditoría matemática del algoritmo.</p>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            Documento generado automáticamente por Antigravity para Javier García (FitPaisa Ltd.)
+        </footer>
+    </div>
+</body>
+</html>

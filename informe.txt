@@ -342,3 +342,24 @@ Se realiza un `git reset --hard 79defe0` para limpiar la rama de pruebas de traz
 *   **Rendimiento**: Se han optimizado los shaders 3D para mantener ~60 FPS incluso con el triple de densidad de partículas en los monogramas de marca.
 
 ***
+
+# Informe Técnico (QA): Planificación Estratégica y Reportes Premium (v3.2.1)
+**Fecha:** 2026-04-15
+**Estado:** PRODUCCIÓN ESTABLE. Documentación técnica y estratégica desplegada.
+
+## 1. Definición de Estrategia de Pruebas
+*   **Protocolo de 10 Puntos**: Se ha elaborado un documento maestro (`docs/planificacion_pruebas_fitpaisa.md`) que define la hoja de ruta para la fase de pruebas, cubriendo desde objetivos de estabilidad hasta normas de calidad.
+*   **Foco en Arquitectura Monolítica**: La estrategia se centra en validar la autonomía de los controladores críticos (`auth.php`, `profile.php`, etc.), asegurando que la duplicación de helpers para ganar estabilidad en Vercel no genere divergencias lógicas.
+*   **Metodología de Mapa Mental**: Integración de conceptos formales como Pruebas de Caja Blanca (estructurales) y Caja Negra (funcionales) aplicados específicamente al stack de FitPaisa.
+
+## 2. Generación de Reportes Técnicos Premium
+*   **Formatos HTML para PDF**: Creación de dos plantillas de informe de alta fidelidad con tipografía premium (Inter/Bebas Neue) y optimización para impresión:
+    *   `docs/informe_pruebas_dark.html`: Estética digital fiel a la identidad visual de la plataforma.
+    *   `docs/informe_pruebas_light.html`: Versión corporativa optimizada para exportación a PDF y ahorro de tinta.
+*   **Protocolo de Depuración**: Formalización de las dimensiones "Dónde, Cómo y Qué" depurar, utilizando los scripts de diagnóstico monolíticos como examinadores de variables.
+
+## 3. Estado del Repositorio
+*   **Sincronización de Ramas**: Todos los documentos estratégicos y reportes premium han sido fusionados en `master` tras su validación en `testing`.
+*   **Escalabilidad**: El proyecto cuenta ahora con una base documental sólida para afrontar futuras auditorías técnicas y fases de QA masivas.
+
+***
