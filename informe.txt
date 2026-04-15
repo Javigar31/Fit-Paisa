@@ -363,3 +363,27 @@ Se realiza un `git reset --hard 79defe0` para limpiar la rama de pruebas de traz
 *   **Escalabilidad**: El proyecto cuenta ahora con una base documental sólida para afrontar futuras auditorías técnicas y fases de QA masivas.
 
 ***
+
+# Informe Técnico (Crítico): Resolución de Bloqueadores en Testing (v3.3.0)
+**Fecha:** 2026-04-15
+**Estado:** PRODUCCIÓN ESTABLE. Desplegado en `master` tras validación en `testing`.
+
+## 1. Resolución de la Pantalla en Negro (Registro)
+*   **Problema**: Los nuevos usuarios se encontraban con una pantalla en negro tras el registro automático.
+*   **Causa Raíz**: 
+    1.  El API `api/auth.php` (acción `register`) no devolvía el objeto `user`, lo que causaba que se guardara `"undefined"` en el almacenamiento local.
+    2.  El frontend fallaba al intentar procesar (`JSON.parse`) este valor antes de inicializar la interfaz.
+*   **Solución**: 
+    *   **Backend**: Sincronizada la respuesta de registro para que devuelva el objeto de usuario completo.
+    *   **Frontend**: Implementado blindaje con `try-catch` y comprobación explícita de `"undefined"` tanto en el auto-redirect de `index.html` como en la carga del dashboard.
+
+## 2. Resolución de Credenciales Inválidas
+*   **Problema**: El login fallaba sistemáticamente en entornos de Vercel Preview a pesar de que el usuario existía en la base de datos de pruebas.
+*   **Causa Raíz**: El controlador monolítico `api/auth.php` no tenía sincronizada la "Regla de Oro" de conexión. Esto provocaba que el API intentara validar credenciales contra la base de datos `neondb` (vacía) mientras el usuario estaba visualizando `fitpaisa_testing`.
+*   **Solución**: Unificada la lógica de conexión en `auth.php`. Ahora el sistema detecta correctamente el entorno de preview y fuerza la conexión a `fitpaisa_testing` de forma consistente con el resto de la aplicación.
+
+## 3. Estado del Repositorio
+*   **Merge Final**: Se ha realizado el paso de `testing` a `master` de todas las correcciones de estabilidad.
+*   **Documentación**: Actualizados los informes técnicos corporativos (`docs/informe_pruebas_light.html` y `dark.html`) a la versión **v3.3.0**.
+
+***
