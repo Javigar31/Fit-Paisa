@@ -33,15 +33,17 @@ function fp_db(): PDO
         $user = getenv('PGUSER_PROD')     ?: getenv('POSTGRES_USER');
         $pass = getenv('DB_PASSWORD_NUEVA') ?: getenv('PGPASSWORD_PROD') ?: getenv('POSTGRES_PASSWORD');
         $db   = getenv('PGDATABASE_PROD') ?: 'neondb';
+        $port = getenv('PGPORT')          ?: '5432';
     } else {
         $host = getenv('PGHOST')          ?: getenv('POSTGRES_HOST');
         $user = getenv('PGUSER')          ?: getenv('POSTGRES_USER');
         $pass = getenv('DB_PASSWORD_NUEVA') ?: getenv('PGPASSWORD') ?: getenv('POSTGRES_PASSWORD');
         $db   = getenv('PGDATABASE')      ?: 'fitpaisa_testing';
+        $port = getenv('PGPORT')          ?: '5432';
         if ($env === 'preview' || empty(getenv('PGDATABASE'))) $db = 'fitpaisa_testing';
     }
 
-    $dsn = "pgsql:host={$host};port=5432;dbname={$db};sslmode=require";
+    $dsn = "pgsql:host={$host};port={$port};dbname={$db};sslmode=require";
 
     try {
         $_fp_pdo = new PDO($dsn, $user, $pass, [

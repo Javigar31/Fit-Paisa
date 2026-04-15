@@ -28,6 +28,7 @@ function fp_db(): PDO
         $user = getenv('PGUSER_PROD')     ?: getenv('POSTGRES_USER');
         $pass = getenv('DB_PASSWORD_NUEVA') ?: getenv('PGPASSWORD_PROD') ?: getenv('POSTGRES_PASSWORD');
         $db   = getenv('PGDATABASE_PROD') ?: 'neondb';
+        $port = getenv('PGPORT')          ?: '5432';
     } else {
         $host = getenv('PGHOST')          ?: getenv('POSTGRES_HOST');
         $user = getenv('PGUSER')          ?: getenv('POSTGRES_USER');
