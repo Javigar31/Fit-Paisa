@@ -188,7 +188,16 @@ function handle_register(): never
         
         $db->commit();
         $token = jwt_create(['user_id'=>$uid, 'email'=>$email, 'role'=>'USER', 'name'=>$body['name']??'']);
-        fp_success(['token'=>$token, 'user_id'=>$uid], 201);
+        fp_success([
+            'token' => $token,
+            'user'  => [
+                'user_id' => $uid,
+                'email'   => $email,
+                'name'    => $body['name'] ?? '',
+                'role'    => 'USER',
+                'plan'    => 'FREE' // New users start free in this logic
+            ]
+        ], 201);
     } catch (Exception $e) { $db->rollBack(); fp_error(500, 'Error registro: '.$e->getMessage()); }
 }
 

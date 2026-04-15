@@ -2094,7 +2094,7 @@
 
         if (data.success) {
           localStorage.setItem('fp_token', data.token);
-          localStorage.setItem('fp_user',  JSON.stringify(data.user));
+          if (data.user) localStorage.setItem('fp_user', JSON.stringify(data.user));
           isRegActive = false;
           window.location.href = 'fitpaisa_cliente-v2.html';
         } else {
