@@ -387,3 +387,25 @@ Se realiza un `git reset --hard 79defe0` para limpiar la rama de pruebas de traz
 *   **Documentación**: Actualizados los informes técnicos corporativos (`docs/informe_pruebas_light.html` y `dark.html`) a la versión **v3.3.0**.
 
 ***
+
+# Informe Técnico (Crítico): Estabilización de Conexión en Producción (v3.3.1)
+**Fecha:** 2026-04-15
+**Estado:** PRODUCCIÓN ESTABLE. Corregido fallo de conexión en `master`.
+
+## 1. Resolución del Fallo de Conexión (Login Master)
+*   **Problema**: Los usuarios no podían iniciar sesión en el entorno de producción, recibiendo un mensaje genérico de "Error de conexión".
+*   **Causa Raíz**: 
+    *   En el controlador monolítico `api/auth.php`, la variable `$port` no se inicializaba dentro del bloque condicional de `production`. 
+    *   Esto generaba una cadena DSN incompleta (`port=;`), rompiendo la comunicación con el pooler de Neon.
+*   **Solución (Estandarización Monolítica)**: 
+    *   **Backend**: Se ha corregido la inicialización de `$port` en `api/auth.php`.
+    *   **Sincronización Global**: Se ha actualizado la lógica de conexión en `api/profile.php`, `api/nutrition.php` y `api/workouts.php` para usar variables dinámicas en lugar de puertos hardcoded, garantizando coherencia con `api/_db.php`.
+
+## 2. Acciones Realizadas
+*   **Despliegue**: Los cambios han sido validados localmente (lógica) y subidos a la rama `master`.
+*   **Git**: Commit `744fb47 "fix(api): fix database connection logic in production (master)"` publicado.
+
+## 3. Estado del Repositorio
+*   **Master**: 100% operativo y sincronizado con las últimas correcciones de estabilidad de la arquitectura monolítica.
+
+***
