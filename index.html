@@ -1590,12 +1590,18 @@
   <script>
     // ── AUTO-REDIRECT IF LOGGED IN ────────
     (function(){
-      const t=localStorage.getItem('fp_token'),u=JSON.parse(localStorage.getItem('fp_user')||'null');
-      if(t&&u){
-        const r=u.role;
-        if(r==='ADMIN')location.href='fitpaisa_admin.html';
-        else if(r==='COACH')location.href='fitpaisa_entrenador.html';
-        else if(r==='USER')location.href='fitpaisa_cliente-v2.html';
+      const t = localStorage.getItem('fp_token');
+      let u = null;
+      try {
+        const rawUser = localStorage.getItem('fp_user');
+        if (rawUser && rawUser !== 'undefined') u = JSON.parse(rawUser);
+      } catch (e) {}
+      
+      if(t && u){
+        const r = u.role;
+        if(r === 'ADMIN') location.href = 'fitpaisa_admin.html';
+        else if(r === 'COACH') location.href = 'fitpaisa_entrenador.html';
+        else if(r === 'USER') location.href = 'fitpaisa_cliente-v2.html';
       }
 
       // Check environment
