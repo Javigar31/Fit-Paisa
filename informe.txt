@@ -1,411 +1,47 @@
-
-
 ***
-
-# Informe de Traspaso Técnico: Proyecto FitPaisa (v1.2.1)
-**Fecha:** 2026-04-09
-**Estado:** Estable en Producción (`master`) y Testing (`testing`).
-
-## 1. Cambios en la Arquitectura (Cache-Busting)
-*   **Renombramiento Crítico**: Se ha migrado `fitpaisa_cliente.html` a `fitpaisa_cliente-v2.html` para invalidar cachés agresivas en redes corporativas (Fortinet).
-*   **Redirecciones**: Actualizadas todas las referencias en `index.html` (login y registro) para apuntar a la nueva versión `-v2`.
-
-## 2. Sistema de Mensajería (Dinamización)
-*   **Backend**: `api/messages.php` operativo con acciones `inbox`, `thread` y `send`.
-*   **Frontend**: Se eliminaron todos los datos mock (Laura Vidal). 
-    *   Implementadas `loadLastMessage()` y `fetchInbox()` para poblar la UI desde la base de datos.
-    *   `openChat(userId)` y `sendMsg()` ahora realizan peticiones `POST` reales a la API.
-    *   IDs añadidos: `dash-msg-title`, `dash-msg-avatar`, `dash-msg-trainer`, `dash-msg-text`.
-
-## 3. Correcciones en el Perfil y Seguridad
-*   **Ajuste de CORS**: En `api/_db.php`, la función `fp_cors()` ahora permite dinámicamente cualquier origen que termine en `.vercel.app`, solucionando bloqueos en ramas de testing.
-*   **Bug de JS**: Corregido un `TypeError` en `saveProfile` donde se intentaba acceder a un objeto intermedio `.data` que ya no existía en el nuevo formato de respuesta de la API.
-
-## 4. Motor Nutricional (Fix del Algoritmo)
-*   **Bug de Consulta**: La acción `summary` en `api/nutrition.php` no estaba seleccionando las columnas `target_weight` y `target_time_weeks`, provocando que el déficit/superávit fuera siempre 0. Corregido.
-*   **Lógica de Macros**: La función `calculate_macros` ahora aplica correctamente la diferencia de peso multiplicada por 7700 kcal repartida entre el tiempo objetivo.
-*   **UI Dinámica**: El TMB y el ajuste calórico (Déficit/Superávit) en `fitpaisa_cliente-v2.html` ya no son texto estático; se actualizan mediante IDs `diet-tmb-val` y `diet-adj-val`.
-
-## 5. Acciones Manuales Pendientes
-*   **Migración de DB**: Es necesario ejecutar `api/db_migration.php` en cualquier entorno nuevo o base de datos de producción para añadir las columnas de objetivos a la tabla `profiles`.
-*   **Roles**: Las credenciales de entrenador registradas hoy son `javigar.1731@hotmail.com` / `Javigar.coach1731` (Rol: `COACH`).
-
-## Contexto para el Modelo:
-*   **Frontend**: Vanilla JS / HTML / CSS.
-*   **Backend**: PHP (con `PDO`).
-*   **Entry Points Clave**: `api/profile.php` (Gestión de usuario/macros), `api/nutrition.php` (Diario de comidas), `api/messages.php` (Mensajería).
-
-***
-
-# Informe Técnico (Tarde): Optimización Mobile & UX (v1.3.0)
-**Fecha:** 2026-04-09
-**Estado:** Merge completado a `master`.
-
-## 1. Optimización de Interfaz Cliente (`fitpaisa_cliente-v2.html`)
-*   **Paridad de Funciones**: Se han integrado los botones de **Perfil** y **Cerrar Sesión** en el menú táctil inferior de la versión móvil, vinculándolos a la lógica de negocio existente.
-*   **Scroll-Snap Vertical**: Implementado sistema de "imán" (`scroll-snap-type: y mandatory`) para que cada sección (Dashboard, Entreno, Dieta) se ajuste automáticamente al centro de la pantalla al hacer scroll, mejorando el feeling de App nativa.
-*   **Alineación de Cabecera**: Ajustada la altura fija de cabecera a 70px y sincronizado el `scroll-margin-top` para evitar que el contenido quede oculto bajo el menú.
-
-## 2. Mejoras en el Index y Acceso (`index.html`)
-*   **Seguridad y Visibilidad**: 
-    *   Añadidos **iconos de ojo** para alternar la visibilidad de la contraseña en el registro.
-    *   Habilitado **Copia/Pega** entre campos de contraseña para reducir errores del usuario.
-*   **Mejora de Conversión**: El botón de "Regístrate gratis" ahora es más grande (13px), con mayor área de clic, resaltado en negrita y subrayado, y efectos hover para facilitar su localización.
-*   **Validación de Formulario**: Nuevo mensaje de error "Todos los campos son obligatorios" que valida el Paso 1 del registro antes de permitir el avance.
-
-## 3. Sistema de Ayuda Inteligente (Hints)
-*   **Diferenciación por Dispositivo**:
-    *   **Desktop**: Mantiene el mensaje "Haz scroll o presiona las flechas para navegar".
-    *   **Mobile/Tablet**: Implementado un **Hint Flotante** (Toast) que aparece a los 3 segundos de carga.
-*   **Efectos Premium**: El hint de móvil aparece en la parte superior con un **borde palpitante** (Rojo/Blanco) para captar la atención de forma no intrusiva y desaparece tras 2.5 segundos de exposición.
-
-## 4. Notas de Despliegue
-*   **Merge**: Se ha realizado el merge de `testing` a `master` satisfactoriamente.
-*   **Caché**: Se recomienda a los usuarios móviles refrescar la página una vez para cargar los nuevos estilos de `scroll-snap`.
-
-***
-
-# Informe Técnico (Mañana): Estabilización de Producción (v1.3.1)
-**Fecha:** 2026-04-10
-**Estado:** Diagnóstico de `master` completado. `testing` estable.
-
-## 1. Diagnóstico de Producción (`master`)
-*   **Identificación de Fallos**: Detectada inconsistencia en la conexión a la base de datos de producción (`fit-paisa.vercel.app`).
-*   **Causas Probables**: 
-    1.  **Variables de Entorno**: Posible falta de configuración de credenciales de Postgres en el scope de **Production** de Vercel.
-    2.  **Desincronización de Esquema**: La tabla `profiles` en producción aún no cuenta con las columnas de objetivos nutricionales (`target_weight`, `target_time_weeks`).
-*   **Herramienta de Diagnóstico**: Se ha utilizado `api/diag_master.php` para verificar la conectividad manual y el estado de las variables en tiempo real.
-
-## 2. Acciones Correctivas Requeridas
-*   **Migración Manual**: Se requiere la ejecución de `https://fit-paisa.vercel.app/api/db_migration.php` para sincronizar el esquema de producción con las nuevas funciones de cálculo de déficit.
-*   **Configuración Vercel**: Verificar que las variables `PGHOST`, `PGUSER`, `PGDATABASE` y `PGPASSWORD` estén correctamente asignadas al entorno de producción en el panel de control de Vercel.
-
-## 3. Estado de la Rama Testing
-*   **Estabilidad Confirmada**: Todas las funciones de mensajería, guardado de perfil y cálculo de macros operan correctamente bajo el dominio de pruebas.
-
-***
-
-# Informe Técnico (Tarde): Resolución Definitiva de Producción (v1.3.2)
-**Fecha:** 2026-04-10
-**Estado:** Producción (`master`) 100% operativa y estabilizada.
-
-## 1. Resolución del Error 500 (Login en Producción)
-*   **Problema Detectado**: Fallo de autenticación en la base de datos (`password authentication failed`).
-*   **Causa Raíz**: Vercel inyecta automáticamente variables de entorno (`POSTGRES_PASSWORD`) que en este proyecto están obsoletas o bloqueadas y no se pueden modificar desde el panel. El código las priorizaba, causando el fallo.
-*   **Solución Técnica** (`api/_db.php`):
-    *   **Prioridad de Credenciales**: Se ha modificado la lógica para que el sistema use primero la variable manual `DB_PASSWORD_NUEVA` antes que cualquier variable automática de Vercel.
-    *   **Forzado de Base de Datos**: 
-        *   La rama `master` está forzada por código a usar la base de datos `neondb`.
-        *   La rama `testing` está forzada por código a usar `fitpaisa_testing`.
-
-## 2. Herramientas de Diagnóstico
-*   **Script Avanzado**: Se desarrolló `api/diag_v3.php` para realizar pruebas de aislamiento (PDO puro) y verificar la visibilidad de variables de entorno sin exponer secretos. 
-*   **Seguridad**: Tras la estabilización, todos los archivos `diag_*.php` han sido eliminados de las ramas para evitar vulnerabilidades de exposición de información técnica.
-
-## 3. Lecciones Aprendidas para el Futuro
-*   **Variables de Vercel**: No confiar en las variables inyectadas automáticamente por las integraciones si se han realizado cambios manuales en Neon. Siempre priorizar variables de usuario (`_PROD` o manuales).
-*   **Aislamiento de Errores**: Ante un Error 500 genérico de PHP, usar siempre un script que pruebe la conexión PDO pura fuera del framework/wrapper de la app para ver el mensaje de error real de Postgres.
-
-## 4. Estado Final
-*   **Master**: Conectado a `neondb` - Operativa.
-*   **Testing**: Conectado a `fitpaisa_testing` - Operativa.
-
-***
-
-# Informe Técnico (Optimización): UI y Responsividad (v1.3.3)
-**Fecha:** 2026-04-10
-**Estado:** Interfaz de cliente optimizada y 100% responsiva.
-
-## 1. Mejoras en la Arquitectura Responsiva
-*   **Problema**: El diseño fijo de `100vh` en escritorio recortaba contenido en pantallas de poca altura o resoluciones bajas, perdiendo visibilidad de los macros y el calendario.
-*   **Solución (Centrado Seguro)**: Se implementó una lógica de márgenes dinámicos (`margin: auto 0`) en los paneles internos (`.slide-hero`, `.slide-panel`).
-    *   **Resultado**: El contenido se mantiene centrado si hay espacio, pero si la ventana es pequeña, el el scroll permite ver todo el contenido empezando desde el inicio (sin recortes superiores).
-*   **Estética Premium**: Se ocultaron las barras de scroll mediante CSS para mantener la sensación de aplicación nativa, manteniendo la funcionalidad de desplazamiento intacta.
-
-## 2. Correcciones en Componentes Críticos
-*   **Catálogo de Alimentos**: Se corrigió el buscador cambiando las sugerencias a `position: absolute`. Esto evita que el desplegable "empuje" el formulario hacia abajo, permitiendo una experiencia de búsqueda fluida.
-*   **Calendario Nutricional**: Se eliminó el `justify-content: space-between` para permitir un agrupamiento natural de los días y se ajustó la altura mínima para evitar saltos visuales durante la carga.
-
-## 3. Estado del Repositorio
-*   **Cambios Sincronizados**: Todas las mejoras visuales han sido fusionadas y subidas a `master` tras ser validadas en la rama `testing`.
-*   **Próximos Pasos**: Continuar con la mejora de funcionalidades backend y paneles de administración bajo esta nueva base responsiva.
-
-***
-
-***
-
-# Informe Técnico (UX & Selectores): Interfaz Premium (v1.4.7)
-**Fecha:** 2026-04-11
-**Estado:** Implementado y validado en `testing`.
-
-## 1. Rediseño de Selectores (`Custom Select`)
-*   **Problema**: Los selects nativos del buscador de alimentos rompían la estética "Dark & Lime" de la aplicación.
-*   **Solución**: Se sustituyeron los selectores de "Medir en" y "Tamaño" por componentes personalizados (`custom-dropdown`) construidos con HTML/CSS/JS.
-    *   **Estética**: Uso de `backdrop-filter: blur`, colores `lime-600` y tipografía premium.
-    *   **UX**: El catálogo y los selectores ahora se cierran automáticamente al pulsar la tecla `Esc`, al hacer clic fuera del elemento o al pulsar la "X" del buscador.
-
-## 2. Correcciones de Lógica
-*   **Bug de Cálculo**: Corregido un error en la función `setCS` que impedía que los macros se actualizaran al seleccionar un alimento del catálogo debido a un desajuste en los IDs de los nuevos selectores.
-
-***
-
-# Informe Técnico (UX): Borrado Optimista (v1.5.0)
-**Fecha:** 2026-04-11
-**Estado:** Estable en Producción.
-
-## 1. Refinamiento del Borrado de Ingestas
-*   **Problema**: Los usuarios reportaban tener que pulsar "2 veces" y recibían errores 404 confusos si hacían doble clic.
-*   **Solución (Borrado Optimista)**:
-    *   El elemento nutricional se oculta **instantáneamente** en el DOM con una transición de opacidad y desplazamiento al confirmar el borrado.
-    *   **Bloqueo de UI**: El botón de la papelera se deshabilita tras el primer clic para evitar peticiones concurrentes.
-    *   **Gestión de Errores**: Si el servidor devuelve un 404 (porque el registro ya se borró en una petición anterior), la interfaz lo trata como éxito silencioso para evitar alertas innecesarias.
-
-***
-
-# Informe Técnico (Arquitectura): Blindaje de Entornos (v1.5.1)
-**Fecha:** 2026-04-11
-**Estado:** Seguridad perimetral activa.
-
-## 1. Separación de Bases de Datos
-*   **Centralización**: Se refactorizó `api/_db.php` para usar `_fp_get_db_config()`.
-*   **Entornos**:
-    *   **Producción (`master`)**: Conectado exclusivamente a `neondb`.
-    *   **Testing (`preview`)**: Forzado por código a conectar con `fitpaisa_testing` para evitar contaminación de datos reales.
-*   **Protección de Diagnóstico**: El script `api/diag_db.php` ahora está bloqueado en producción por defecto. Solo accesible mediante una llave secreta (`?key=...`) para evitar exposición de metadatos.
-
-***
-
-# Informe Técnico (Crítico): Restauración de Master (v1.5.2)
-**Fecha:** 2026-04-11
-**Estado:** Producción estabilizada. Error 500 resuelto.
-
-## 1. Resolución del Error 500 en Registro
-*   **Problema**: El registro de alimentos fallaba sistemáticamente en producción con un Error 500.
-*   **Causa Raíz**: El script de auto-migración omitía las columnas `portion_amount` y `portion_unit` en la tabla `food_entries` de la base de datos `neondb`. 
-*   **Solución**: Se completó la función `fp_ensure_schema()` en `api/_db.php`. 
-    *   Al abrir el diagnóstico o registrar un alimento, el sistema autodetecta las columnas faltantes y las crea en tiempo real sin intervención manual.
-*   **Resultado**: Registro de alimentos 100% operativo en `https://fit-paisa.vercel.app/`.
-
-***
-
-# Informe Técnico (Global): Soporte de Zona Horaria (v1.6.2)
-**Fecha:** 2026-04-11
-**Estado:** Desplegado. Coherencia temporal universal.
-
-## 1. Resolución del Desfase Horario (Bug UTC)
-*   **Problema**: Los usuarios en España veían registros en el día anterior durante las madrugadas debido al uso de hora UTC en el servidor y frontend.
-*   **Solución**:
-    *   **Detección Local**: Implementación de `getLocalDateString()` usando `Intl.DateTimeFormat`.
-    *   **Sincronización de Perfil**: Almacenamiento de `timezone` en la tabla `profiles`.
-    *   **Vista Céntrica en el Cliente**: Los entrenadores y administradores visualizan los datos en la zona horaria del cliente, garantizando que el "Hoy" del cliente sea el mismo para el supervisor.
-*   **Resultado**: Registro nutricional y calendario 100% precisos en cualquier zona horaria.
-
-***
-
-# Informe Técnico (Global): Estabilización de Dashboards y Suscripciones (v1.6.8)
-**Fecha:** 2026-04-11
-**Estado:** Sistema robustecido. Dashboards operativos.
-
-## 1. Arquitectura de Perfiles Resiliente
-*   **Problema**: Los administradores y nuevos usuarios recibían errores 400 ya que el sistema esperaba datos físicos (peso/altura) que no existían para esos roles.
-*   **Solución**: Se implementó lógica de **UPSERT** en `api/profile.php`. Si el perfil no existe, se crea automáticamente con valores seguros durante la primera sincronización de zona horaria.
-*   **Resultado**: Sincronización de localización universal sin bloqueos según el rol.
-
-## 2. Estabilización del Panel Admin
-*   **Error 500 Subscriptions**: Resuelto añadiendo las columnas `provider`, `updated_at`, `starts_at` y `ends_at` a la tabla `subscriptions` del entorno de producción.
-*   **Visibilidad de Usuarios Gratuitos**: Refactorización de la consulta SQL para incluir a todos los usuarios del sistema (LEFT JOIN), permitiendo una gestión integral de la comunidad, no solo de los usuarios de pago.
-*   **Alineación de Metas**: El badge de notificación lateral y las tarjetas de ingresos/actividad ahora reflejan los mismos datos en tiempo real.
-
-***
-
-# Informe Técnico (Rendimiento): Optimización Mobile & DB (v1.8.0)
-**Fecha:** 2026-04-11
-**Estado:** Producción Optimizada (Ultra-Fast).
-
-## 1. Optimización del Motor de Base de Datos
-*   **Problema**: Carga lenta de datos debido a la ausencia de índices en tablas de alto tráfico.
-*   **Solución**: 
-    *   **Indexación Masiva**: Creados índices en `users(role, is_active)`, `users(created_at)`, `subscriptions(status, plan_type)` y `workout_plans(coach_id)`.
-    *   **Simplificación de Queries**: Eliminada la lógica `COALESCE` en ordenamientos, habilitando el uso nativo de índices para listados.
-*   **Resultado**: Las consultas complejas ahora se ejecutan en milisegundos incluso con miles de registros.
-
-## 2. Estrategia de Carga Eficiente (Mobile)
-*   **Consolidación de API**: Introducción del endpoint `dashboard_init`. Este cambio permite obtener todas las estadísticas, registros recientes y la primera página de usuarios en **una única petición HTTP**, reduciendo drásticamente el impacto de la latencia en redes móviles.
-*   **Aceleración por Hardware y UI**:
-    *   Detección inteligente de dispositivos táctiles para desactivar el seguimiento de cursor animado.
-    *   Eliminación de efectos de desenfoque (`backdrop-filter`) y transformaciones 3D en resoluciones móviles para garantizar estabilidad visual.
-*   **Resultado**: El panel fluye de forma constante (60fps) en cualquier smartphone moderno.
-
-***
-
-# Informe Técnico (Crítico): Blindaje Extremo (v2.0.0)
-**Fecha:** 2026-04-12
-**Estado:** Desplegado en `master` y `testing`. Nivel de seguridad A+.
-
-... (contenido anterior) ...
-
-***
-
-# Informe Técnico (Incidencias): Estabilización Fallida (v2.1.x a v2.8.x)
-**Fecha:** 2026-04-12
-**Estado:** REVERTIDO a v2.0.0 (Commit 79defe0).
-
-## 1. Resumen de la Jornada
-Se intentó estabilizar la autenticación y los paneles de control en el entorno de Vercel (PHP 8.3), resultando en una serie de errores 500 persistentes y regresiones. Se decidió dar marcha atrás para mantener la integridad del código base.
-
-## 2. Hallazgos Críticos (Causa Raíz)
-*   **Conflicto de Credenciales**: Se identificó que Vercel inyecta una variable `PGPASSWORD` que falla en Neon. Nuestra base de datos requiere `DB_PASSWORD_NUEVA`. Cualquier script que no priorice explícitamente esta última fallará con "password authentication failed".
-*   **Inestabilidad de Inclusiones**: Los archivos monolíticos (como `auth_direct.php`) funcionaron donde los controladores estándar fallaron. Esto sugiere que el sistema de `require_once` o el cargado de `_db.php` está provocando fallos por:
-    1.  **Límites de Conexión**: Demasiadas conexiones abiertas al pooler simultáneamente.
-    2.  **Headers Already Sent**: Posible presencia de caracteres invisibles o salida accidental antes de las cabeceras JSON.
-*   **Latencia de Despliegue**: Se observó que Vercel no siempre actualiza los archivos `api/*.php` de forma instantánea, provocando que pruebas de diagnóstico mostraran resultados obsoletos (v2.2.1 vs v2.3.0).
-
-## 3. Pendientes para el Futuro
-*   **Migración Monolítica**: Si los errores 500 persisten, la solución definitiva será fusionar la lógica de `_db.php` y `_jwt.php` directamente dentro de cada controlador principal para eliminar el overhead de inclusiones.
-*   **Depuración de Panel**: Existe un error de sintaxis JS en `fitpaisa_entrenador.html` (mismatched braces en `checkAuth`) que debe corregirse en la próxima sesión.
-
-## 4. Decisión Técnica
-Se realiza un `git reset --hard 79defe0` para limpiar la rama de pruebas de trazados de depuración (`try-catch` masivos) y archivos temporales (`auth_direct.php`, `check_files.php`).
-
-***
-
-# Informe Técnico (Diagnóstico): Validación de Infraestructura (v3.0.0)
-**Fecha:** 2026-04-13
-**Estado:** Estable. Diagnósticos en verde en Testing y Producción.
-
-## 1. Implementación de Diagnóstico v3
-*   **Aislamiento**: Se han desplegado `api/diag_v3_testing.php` y `api/diag_v3_prod.php`. Son scripts monolíticos que no dependen de inclusiones externas.
-*   **Resultados**:
-    *   **Conexión**: 100% exitosa en ambos entornos (~650ms).
-    *   **Prioridad de Credenciales**: Se confirma que `DB_PASSWORD_NUEVA` es la llave maestra para evitar fallos de autenticación en Neon/Vercel.
-    *   **Entorno**: PHP 8.3.8 detectado con extensiones `mbstring` y `pdo_pgsql` operativas.
-
-## 2. Hallazgos Estratégicos
-*   **Causa de Errores 500**: La disparidad entre el éxito de los diagnósticos (1 archivo) y el fallo de la web (múltiples `require_once`) apunta a una inestabilidad en el sistema de archivos o límites de recursos en Vercel al procesar inclusiones profundas.
-*   **Estrategia Confirmada**: La solución para mañana será la "Consolidación Monolítica": inyectar la lógica de conexión y JWT directamente en los controladores críticos (`coach.php`, `workouts.php`) eliminando los `require_once` de archivos base.
-
-## 3. Estado del Repositorio
-*   **Testing**: Actualizada con `diag_v3_testing.php`.
-*   **Master**: Actualizada con `diag_v3_prod.php`.
-
-## 4. Backup de Seguridad 🛡️
-*   **Rama**: `backup-safe-2026-04-13`.
-*   **Tag**: `stable-v3-pre-refactor`.
-*   **Propósito**: Punto de retorno garantizado antes de iniciar la refactorización monolítica de controladores.
-
-***
-
-# Informe Técnico (Estabilización): Arquitectura Monolítica (v3.1.0)
-**Fecha:** 2026-04-14
-**Estado:** PRODUCCIÓN ESTABLE. Consolidación de controladores completada.
-
-## 1. Resolución de Errores 500 y SyntaxErrors
-*   **Problema Crítico**: Se reportaron fallos al guardar perfil y errores de JSON ("Unexpected token <") en el panel nutricional.
-*   **Causa Técnica**: 
-    1.  **Vercel/PHP 8.3**: El sistema de `require_once` demostró ser inestable en picos de tráfico serverless, devolviendo errores 500 aleatorios.
-    2.  **Conflictos de Redemarcación**: Al intentar arreglar un archivo, el sistema de inclusiones provocaba errores de "Cannot redeclare function", rompiendo la respuesta JSON y devolviendo HTML de error.
-
-## 2. Solución: Consolidación Monolítica
-*   **Estrategia**: Se han refactorizado los 4 controladores más críticos para convertirlos en **unidades autónomas (Monolíticas)**:
-    1.  `api/auth.php` (Acceso y Registro)
-    2.  `api/profile.php` (Perfil y Macros)
-    3.  `api/nutrition.php` (Diario y Resumen)
-    4.  `api/workouts.php` (Entrenamientos)
-*   **Implementación**: Cada archivo contiene ahora su propia copia de los helpers de base de datos (`fp_db`), seguridad (`jwt_require`) y sanitización. Esto elimina la dependencia del sistema de archivos de Vercel y garantiza una respuesta Error 200 constante.
-
-## 3. Estado Final de Despliegue
-*   **Merge**: Todos los cambios de la rama `testing` han sido fusionados a `master`.
-*   **Estabilidad**: El sistema es ahora resiliente ante la latencia de Neon y la inestabilidad de inclusiones de Vercel.
-*   **Backup**: Se mantiene el punto de restauración `stable-v3-pre-refactor` como medida de seguridad adicional.
-
-***
-
-# Informe Técnico (Branding): Identidad 3D y Optimizaciones (v3.2.0)
-**Fecha:** 2026-04-14
-**Estado:** PRODUCCIÓN ESTABLE. Mejoras visuales desplegadas en `master` y `testing`.
-
-## 1. Consolidación de Identidad Visual (Favicon)
-*   **Formato SVG Dinámico**: Se ha implementado un favicon basado en SVG vectorial para garantizar la máxima nitidez en todas las resoluciones.
-*   **Efectos de Brillo**: Uso de filtros `drop-shadow` en el monograma FP, logrando un resplandor blanco/rojo que destaca en las pestañas del navegador (modo oscuro y claro).
-*   **Compatibilidad**: El archivo `favicon.png` de alta resolución se mantiene en el servidor como recurso alternativo.
-
-## 2. Renovación del Motor de Fondo 3D (`index.html`)
-*   **Monograma FP de Partículas**: Se ha sustituido la geometría plana del logo por un sistema dinámico de partículas muestreadas mediante canvas en tiempo real.
-*   **Sincronización de Pulso**: El monograma utiliza ahora la misma lógica de onda que la mancuerna principal. Las partículas blancas palpitan y vibran en perfecta sintonía con el latido del modelo 3D.
-*   **Incrustación Volumétrica**: 
-    *   Se ha inyectado profundidad aleatoria (eje Z) a las partículas del logo.
-    *   El texto ya no se ve como una "pegatina" externa, sino que está físicamente integrado dentro de la nube de partículas de los discos laterales.
-*   **Dinámica de Color**: Implementación de un shader personalizado que interpola el color de las partículas entre el rojo corporativo (`accentColor`) y el blanco puro durante la fase de pulsación intensa.
-
-## 3. Estado del Repositorio
-*   **Despliegue General**: Se han sincronizado las ramas `testing` y `master`.
-*   **Rendimiento**: Se han optimizado los shaders 3D para mantener ~60 FPS incluso con el triple de densidad de partículas en los monogramas de marca.
-
-***
-
-# Informe Técnico (QA): Planificación Estratégica y Reportes Premium (v3.2.1)
-**Fecha:** 2026-04-15
-**Estado:** PRODUCCIÓN ESTABLE. Documentación técnica y estratégica desplegada.
-
-## 1. Definición de Estrategia de Pruebas
-*   **Protocolo de 10 Puntos**: Se ha elaborado un documento maestro (`docs/planificacion_pruebas_fitpaisa.md`) que define la hoja de ruta para la fase de pruebas, cubriendo desde objetivos de estabilidad hasta normas de calidad.
-*   **Foco en Arquitectura Monolítica**: La estrategia se centra en validar la autonomía de los controladores críticos (`auth.php`, `profile.php`, etc.), asegurando que la duplicación de helpers para ganar estabilidad en Vercel no genere divergencias lógicas.
-*   **Metodología de Mapa Mental**: Integración de conceptos formales como Pruebas de Caja Blanca (estructurales) y Caja Negra (funcionales) aplicados específicamente al stack de FitPaisa.
-
-## 2. Generación de Reportes Técnicos Premium
-*   **Formatos HTML para PDF**: Creación de dos plantillas de informe de alta fidelidad con tipografía premium (Inter/Bebas Neue) y optimización para impresión:
-    *   `docs/informe_pruebas_dark.html`: Estética digital fiel a la identidad visual de la plataforma.
-    *   `docs/informe_pruebas_light.html`: Versión corporativa optimizada para exportación a PDF y ahorro de tinta.
-*   **Protocolo de Depuración**: Formalización de las dimensiones "Dónde, Cómo y Qué" depurar, utilizando los scripts de diagnóstico monolíticos como examinadores de variables.
-
-## 3. Estado del Repositorio
-*   **Sincronización de Ramas**: Todos los documentos estratégicos y reportes premium han sido fusionados en `master` tras su validación en `testing`.
-*   **Escalabilidad**: El proyecto cuenta ahora con una base documental sólida para afrontar futuras auditorías técnicas y fases de QA masivas.
-
-***
-
 # Informe Técnico (Crítico): Resolución de Bloqueadores en Testing (v3.3.0)
 **Fecha:** 2026-04-15
 **Estado:** PRODUCCIÓN ESTABLE. Desplegado en `master` tras validación en `testing`.
 
 ## 1. Resolución de la Pantalla en Negro (Registro)
 *   **Problema**: Los nuevos usuarios se encontraban con una pantalla en negro tras el registro automático.
-*   **Causa Raíz**: 
-    1.  El API `api/auth.php` (acción `register`) no devolvía el objeto `user`, lo que causaba que se guardara `"undefined"` en el almacenamiento local.
-    2.  El frontend fallaba al intentar procesar (`JSON.parse`) este valor antes de inicializar la interfaz.
-*   **Solución**: 
-    *   **Backend**: Sincronizada la respuesta de registro para que devuelva el objeto de usuario completo.
-    *   **Frontend**: Implementado blindaje con `try-catch` y comprobación explícita de `"undefined"` tanto en el auto-redirect de `index.html` como en la carga del dashboard.
-
-## 2. Resolución de Credenciales Inválidas
-*   **Problema**: El login fallaba sistemáticamente en entornos de Vercel Preview a pesar de que el usuario existía en la base de datos de pruebas.
-*   **Causa Raíz**: El controlador monolítico `api/auth.php` no tenía sincronizada la "Regla de Oro" de conexión. Esto provocaba que el API intentara validar credenciales contra la base de datos `neondb` (vacía) mientras el usuario estaba visualizando `fitpaisa_testing`.
-*   **Solución**: Unificada la lógica de conexión en `auth.php`. Ahora el sistema detecta correctamente el entorno de preview y fuerza la conexión a `fitpaisa_testing` de forma consistente con el resto de la aplicación.
-
-## 3. Estado del Repositorio
-*   **Merge Final**: Se ha realizado el paso de `testing` a `master` de todas las correcciones de estabilidad.
-*   **Documentación**: Actualizados los informes técnicos corporativos (`docs/informe_pruebas_light.html` y `dark.html`) a la versión **v3.3.0**.
+*   **Solución**: Backend sincronizado y Frontend blindado con `try-catch`.
 
 ***
-
 # Informe Técnico (Crítico): Estabilización de Conexión en Producción (v3.3.1)
 **Fecha:** 2026-04-15
 **Estado:** PRODUCCIÓN ESTABLE. Corregido fallo de conexión en `master`.
 
 ## 1. Resolución del Fallo de Conexión (Login Master)
-*   **Problema**: Los usuarios no podían iniciar sesión en el entorno de producción, recibiendo un mensaje genérico de "Error de conexión".
-*   **Causa Raíz**: 
-    *   En el controlador monolítico `api/auth.php`, la variable `$port` no se inicializaba dentro del bloque condicional de `production`. 
-    *   Esto generaba una cadena DSN incompleta (`port=;`), rompiendo la comunicación con el pooler de Neon.
-*   **Solución (Estandarización Monolítica)**: 
-    *   **Backend**: Se ha corregido la inicialización de `$port` en `api/auth.php`.
-    *   **Sincronización Global**: Se ha actualizado la lógica de conexión en `api/profile.php`, `api/nutrition.php` y `api/workouts.php` para usar variables dinámicas en lugar de puertos hardcoded, garantizando coherencia con `api/_db.php`.
+*   **Problema**: Cadenas DSN incompletas rompiendo la comunicación con Neon.
+*   **Solución**: Estandarización monolítica de variables dinámicas ($port) en todos los controladores.
 
-## 2. Acciones Realizadas
-*   **Despliegue**: Los cambios han sido validados localmente (lógica) y subidos a la rama `master`.
-*   **Git**: Commit `744fb47 "fix(api): fix database connection logic in production (master)"` publicado.
+***
+# Informe Técnico (Diseño): Shaders Atmosféricos "Paper Style" (v3.3.2)
+**Fecha:** 2026-04-17
+**Estado:** PRODUCCIÓN ESTABLE. Atmósfera 3D Premium desplegada.
 
-## 3. Estado del Repositorio
-*   **Master**: 100% operativo y sincronizado con las últimas correcciones de estabilidad de la arquitectura monolítica.
+## 1. Integración de Shaders "Paper Style"
+*   **ShaderPlane Evolucionado**: Rediseño tipo "papel" con ruido de alta densidad y AdditiveBlending.
+*   **Simplificación Visual**: Eliminación del halo para centrar la atención en la mancuerna 3D.
+
+***
+# Informe Técnico (UX/UI): Experiencia Inmersiva "GuildMind Style" (v3.4.0)
+**Fecha:** 2026-04-17
+**Estado:** EXPERIMENTAL / DEPRECADO en favor de v3.5.0.
+*   *Nota*: Implementación de Scroll-telling vertical (Lenis + ScrollTrigger) que sirvió como validación estética para la v3.5.0.
+
+***
+# Informe Técnico (UX/UI): Hibridación y Refinamiento Estético (v3.5.0)
+**Fecha:** 2026-04-17
+**Estado:** ESTABLE / DESPLEGADO.
+
+## 1. Arquitectura Híbrida
+*   **Decisión Técnica**: Restauración del carrusel horizontal original para máxima estabilidad.
+*   **Capa de Animación**: Inyección de GSAP en la lógica `goTo` para animaciones de contenido independientes.
+
+## 2. Paginación Estilo "GuildMind"
+*   **Dinámica de Sección**: Transiciones coordinadas "salida superior / entrada inferior" con efectos de *stagger*.
+*   **Handoff de Carga**: Animación de entrada coordinada post-loader.
 
 ***

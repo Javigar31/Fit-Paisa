@@ -11,9 +11,7 @@
     rel="stylesheet">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23080a0f%22/><text x=%2250%22 y=%2266%22 font-family=%22Arial Black, sans-serif%22 font-size=%2258%22 font-weight=%22900%22 fill=%22%23ff3b3b%22 text-anchor=%22middle%22 style=%22filter:drop-shadow(0 0 4px %23ff3b3b)%22>FP</text></svg>">
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="loader.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <style>
     *,
     *::before,
@@ -986,17 +984,6 @@
   <div id="global-bg"></div>
   <div id="canvas-3d" style="position:fixed;inset:0;z-index:1;pointer-events:none;opacity:1"></div>
 
-  <!-- Loader / Splash Screen -->
-  <div id="loader" style="position:fixed;inset:0;z-index:10000;background:#080a0f;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 1s ease,visibility 1s;">
-    <div style="text-align:center;position:relative;">
-      <div id="loader-percent" style="font-family:'Bebas Neue',sans-serif;font-size:clamp(80px,15vw,180px);line-height:1;color:#ff3b3b;opacity:0.12;user-select:none;">00</div>
-      <div id="loader-msg" style="position:absolute;top:55%;left:50%;transform:translate(-50%,-50%);font-size:11px;letter-spacing:0.4em;text-transform:uppercase;font-weight:700;white-space:nowrap;color:#f0f4f8;opacity:0.8;">INICIANDO...</div>
-    </div>
-    <div style="position:fixed;bottom:0;left:0;width:100%;height:2px;background:rgba(255,255,255,0.05);">
-      <div id="loader-bar" style="height:100%;width:0%;background:#ff3b3b;transition:width 0.4s cubic-bezier(0.1,0,0.3,1);box-shadow:0 0 15px #ff3b3b;"></div>
-    </div>
-  </div>
-
   <div id="cursor"></div>
   <div id="cursor-ring"></div>
   <div id="progress-line"></div>
@@ -1709,7 +1696,6 @@
     function goTo(n) {
       if (isAnimating || n === current || isRegActive) return;
       isAnimating = true;
-      const prevSlide = document.querySelector(`.slide[data-index="${current}"]`);
       current = Math.max(0, Math.min(TOTAL - 1, n));
 
       if (window.innerWidth <= 768) {
@@ -1720,36 +1706,8 @@
         return;
       }
 
-      // --- GuildMind-style content animation ---
-      if (typeof gsap !== 'undefined' && prevSlide) {
-        // Animate OUT the previous slide content
-        const prevInner = prevSlide.querySelector('.slide-inner');
-        if (prevInner) {
-          gsap.to(prevInner.children, {
-            opacity: 0, y: -24, stagger: 0.05,
-            duration: 0.35, ease: 'power2.in'
-          });
-        }
-      }
-
       positionSlides();
       updateUI();
-
-      // Animate IN the incoming slide content
-      if (typeof gsap !== 'undefined') {
-        const newSlide = document.querySelector(`.slide[data-index="${current}"]`);
-        if (newSlide) {
-          const newInner = newSlide.querySelector('.slide-inner');
-          if (newInner) {
-            gsap.fromTo(newInner.children,
-              { opacity: 0, y: 32 },
-              { opacity: 1, y: 0, stagger: 0.08,
-                duration: 0.6, ease: 'power3.out', delay: 0.25 }
-            );
-          }
-        }
-      }
-
       setTimeout(() => isAnimating = false, 900);
     }
 
@@ -1758,19 +1716,6 @@
     // Init
     positionSlides();
     updateUI();
-
-    // First-load content entrance (GuildMind feel)
-    setTimeout(() => {
-      if (typeof gsap !== 'undefined') {
-        const firstSlide = document.querySelector('.slide[data-index="0"] .slide-inner');
-        if (firstSlide) {
-          gsap.fromTo(firstSlide.children,
-            { opacity: 0, y: 40 },
-            { opacity: 1, y: 0, stagger: 0.1, duration: 0.8, ease: 'power3.out' }
-          );
-        }
-      }
-    }, 200);
 
     // ── Mouse wheel ───────────────────────
     let wheelTimer;
@@ -2519,65 +2464,6 @@
 
     // Run
     init3D();
-
-    // ── Loader (GuildMind Style) ──────────────────────────────
-    (function initLoader() {
-      const percentEl = document.getElementById('loader-percent');
-      const barEl     = document.getElementById('loader-bar');
-      const msgEl     = document.getElementById('loader-msg');
-      const loader    = document.getElementById('loader');
-      if (!loader) return;
-
-      const messages = [
-        'ESCULPIENDO TU POTENCIAL...',
-        'SINCRONIZANDO BIOM\u00c9TRICA...',
-        'CALIBRANDO TU EVOLUCI\u00d3N...',
-        'FORJANDO EL CAMBIO...',
-        'BIENVENIDO A FITPAISA'
-      ];
-      let progress = 0, msgIndex = 0;
-
-      const tick = setInterval(() => {
-        progress = Math.min(progress + Math.random() * 4 + 1, 100);
-        if (percentEl) percentEl.textContent = Math.floor(progress).toString().padStart(2,'0');
-        if (barEl)     barEl.style.width = progress + '%';
-        if (progress > (msgIndex + 1) * 20 && msgIndex < messages.length - 1) {
-          msgIndex++;
-          if (typeof gsap !== 'undefined') {
-            gsap.to(msgEl, { opacity: 0, y: -8, duration: 0.25, onComplete: () => {
-              if (msgEl) msgEl.textContent = messages[msgIndex];
-              gsap.to(msgEl, { opacity: 0.8, y: 0, duration: 0.25 });
-            }});
-          } else if (msgEl) {
-            msgEl.textContent = messages[msgIndex];
-          }
-        }
-        if (progress >= 100) {
-          clearInterval(tick);
-          setTimeout(() => {
-            // Fade out loader
-            loader.style.transition = 'opacity 0.8s ease, visibility 0.8s';
-            loader.style.opacity = '0';
-            loader.style.visibility = 'hidden';
-            loader.style.pointerEvents = 'none';
-
-            // Trigger first-slide entrance
-            setTimeout(() => {
-              if (typeof gsap !== 'undefined') {
-                const firstInner = document.querySelector('.slide[data-index="0"] .slide-inner');
-                if (firstInner) {
-                  gsap.fromTo(firstInner.children,
-                    { opacity: 0, y: 40 },
-                    { opacity: 1, y: 0, stagger: 0.12, duration: 0.9, ease: 'power3.out' }
-                  );
-                }
-              }
-            }, 400);
-          }, 500);
-        }
-      }, 60);
-    })();
-
   </script>
 </body>
 
