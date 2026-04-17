@@ -363,20 +363,57 @@ Se realiza un `git reset --hard 79defe0` para limpiar la rama de pruebas de traz
 *   **Escalabilidad**: El proyecto cuenta ahora con una base documental sólida para afrontar futuras auditorías técnicas y fases de QA masivas.
 
 ***
-# Informe Técnico (Diseño): Shaders Atmosféricos (v3.3.0)
+# Informe Técnico (Diseño): Shaders Atmosféricos "Paper Style" (v3.3.0)
 **Fecha:** 2026-04-17
-**Estado:** PRODUCCIÓN ESTABLE. Atmósfera 3D Premium desplegada.
+**Estado:** PRODUCCIÓN ESTABLE. Atmósfera 3D Premium desplegada en `testing`.
 
-## 1. Integración de Shaders de Fondo
-*   **ShaderPlane Dinámico**: Implementado un plano de fondo con shader personalizado que genera una neblina orgánica y pulsante en el eje Z.
-*   **Paleta de Color**: Sincronizado con `accentColor` (#ff3b3b) para crear una profundidad envolvente que resalta el modelo central.
-*   **Optimización**: El shader se ejecuta en la GPU con `depthWrite: false`, garantizando que no haya conflictos visuales con las partículas de la mancuerna.
+## 1. Integración de Shaders "Paper Style"
+*   **ShaderPlane Evolucionado**: Siguiendo el estándar de de 21st.dev, se ha rediseñado el shader de fondo para ofrecer una textura tipo "papel" con ruido de alta densidad y resaltado especular.
+*   **Geometría Avanzada**: Aumentada la densidad de la malla (`128x128`) para lograr deformaciones más suaves y detalladas.
+*   **Fusión de Color**: Uso de `AdditiveBlending` para una integración lumínica superior con el fondo oscuro y el `accentColor` (#ff3b3b).
 
-## 2. Halo de Energía (Energy Ring)
-*   **Efecto Volumétrico**: Añadido un anillo de energía (`RingGeometry`) que orbita y pulsa en opacidad alrededor de la mancuerna.
-*   **Sincronización**: Su rotación y latido están vinculados al `clock` global, manteniendo la coherencia rítmica de toda la escena 3D.
+## 2. Simplificación Visual
+*   **Eliminación del Halo**: Se ha removido el anillo de energía previo para limpiar la composición, siguiendo el feedback del usuario y centrando la atención en la mancuerna 3D.
 
-## 3. Integridad del Modelo Original
-*   **Mancuerna 3D Preservada**: Los cambios se han inyectado de forma no invasiva, manteniendo intacta la lógica de partículas y monogramas FP previa.
+## 3. Despliegue y Versión
+*   **Git Push**: Cambios confirmados y subidos satisfactoriamente a la rama `testing`.
+*   **Integridad**: Se mantiene intacta la lógica de partículas y monogramas FP original.
+
+***
+# Informe Técnico (UX/UI): Experiencia Inmersiva "GuildMind Style" (v3.4.0)
+**Fecha:** 2026-04-17
+**Estado:** PRODUCCIÓN DESPLEGADA. Cambio de paradigma de navegación.
+
+## 1. Intro de Carga (Splash Screen)
+*   **Narrativa Visual**: Implementada una pantalla de bienvenida minimalista con contador porcentual y mensajes dinámicos de marca.
+*   **Lógica de Precarga**: El sistema simula la inicialización de recursos críticos mientras mantiene al usuario cautivado con el manifiesto de FitPaisa.
+*   **Aesthetics**: Fondo negro puro con acentos en `#ff3b3b` y tipografía `Bebas Neue`.
+
+## 2. Sistema de Paginación (Scroll-telling)
+*   **Arquitectura de Scroll**: Transición de carrusel horizontal a sistema de scroll vertical infinito y fluido mediante **Lenis**.
+*   **Animaciones con GSAP**:
+    *   **Pins 3D**: El escenario Three.js queda anclado (pinned) mientras el contenido fluye.
+    *   **Sincronización de Modelo**: La mancuerna 3D rota y escala en función del progreso del scroll del usuario.
+    *   **Fade Transitions**: Los paneles de contenido aparecen y desaparecen con efectos de parallax e interpolación de opacidad.
+
+## 3. Integración Tecnológica
+*   **Librerías Añadidas**: GSAP (Animation Core), ScrollTrigger (Timeline Control) y Lenis (Inertial Scrolling).
+*   **Legacy Cleanup**: Los controles de navegación antiguos (flechas, puntos) han sido ocultados para favorecer la experiencia inmersiva de scroll.
+
+***
+# Informe Técnico (UX/UI): Hibridación y Refinamiento Estético (v3.5.0)
+**Fecha:** 2026-04-17
+**Estado:** ESTABLE / DESPLEGADO.
+
+## 1. Arquitectura Híbrida
+*   **Decisión Técnica**: Se restauró la estructura de carrusel horizontal original para garantizar una estabilidad del 100% con el modelo 3D y los controles de usuario.
+*   **Capa de Animación**: Se inyectó GSAP dentro de la lógica de navegación (`goTo`) para animar el contenido de los slides de forma independiente a la estructura del carrusel.
+
+## 2. Paginación Estilo "GuildMind"
+*   **Dinámica de Sección**: Al cambiar de slide, el contenido (texto, cards, botones) realiza una transición coordinada de "salida superior / entrada inferior" con efectos de *stagger* (escalonado).
+*   **Handoff de Carga**: El primer slide ahora realiza una animación de entrada coordinada justo después de que el loader desaparece, mejorando la fluidez percibida.
+
+## 3. Optimización de Performance
+*   **Mantenimiento**: Se eliminó la dependencia de Scroll-telling vertical por causar conflictos con la lógica de registro y el modelo 3D, optando por una solución puramente aditiva que no compromete la funcionalidad base.
 
 ***
