@@ -2168,6 +2168,7 @@
 
     // ── 3D Scene Manager (Three.js) ─────────────────────
     let scene, camera, renderer, currentObject, clock;
+    let shaderPlane;
     const accentColor = 0xff3b3b;
 
     function init3D() {
@@ -2186,6 +2187,62 @@
 
       const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
       scene.add(ambientLight);
+
+      // --- Background Shader Plane (Paper Style) ---
+      const planeGeom = new THREE.PlaneGeometry(40, 40, 128, 128);
+      const planeMat = new THREE.ShaderMaterial({
+        uniforms: {
+          time: { value: 0 },
+          intensity: { value: 1.0 },
+          color1: { value: new THREE.Color(accentColor) },
+          color2: { value: new THREE.Color(0x050505) }
+        },
+        vertexShader: `
+          uniform float time;
+          uniform float intensity;
+          varying vec2 vUv;
+          
+          void main() {
+            vUv = uv;
+            vec3 pos = position;
+            pos.y += sin(pos.x * 10.0 + time) * 0.15 * intensity;
+            pos.x += cos(pos.y * 8.0 + time * 1.5) * 0.05 * intensity;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+          }
+        `,
+        fragmentShader: `
+          uniform float time;
+          uniform float intensity;
+          uniform vec3 color1;
+          uniform vec3 color2;
+          varying vec2 vUv;
+          
+          void main() {
+            vec2 uv = vUv;
+            
+            // Animated noise pattern from prompt
+            float noise = sin(uv.x * 20.0 + time) * cos(uv.y * 15.0 + time * 0.8);
+            noise += sin(uv.x * 35.0 - time * 2.0) * cos(uv.y * 25.0 + time * 1.2) * 0.5;
+            
+            // Mix colors based on noise
+            vec3 color = mix(color1, color2, noise * 0.5 + 0.5);
+            color = mix(color, vec3(1.0), pow(abs(noise), 2.0) * intensity * 0.3);
+            
+            // Glow effect
+            float glow = 1.0 - length(uv - 0.5) * 1.8;
+            glow = pow(max(glow, 0.0), 2.5);
+            
+            gl_FragColor = vec4(color * glow, glow * 0.7);
+          }
+        `,
+        transparent: true,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      });
+      shaderPlane = new THREE.Mesh(planeGeom, planeMat);
+      shaderPlane.position.z = -8;
+      scene.add(shaderPlane);
 
       camera.position.z = 6;
       clock = new THREE.Clock();
@@ -2369,25 +2426,31 @@
 
     function animate3D() {
       requestAnimationFrame(animate3D);
+      const elapsed = clock ? clock.getElapsedTime() : 0;
+
       if (currentObject) {
         currentObject.rotation.y += 0.01;
-        // Parallax logic linked to global mouse positions mx, my
         const rx_target = (mx / window.innerWidth - 0.5) * 1;
         const ry_target = (my / window.innerHeight - 0.5) * 1;
         currentObject.rotation.x += (ry_target - currentObject.rotation.x) * 0.05;
         currentObject.rotation.z += (rx_target - currentObject.rotation.z) * 0.05;
       }
+
+      if (shaderPlane && shaderPlane.material.uniforms) {
+        shaderPlane.material.uniforms.time.value = elapsed;
+        shaderPlane.material.uniforms.intensity.value = 1.0 + Math.sin(elapsed * 2) * 0.3;
+      }
+
       renderer.render(scene, camera);
 
       if (clock && currentObject && currentObject.children.length > 0) {
-        const elapsed = clock.getElapsedTime();
         currentObject.children.forEach(child => {
           if (child.material && child.material.uniforms && child.material.uniforms.uTime) {
             child.material.uniforms.uTime.value = elapsed;
           }
         });
 
-        // Pulsing logic (JS-based fallback)
+        // Pulsing logic
         const scale = 1.6 + Math.sin(Date.now() * 0.003) * 0.05;
         currentObject.scale.set(scale, scale, scale);
       }

@@ -363,3 +363,20 @@ Se realiza un `git reset --hard 79defe0` para limpiar la rama de pruebas de traz
 *   **Escalabilidad**: El proyecto cuenta ahora con una base documental sólida para afrontar futuras auditorías técnicas y fases de QA masivas.
 
 ***
+# Informe Técnico (Diseño): Shaders Atmosféricos (v3.3.0)
+**Fecha:** 2026-04-17
+**Estado:** PRODUCCIÓN ESTABLE. Atmósfera 3D Premium desplegada.
+
+## 1. Integración de Shaders de Fondo
+*   **ShaderPlane Dinámico**: Implementado un plano de fondo con shader personalizado que genera una neblina orgánica y pulsante en el eje Z.
+*   **Paleta de Color**: Sincronizado con `accentColor` (#ff3b3b) para crear una profundidad envolvente que resalta el modelo central.
+*   **Optimización**: El shader se ejecuta en la GPU con `depthWrite: false`, garantizando que no haya conflictos visuales con las partículas de la mancuerna.
+
+## 2. Halo de Energía (Energy Ring)
+*   **Efecto Volumétrico**: Añadido un anillo de energía (`RingGeometry`) que orbita y pulsa en opacidad alrededor de la mancuerna.
+*   **Sincronización**: Su rotación y latido están vinculados al `clock` global, manteniendo la coherencia rítmica de toda la escena 3D.
+
+## 3. Integridad del Modelo Original
+*   **Mancuerna 3D Preservada**: Los cambios se han inyectado de forma no invasiva, manteniendo intacta la lógica de partículas y monogramas FP previa.
+
+***
