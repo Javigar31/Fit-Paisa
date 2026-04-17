@@ -23,7 +23,10 @@
       padding: 0;
     }
 
-    html,
+    html {
+      height: 100%;
+    }
+
     body {
       width: 100%;
       height: 100%;
@@ -33,7 +36,6 @@
       font-family: var(--font-b);
       -webkit-font-smoothing: antialiased;
       cursor: none;
-      /* Desktop default */
     }
 
     /* Restore cursor on mobile/touch devices */
@@ -78,22 +80,37 @@
       transition: background .8s ease;
     }
 
+    /* ── Carousel: The JS SPA Container ── */
     #carousel {
-      position: absolute;
-      inset: 0;
-      transition: transform .9s cubic-bezier(.77, 0, .18, 1);
+      position: fixed !important;
+      inset: 0 !important;
+      z-index: 10 !important;
+      pointer-events: none;
     }
 
-    /* ── Slide panels ── */
-    .slide {
-      position: absolute;
-      inset: 0;
-      backface-visibility: hidden;
-      display: flex;
+    /* ── Slide panels (Absolute SPA Mode + Immersive Scale) ── */
+    .vp-slide {
+      position: absolute !important;
+      inset: 0 !important;
+      display: flex !important;
       align-items: center;
       justify-content: center;
-      overflow: hidden;
-      transition: transform 0.9s cubic-bezier(0.77, 0, 0.18, 1), opacity 0.9s cubic-bezier(0.77, 0, 0.18, 1);
+      overflow-y: auto;     /* MUST be auto for mobile vertical scroll */
+      overflow-x: hidden;
+      z-index: 1;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: scale(0.93) translateY(20px); /* The "inside-out" effect start point */
+      transition: opacity 1.2s cubic-bezier(0.19, 1, 0.22, 1), transform 1.2s cubic-bezier(0.19, 1, 0.22, 1), visibility 1.2s;
+    }
+
+    .vp-slide.is-active {
+      opacity: 1 !important;
+      visibility: visible;
+      z-index: 2;
+      pointer-events: auto;
+      transform: scale(1) translateY(0); /* The "inside-out" effect end point */
     }
 
     /* Each slide gets its Z position set by JS */
@@ -112,7 +129,7 @@
     /* BG background is now handled by the #global-bg element via JS */
 
     /* ── Slide content ── */
-    .slide-inner {
+    .pane-inner {
       position: relative;
       z-index: 2;
       width: 100%;
@@ -207,16 +224,119 @@
       text-underline-offset: 4px;
     }
 
-    /* ── UI Cards (right side) ── */
+    /* ── UI Cards (right side) + Spotlight Glow Border (STRICT Brand Implementation) ── */
     .ui-card {
-      background: rgba(0, 0, 0, .82);
-      border: 1px solid var(--border);
-      border-radius: 20px;
+      /* Refined variables to match Brand Darkness + Prompt Effect */
+      --base: 0;                /* Red hue for FitPaisa */
+      --spread: 200;
+      --radius: 14;
+      --border: 3;
+      --backdrop: rgba(8, 10, 15, 0.88); /* Deep Dark Brand Tonality */
+      --backup-border: rgba(255, 255, 255, 0.08);
+      --size: 200;
+      --outer: 1;
+      --border-size: calc(var(--border, 2) * 1px);
+      --spotlight-size: calc(var(--size, 150) * 1px);
+      --hue: calc(var(--base) + (var(--xp, 0) * var(--spread, 0)));
+      --saturation: 100;
+      --lightness: 65;
+      --bg-spot-opacity: 0.12;
+      --border-spot-opacity: 1;
+      --border-light-opacity: 1;
+
+      position: relative !important;
+      touch-action: none;
+      background-color: var(--backdrop);
+      background-image: radial-gradient(
+        var(--spotlight-size) var(--spotlight-size) at
+        calc(var(--x, 1) * 1px)
+        calc(var(--y, 1) * 1px),
+        hsl(var(--hue, 210) calc(var(--saturation, 100) * 1%) calc(var(--lightness, 70) * 1%) / var(--bg-spot-opacity, 0.12)), 
+        transparent
+      );
+      background-size: calc(100% + (2 * var(--border-size))) calc(100% + (2 * var(--border-size)));
+      background-position: 50% 50%;
+      background-attachment: fixed;
+      border: var(--border-size) solid var(--backup-border);
+      border-radius: calc(var(--radius) * 1px);
       padding: 28px;
       backdrop-filter: blur(20px);
       transform: perspective(800px) rotateY(-8deg) rotateX(4deg);
       transition: transform .6s ease;
       box-shadow: 0 40px 80px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .08);
+      display: grid;
+      grid-template-rows: 1fr auto;
+      gap: 1rem;
+      isolation: isolate;
+    }
+
+    .ui-card::before,
+    .ui-card::after {
+      pointer-events: none;
+      content: "";
+      position: absolute;
+      inset: calc(var(--border-size) * -1);
+      border: var(--border-size) solid transparent;
+      border-radius: calc(var(--radius) * 1px);
+      background-attachment: fixed;
+      background-size: calc(100% + (2 * var(--border-size))) calc(100% + (2 * var(--border-size)));
+      background-repeat: no-repeat;
+      background-position: 50% 50%;
+      mask: linear-gradient(transparent, transparent), linear-gradient(white, white);
+      mask-clip: padding-box, border-box;
+      mask-composite: intersect;
+      -webkit-mask: linear-gradient(transparent, transparent), linear-gradient(white, white);
+      -webkit-mask-clip: padding-box, border-box;
+      -webkit-mask-composite: source-in; /* Essential for Webkit border-only glow */
+    }
+
+    .ui-card::before {
+      background-image: radial-gradient(
+        calc(var(--spotlight-size) * 0.75) calc(var(--spotlight-size) * 0.75) at
+        calc(var(--x, 0) * 1px)
+        calc(var(--y, 0) * 1px),
+        hsl(var(--hue, 210) calc(var(--saturation, 100) * 1%) calc(var(--lightness, 50) * 1%) / var(--border-spot-opacity, 1)), transparent 100%
+      );
+      filter: brightness(2);
+    }
+
+    .ui-card::after {
+      background-image: radial-gradient(
+        calc(var(--spotlight-size) * 0.5) calc(var(--spotlight-size) * 0.5) at
+        calc(var(--x, 0) * 1px)
+        calc(var(--y, 0) * 1px),
+        hsl(0 100% 100% / var(--border-light-opacity, 1)), transparent 100%
+      );
+    }
+
+    .ui-card::before {
+      background-image: radial-gradient(
+        calc(var(--spotlight-size) * 0.75) calc(var(--spotlight-size) * 0.75) at
+        calc(var(--x, 0) * 1px)
+        calc(var(--y, 0) * 1px),
+        hsl(var(--hue, 210) calc(var(--saturation, 100) * 1%) calc(var(--lightness, 50) * 1%) / var(--border-spot-opacity, 1)), transparent 100%
+      );
+      filter: brightness(2);
+    }
+
+    .ui-card::after {
+      background-image: radial-gradient(
+        calc(var(--spotlight-size) * 0.5) calc(var(--spotlight-size) * 0.5) at
+        calc(var(--x, 0) * 1px)
+        calc(var(--y, 0) * 1px),
+        hsl(0 100% 100% / var(--border-light-opacity, 1)), transparent 100%
+      );
+    }
+
+    .ui-card > [data-glow] {
+      position: absolute;
+      inset: 0;
+      will-change: filter;
+      opacity: var(--outer, 1);
+      border-radius: calc(var(--radius) * 1px);
+      filter: blur(calc(var(--border-size) * 10));
+      background: none;
+      pointer-events: none;
     }
 
     .slide:hover .ui-card {
@@ -430,36 +550,67 @@
       flex-shrink: 0;
     }
 
-    /* ── Nav ── */
+    /* ── Nav (GuildMind Premium UI) ── */
     #nav {
       position: fixed;
-      bottom: 40px;
-      left: 50%;
-      transform: translateX(-50%);
+      right: 52px; /* Mathematically aligned with the center of the counter text above */
+      top: 50%;
+      transform: translateY(-50%);
       z-index: 100;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 8px;
-      background: rgba(15, 18, 25, .8);
-      border: 1px solid var(--border);
-      border-radius: 99px;
-      padding: 8px 16px;
-      backdrop-filter: blur(20px);
+      gap: 0px; /* No gap ensures the track flows seamlessly */
+      background: transparent;
+      border: none;
+      padding: 0;
+      pointer-events: auto;
+    }
+
+    /* Subtle vertical guide track */
+    #nav::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 1px;
+      background: rgba(255, 255, 255, 0.05);
+      z-index: 0;
     }
 
     .nav-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--muted);
-      cursor: none;
-      transition: all .3s;
+      width: 24px;
+      height: 24px; /* Fixed height slot */
+      cursor: pointer;
+      position: relative;
+      z-index: 1;
     }
 
-    .nav-dot.active {
-      background: var(--accent);
-      width: 24px;
+    .nav-dot::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%); /* Crucial for absolute centering */
+      width: 2px;
+      height: 6px; /* Elegant dashes instead of circles */
       border-radius: 4px;
+      background: rgba(255, 255, 255, 0.15);
+      transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+    }
+
+    .nav-dot:hover::before {
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    .nav-dot.active::before {
+      background: var(--accent);
+      width: 3px;
+      height: 24px; /* Stretches the full slot height */
+      border-radius: 4px;
+      box-shadow: 0 0 14px rgba(255, 59, 59, 0.8), 0 0 4px rgba(255, 59, 59, 0.4);
     }
 
     /* ── Slide counter ── */
@@ -497,10 +648,10 @@
       transform: translateY(-10px);
     }
 
-    /* ── Arrow hints ── */
+    /* ── Arrow hints (Hidden for GuildMind Clean UI) ── */
     #arrows {
-      position: fixed;
-      bottom: 140px;
+      display: none;
+
       left: 50%;
       transform: translateX(-50%);
       z-index: 100;
@@ -604,23 +755,11 @@
       }
     }
 
-    /* ── Slide-in animations ── */
-    .slide-inner>* {
-      transition: opacity .6s ease, transform .6s ease;
-    }
-
-    .slide:not(.is-active) .slide-inner>* {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-
-    .slide.is-active .slide-inner>* {
+    /* ── Slide-in animations ──────────────────── */
+    .pane-inner > * {
       opacity: 1;
       transform: translateY(0);
-    }
-
-    .slide.is-active .slide-inner>*:nth-child(2) {
-      transition-delay: .15s;
+      transition: opacity .5s ease, transform .5s ease;
     }
 
     /* ── Swipe hint ── */
@@ -656,54 +795,14 @@
     }
 
     @media (max-width: 768px) {
-
-      html,
       body {
-        overflow-y: auto !important;
-        overflow-x: hidden;
-        height: auto !important;
-        min-height: 100vh;
         scroll-snap-type: y proximity;
-        scroll-behavior: smooth;
       }
 
-      #scene,
-      #carousel,
-      .slide {
-        position: relative;
-        inset: auto;
-        height: auto;
-        min-height: min-content;
-      }
-
-      #scene {
-        perspective: none;
-      }
-
-      #carousel {
-        transform: none !important;
-      }
-
-      .slide {
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        padding: 80px 0 100px;
-        opacity: 1 !important;
-        visibility: visible !important;
-        pointer-events: auto !important;
-        scroll-snap-align: start;
-        transform: none !important;
-        /* Force reset of JS-based 3D transforms */
-      }
-
-      /* Allow slide content animations to work on mobile */
       .slide-inner {
         grid-template-columns: 1fr;
         gap: 40px;
         padding: 0 24px;
-        transform: none !important;
-        /* Disable parallax on mobile to avoid jitter */
       }
 
       .ui-card {
@@ -726,9 +825,7 @@
         right: 20px;
       }
 
-      #arrows {
-        display: none;
-      }
+      #arrows { display: none; }
 
       #hint {
         display: flex;
@@ -736,31 +833,21 @@
         justify-content: center;
         bottom: auto;
         top: 100px;
-        left: 50%;
-        transform: translateX(-50%);
         background: rgba(10, 12, 18, 0.95);
         backdrop-filter: blur(15px);
         padding: 16px 24px;
         border-radius: 20px;
         border: 2px solid var(--accent);
-        white-space: normal;
-        inline-size: min-content;
         min-width: 260px;
         max-width: 85vw;
         font-size: 13px;
         line-height: 1.4;
         color: var(--text);
         text-align: center;
-        z-index: 1000;
-        pointer-events: none;
-        animation: 
-          fadeHint 4.5s ease 3s forwards,
-          borderPulse 1.5s ease-in-out 3s infinite;
+        animation: fadeHint 4.5s ease 3s forwards, borderPulse 1.5s ease-in-out 3s infinite;
       }
 
-      #hint::before {
-        content: "Desliza para navegar";
-      }
+      #hint::before { content: "Desliza para navegar"; }
 
       #nav {
         width: calc(100% - 32px);
@@ -771,10 +858,6 @@
     }
 
     @media (max-width: 520px) {
-      .slide {
-        padding: 86px 0 110px;
-      }
-
       .slide-inner {
         gap: 24px;
         padding: 0 16px;
@@ -1014,15 +1097,16 @@
     </div>
   </div>
 
-  <div id="scene">
-    <div id="carousel">
+  <div id="scene"></div>
+
+  <div id="carousel">
 
       <!-- SLIDE 0 · Intro / Login -->
-      <div class="slide slide-0 is-active" data-index="0">
+      <div class="vp-slide vp-slide-0 is-active" data-index="0">
         <div class="deco"
           style="width:300px;height:300px;background:radial-gradient(circle,rgba(255,107,107,.06),transparent);top:-100px;right:-100px;animation-delay:0s">
         </div>
-        <div class="slide-inner">
+        <div class="pane-inner">
           <div>
             <div class="slide-label">Bienvenido/a al <strong>Inicio</strong> de FitPaisa</div>
             <div class="slide-title">ENTRENA.<br><em>COME.</em><br>EVOLUCIONA.</div>
@@ -1246,11 +1330,11 @@
     </div>
 
     <!-- SLIDE 1 · Dashboard -->
-    <div class="slide slide-1" data-index="1">
+    <div class="vp-slide vp-slide-1" data-index="1">
       <div class="deco"
         style="width:400px;height:400px;background:radial-gradient(circle,rgba(255,138,138,.05),transparent);bottom:-150px;left:-100px;animation-delay:1s">
       </div>
-      <div class="slide-inner">
+      <div class="pane-inner">
         <div>
           <div class="slide-label">Dashboard personal</div>
           <div class="slide-title">TU DÍA,<br>DE UN<br><em>VISTAZO.</em></div>
@@ -1307,11 +1391,11 @@
     </div>
 
     <!-- SLIDE 2 · Nutrición -->
-    <div class="slide slide-2" data-index="2">
+    <div class="vp-slide vp-slide-2" data-index="2">
       <div class="deco"
         style="width:350px;height:350px;background:radial-gradient(circle,rgba(255,179,71,.04),transparent);top:50px;right:50px;animation-delay:2s">
       </div>
-      <div class="slide-inner">
+      <div class="pane-inner">
         <div>
           <div class="slide-label">Control nutricional</div>
           <div class="slide-title">COME<br>CON<br><em>DATOS.</em></div>
@@ -1359,11 +1443,11 @@
     </div>
 
     <!-- SLIDE 3 · Entrenamientos -->
-    <div class="slide slide-3" data-index="3">
+    <div class="vp-slide vp-slide-3" data-index="3">
       <div class="deco"
         style="width:320px;height:320px;background:radial-gradient(circle,rgba(255,107,107,.05),transparent);bottom:-80px;right:80px;animation-delay:.5s">
       </div>
-      <div class="slide-inner">
+      <div class="pane-inner">
         <div>
           <div class="slide-label">Entrenamiento</div>
           <div class="slide-title">ROMPE<br>TUS<br><em>LÍMITES.</em></div>
@@ -1426,11 +1510,11 @@
     </div>
 
     <!-- SLIDE 4 · Mensajería -->
-    <div class="slide slide-4" data-index="4">
+    <div class="vp-slide vp-slide-4" data-index="4">
       <div class="deco"
         style="width:280px;height:280px;background:radial-gradient(circle,rgba(192,132,252,.05),transparent);top:100px;left:100px;animation-delay:1.5s">
       </div>
-      <div class="slide-inner">
+      <div class="pane-inner">
         <div>
           <div class="slide-label">Comunicación directa</div>
           <div class="slide-title">TU<br>ENTRE<br><em>NADOR/A.</em></div>
@@ -1472,11 +1556,11 @@
     </div>
 
     <!-- SLIDE 5 · Premium -->
-    <div class="slide slide-5" data-index="5">
+    <div class="vp-slide vp-slide-5" data-index="5">
       <div class="deco"
         style="width:500px;height:500px;background:radial-gradient(circle,rgba(255,107,107,.04),transparent);top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:3s">
       </div>
-      <div class="slide-inner">
+      <div class="pane-inner">
         <div>
           <div class="slide-label">Suscripción Premium</div>
           <div class="slide-title">EL NIVEL<br>PRO,<br><em>SIN LÍMITES.</em></div>
@@ -1530,11 +1614,11 @@
     </div>
 
     <!-- SLIDE 6 · Contacto -->
-    <div class="slide slide-6" data-index="6">
+    <div class="vp-slide vp-slide-6" data-index="6">
       <div class="deco"
         style="width:400px;height:400px;background:radial-gradient(circle,rgba(255,107,107,.05),transparent);bottom:-100px;left:-100px;animation-delay:1s">
       </div>
-      <div class="slide-inner">
+      <div class="pane-inner">
         <div>
           <div class="slide-label">Contacto</div>
           <div class="slide-title">¿TIENES<br>PREGUNTAS?<br><em>ESCRÍBENOS.</em></div>
@@ -1585,7 +1669,6 @@
     </div>
 
   </div><!-- /carousel -->
-  </div><!-- /scene -->
 
   <!-- Nav dots -->
   <div id="nav">
@@ -1631,30 +1714,20 @@
 
     // ── 3D Carousel ──────────────────────
     const carousel = document.getElementById('carousel');
-    const slides = document.querySelectorAll('.slide');
+    const slides = document.querySelectorAll('.vp-slide');
     const dots = document.querySelectorAll('.nav-dot');
     const curEl = document.getElementById('slide-cur');
     const progressLine = document.getElementById('progress-line');
 
     function positionSlides() {
-      if (window.innerWidth <= 768) return; // Don't apply 3D transforms on mobile
       slides.forEach((s, i) => {
-        const offset = i - current;
-        if (offset === 0) {
-          // Active slide
-          s.style.transform = 'perspective(1400px) rotateX(0deg) rotateY(0deg) translateY(0px) translateZ(0px) scale(1)';
-          s.style.opacity = '1';
-          s.style.visibility = 'visible';
-          s.style.pointerEvents = 'auto';
-        } else {
-          // All inactive slides — completely hidden, no perspective, no rotation
-          s.style.transform = 'translateY(0px) translateZ(-2000px) scale(0.5)';
-          s.style.opacity = '0';
-          s.style.visibility = 'hidden';
-          s.style.pointerEvents = 'none';
-        }
-        s.style.zIndex = TOTAL - Math.abs(offset);
-        s.classList.toggle('is-active', offset === 0);
+        const isActive = i === current;
+        s.classList.toggle('is-active', isActive);
+        s.style.removeProperty('transform');
+        s.style.removeProperty('opacity');
+        s.style.removeProperty('visibility');
+        s.style.removeProperty('pointerEvents');
+        s.style.removeProperty('zIndex');
       });
     }
 
@@ -1707,135 +1780,90 @@
     let isRegActive = false;
 
     function goTo(n) {
-      if (isAnimating || n === current || isRegActive) return;
+      if (isAnimating || isRegActive) return;
+      const target = Math.max(0, Math.min(TOTAL - 1, n));
+      if (target === current) return;
+
       isAnimating = true;
-      const prevSlide = document.querySelector(`.slide[data-index="${current}"]`);
-      current = Math.max(0, Math.min(TOTAL - 1, n));
+      const oldSlide = slides[current];
+      current = target;
+      const newSlide = slides[current];
 
-      if (window.innerWidth <= 768) {
-        const slide = document.querySelector(`.slide[data-index="${current}"]`);
-        if (slide) slide.scrollIntoView({ behavior: 'smooth' });
-        updateUI();
-        setTimeout(() => isAnimating = false, 500);
-        return;
-      }
+      // Swapping classes for CSS opacity transition
+      if (oldSlide) oldSlide.classList.remove('is-active');
+      if (newSlide) newSlide.classList.add('is-active');
 
-      // --- GuildMind-style content animation ---
-      if (typeof gsap !== 'undefined' && prevSlide) {
-        // Animate OUT the previous slide content
-        const prevInner = prevSlide.querySelector('.slide-inner');
-        if (prevInner) {
-          gsap.to(prevInner.children, {
-            opacity: 0, y: -24, stagger: 0.05,
-            duration: 0.35, ease: 'power2.in'
-          });
-        }
-      }
-
-      positionSlides();
       updateUI();
 
-      // Animate IN the incoming slide content
+      // GSAP Entrance
       if (typeof gsap !== 'undefined') {
-        const newSlide = document.querySelector(`.slide[data-index="${current}"]`);
-        if (newSlide) {
-          const newInner = newSlide.querySelector('.slide-inner');
-          if (newInner) {
-            gsap.fromTo(newInner.children,
-              { opacity: 0, y: 32 },
-              { opacity: 1, y: 0, stagger: 0.08,
-                duration: 0.6, ease: 'power3.out', delay: 0.25 }
-            );
-          }
+        const inner = newSlide.querySelector('.pane-inner');
+        if (inner) {
+          gsap.fromTo(Array.from(inner.children),
+            { opacity: 0, y: 32 },
+            { opacity: 1, y: 0, stagger: 0.08, duration: 0.6, ease: 'power3.out', delay: 0.2 }
+          );
         }
       }
 
-      setTimeout(() => isAnimating = false, 900);
+      // Update 3D dumbbell
+      if (typeof dumbbell !== 'undefined') {
+        const pct = current / (TOTAL - 1);
+        gsap.to(dumbbell.rotation, {
+          y: pct * Math.PI * 2,
+          x: Math.sin(pct * Math.PI) * 0.4,
+          duration: 1.2, ease: "power2.out"
+        });
+        const s = 1.0 + 0.15 * Math.sin(pct * Math.PI);
+        gsap.to(dumbbell.scale, { x: s, y: s, z: s, duration: 1.2, ease: "power2.out" });
+      }
+
+      setTimeout(() => { isAnimating = false; }, 800);
     }
 
     function go(delta) { goTo(current + delta); }
 
-    // Init
-    positionSlides();
+    // Init — initial state
     updateUI();
 
-    // First-load content entrance (GuildMind feel)
+    // First-load entrance
     setTimeout(() => {
       if (typeof gsap !== 'undefined') {
-        const firstSlide = document.querySelector('.slide[data-index="0"] .slide-inner');
-        if (firstSlide) {
-          gsap.fromTo(firstSlide.children,
+        const firstInner = slides[0].querySelector('.pane-inner');
+        if (firstInner) {
+          gsap.fromTo(Array.from(firstInner.children),
             { opacity: 0, y: 40 },
-            { opacity: 1, y: 0, stagger: 0.1, duration: 0.8, ease: 'power3.out' }
+            { opacity: 1, y: 0, stagger: 0.12, duration: 0.9, ease: 'power3.out' }
           );
         }
       }
-    }, 200);
+    }, 300);
 
-    // ── Mouse wheel ───────────────────────
+    // ── Mouse wheel (Restored) ─────────────────────────────────────
     let wheelTimer;
     window.addEventListener('wheel', e => {
-      if (window.innerWidth <= 768) return;
+      if (isRegActive) return;
       clearTimeout(wheelTimer);
       wheelTimer = setTimeout(() => {
-        go(e.deltaY > 0 ? 1 : -1);
-      }, 50);
+        if (Math.abs(e.deltaY) > 20) {
+          go(e.deltaY > 0 ? 1 : -1);
+        }
+      }, 50); // Debounce to prevent double trigger
     }, { passive: true });
 
     // ── Keyboard ──────────────────────────
     window.addEventListener('keydown', e => {
-      if (window.innerWidth <= 768) return;
       if (e.key === 'ArrowDown' || e.key === 'ArrowRight') go(1);
-      if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') go(-1);
+      if (e.key === 'ArrowUp'   || e.key === 'ArrowLeft')  go(-1);
     });
 
     // ── Touch swipe ───────────────────────
     let touchY = 0;
-    window.addEventListener('touchstart', e => {
-      if (window.innerWidth <= 768) return;
-      touchY = e.touches[0].clientY;
-    }, { passive: true });
+    window.addEventListener('touchstart', e => { touchY = e.touches[0].clientY; }, { passive: true });
     window.addEventListener('touchend', e => {
-      if (window.innerWidth <= 768) return;
       const delta = touchY - e.changedTouches[0].clientY;
       if (Math.abs(delta) > 50) go(delta > 0 ? 1 : -1);
     }, { passive: true });
-
-    // ── Mobile native scroll bindings ─────
-    if (window.innerWidth <= 768) {
-      const observerOptions = {
-        threshold: 0.5,
-        rootMargin: "0px"
-      };
-
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            // Toggle active class
-            slides.forEach(s => s.classList.remove('is-active'));
-            entry.target.classList.add('is-active');
-
-            const idx = parseInt(entry.target.getAttribute('data-index'));
-            if (current !== idx) {
-              current = idx;
-              updateUI();
-            }
-          }
-        });
-      }, observerOptions);
-
-      slides.forEach(s => observer.observe(s));
-
-      // Hide logo on scroll
-      window.addEventListener('scroll', () => {
-        const logo = document.getElementById('logo');
-        if (window.scrollY > 40) {
-          logo.classList.add('is-hidden');
-        } else {
-          logo.classList.remove('is-hidden');
-        }
-      }, { passive: true });
-    }
 
     // ── Custom cursor ─────────────────────
     const cursor = document.getElementById('cursor');
@@ -1846,6 +1874,15 @@
       mx = e.clientX; my = e.clientY;
       cursor.style.left = mx + 'px';
       cursor.style.top = my + 'px';
+    });
+
+    // ── Spotlight glow border: feed --x/--xp/--y/--yp ──────────────────────────
+    document.addEventListener('pointermove', (e) => {
+      const { clientX: x, clientY: y } = e;
+      document.documentElement.style.setProperty('--x', x.toFixed(2));
+      document.documentElement.style.setProperty('--xp', (x / window.innerWidth).toFixed(2));
+      document.documentElement.style.setProperty('--y', y.toFixed(2));
+      document.documentElement.style.setProperty('--yp', (y / window.innerHeight).toFixed(2));
     });
 
     function animRing() {
@@ -2215,7 +2252,7 @@
     document.addEventListener('mousemove', e => {
       const xPct = (e.clientX / window.innerWidth - 0.5) * 2;
       const yPct = (e.clientY / window.innerHeight - 0.5) * 2;
-      const activeSlide = document.querySelector('.slide.is-active .slide-inner');
+      const activeSlide = document.querySelector('.vp-slide.is-active .pane-inner');
       if (activeSlide) {
         activeSlide.style.transform = `translate(${xPct * 8}px, ${yPct * 6}px)`;
       }

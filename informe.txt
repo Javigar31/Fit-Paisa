@@ -417,3 +417,25 @@ Se realiza un `git reset --hard 79defe0` para limpiar la rama de pruebas de traz
 *   **Mantenimiento**: Se eliminó la dependencia de Scroll-telling vertical por causar conflictos con la lógica de registro y el modelo 3D, optando por una solución puramente aditiva que no compromete la funcionalidad base.
 
 ***
+
+# Informe Técnico (UX/UI): Paridad "GuildMind", Responsividad e Inmersión Global (v3.6.0)
+**Fecha:** 2026-04-17
+**Estado:** PUSH a `testing`.
+
+## 1. Lo que se ha pedido
+*   **Diseño de Paginación Exacto**: Réplica de la estética limpia sin flechas grandes, con navegación vertical progresiva en el borde basada en referentes corporativos premium (`guildmind.app`).
+*   **Transiciones Inmersivas**: Efecto de página "desde adentro hacia afuera" (Scale / Zoom-In) al cambiar dinámicamente entre slides.
+*   **Responsividad Restaurada**: Arreglo de los cortes y solapamientos en dispositivos móviles y tabletas que impedían un scrolling limpio dentro del Single Page Application.
+*   **Corrección de Borde Interactivo**: Solución del spotlight de las `.ui-card` que solo brillaba si el cursor se encontraba en la esquina superior izquierda de la pantalla.
+
+## 2. Lo que se ha hecho (Soluciones Implementadas)
+*   **Paginación Lineal "Tracker"**: Se eliminaron los gruesos botones inferiores (`#arrows`). La botonera lateral (`#nav`) fue matemáticamente alineada al centro del contador superior (`01/07`). Los gruesos puntos se convirtieron en franjas sutiles ancladas a una finísima línea de guía (`1px`), igualando el standard *GuildMind*.
+*   **Cinemática de Viaje Slide-to-Slide**: En lugar de simples opacidades, el CSS del panel `.vp-slide` incluye ahora `transform: scale(0.93) translateY(20px)`. Al volverse activa, escala suavemente durante 1.2 segundos hacia `scale(1)`, simulando que el nuevo contenido "avanza" orgánicamente hacia tu cara de adentro hacia afuera, lo cual casa perfectamente con el Parallax 3D.
+*   **Integración de Borde Reactivo Absoluto**: El cálculo de inyección geométrica (`--x`, `--y`) en Javascript se reparó tras constatar que el CSS `background-attachment: fixed` usaba los ejes puros del navegador (Viewport) en vez de offsets relativos al componente. La linterna reactiva de las tarjetas ahora sigue a tu cursor milimétricamente.
+*   **Resurrección de Media Queries**: Se diagnosticó y solventó la ausencia de directivas `@media` que se habían perdido en el refactoring arquitectónico. `index.html` cuenta nuevamente con un colapso automático a *1 columna* para resoluciones `< 992px` y activa los desbordes `overflow-y: auto`, restaurando su ADN Mobile-First.
+
+## 3. Fallos que Persisten (Diagnóstico del Lado del Usuario)
+*   **Previsualización Estancada (Desincronización Back-to-Front)**: Es persistente el fallo en los ciclos de revisión locales del cliente, reportando que los cambios no surten efecto ("se ve exactamente igual").
+*   **Causa Raíz Diagnosticada**: Las trazas de actividad muestran que el entorno local del usuario está previsualizando en bucle el archivo `backup/index_backup_20260417_1250.html` en lugar de testear los despliegues en caliente del nodo principal (`Fit-Paisa/index.html`). Esto causa un "efecto espejismo" donde el cliente visualiza un estado fósil en lugar de la producción alterada. 
+
+***
