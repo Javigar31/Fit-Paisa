@@ -72,6 +72,7 @@
       position: fixed;
       inset: 0;
       z-index: 2;
+      pointer-events: none;
     }
 
     #global-bg {
@@ -244,7 +245,6 @@
       );
       background-size: calc(100% + (2 * var(--border-size))) calc(100% + (2 * var(--border-size)));
       background-position: 50% 50%;
-      background-attachment: fixed;
       border: var(--border-size) solid var(--backup-border);
       border-radius: calc(var(--radius) * 1px);
       padding: 28px;
@@ -266,7 +266,6 @@
       inset: calc(var(--border-size) * -1);
       border: var(--border-size) solid transparent;
       border-radius: calc(var(--radius) * 1px);
-      background-attachment: fixed;
       background-size: calc(100% + (2 * var(--border-size))) calc(100% + (2 * var(--border-size)));
       background-repeat: no-repeat;
       background-position: 50% 50%;
@@ -1706,6 +1705,7 @@
     const dots = document.querySelectorAll('.nav-dot');
     const curEl = document.getElementById('slide-cur');
     const progressLine = document.getElementById('progress-line');
+    const TOTAL = slides.length;
 
     function positionSlides() {
       slides.forEach((s, i) => {
