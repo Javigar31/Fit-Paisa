@@ -439,3 +439,31 @@ Se realiza un `git reset --hard 79defe0` para limpiar la rama de pruebas de traz
 *   **Causa Raíz Diagnosticada**: Las trazas de actividad muestran que el entorno local del usuario está previsualizando en bucle el archivo `backup/index_backup_20260417_1250.html` en lugar de testear los despliegues en caliente del nodo principal (`Fit-Paisa/index.html`). Esto causa un "efecto espejismo" donde el cliente visualiza un estado fósil en lugar de la producción alterada. 
 
 ***
+
+***
+
+# Informe Técnico (UX/UI): Scroll Nativo, GSAP y Refinamiento 3D (v4.0.0)
+**Fecha:** 2026-04-18
+**Estado:** DESPLEGADO en testing y master. Estabilidad total.
+
+## 1. Migración a Scroll Nativo (GuildMind Style)
+*   Adiós al Carrusel JS: Se eliminó el sistema de navegación por eventos de rueda/teclado que "secuestraba" el scroll.
+*   Arquitectura de Snap: Implementado scroll-snap-type: y mandatory en el contenedor raíz. Esto permite un scroll fluido del navegador pero asegura que cada sección se detenga exactamente en el centro de la pantalla.
+*   Mejora de UX: La navegación ahora es intuitiva y compatible con la aceleración natural de trackpads y dispositivos móviles.
+
+## 2. Orquestación de Animaciones con GSAP
+*   Revelado Secuencial (Stagger): Se integró ScrollTrigger para disparar animaciones de entrada. Se configuró un retardo deliberado de 0.35s entre el primer hijo (texto) y el segundo (tarjeta) de cada bloque.
+*   Sincronización 3D: La rotación de la mancuerna de fondo ahora está directamente ligada al progreso del scroll de la página, con una inercia de 1.5s para evitar frenazos bruscos.
+
+## 3. Cirugía Estética y 3D
+*   Mancuerna Rígida: Se eliminó el efecto de deformación de vértices ("medusa"). El modelo ahora mantiene su estructura física de acero mientras palpita lumínicamente.
+*   Spotlight Card Glow: 
+    1.  Precisión Local: Se corrigió el cálculo de coordenadas de brillo usando offsets relativos a la tarjeta (getBoundingClientRect), eliminando desgloses por scroll.
+    2.  Color de Marca: Se bloqueó el efecto de arcoíris interactivo para forzar una iluminación en Rojo FitPaisa puro, alineándose con el Branding.
+
+## 4. Estabilización y Fixes Críticos
+*   Interacción: Se habilitó pointer-events: none en la capa #scene 3D, permitiendo que los botones de "Suscribirse" y "Volver al inicio" vuelvan a ser clicables.
+*   SyntaxError: Eliminada la redeclaración accidental de la variable TOTAL que impedía la carga del sitio en navegadores Chromium.
+*   Barra de Progreso: Sincronizada la línea de progreso superior con el porcentaje real de scroll del documento.
+
+***
