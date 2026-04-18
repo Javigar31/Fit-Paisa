@@ -1800,13 +1800,15 @@
              gsap.to(currentObject.rotation, {
                 y: self.progress * Math.PI * 8, // Gira 4 vueltas completas de inicio a fin
                 overwrite: "auto",
-                duration: 1
+                duration: 1.5,
+                ease: "power3.out"
              });
              const s = 1.6 + 0.3 * Math.sin(self.progress * Math.PI);
              gsap.to(currentObject.scale, {
                 x: s, y: s, z: s,
                 overwrite: "auto",
-                duration: 1
+                duration: 1.5,
+                ease: "power3.out"
              });
           }
         }
