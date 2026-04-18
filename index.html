@@ -217,7 +217,7 @@
     .ui-card {
       /* Refined variables to match Brand Darkness + Prompt Effect */
       --base: 0;                /* Red hue for FitPaisa */
-      --spread: 200;
+      --spread: 0;              /* Fijo en rojo (sin cambio interactivo en el eje X) */
       --radius: 14;
       --border: 3;
       --backdrop: rgba(8, 10, 15, 0.88); /* Deep Dark Brand Tonality */
@@ -226,7 +226,7 @@
       --outer: 1;
       --border-size: calc(var(--border, 2) * 1px);
       --spotlight-size: calc(var(--size, 150) * 1px);
-      --hue: calc(var(--base) + (var(--xp, 0) * var(--spread, 0)));
+      --hue: var(--base);       /* Fijo bloqueado al rojo */
       --saturation: 100;
       --lightness: 65;
       --bg-spot-opacity: 0.12;
@@ -1790,12 +1790,31 @@
       
       slides.forEach(slide => observer.observe(slide));
 
+      // Parallax effect for decorative blobs (.deco)
+      document.querySelectorAll('.deco').forEach((deco, i) => {
+        gsap.to(deco, {
+          y: (i % 2 === 0 ? 100 : -100), // Alternate directions
+          ease: "none",
+          scrollTrigger: {
+            trigger: deco,
+            start: "top bottom",
+            end: "bottom top",
+            scrub: true
+          }
+        });
+      });
+
       // 3D Dumbbell Scroll Sync
       ScrollTrigger.create({
         trigger: document.body,
         start: "top top",
         end: "bottom bottom",
         onUpdate: (self) => {
+          // Sync progress line
+          if (progressLine) {
+            progressLine.style.width = (self.progress * 100) + '%';
+          }
+
           if (typeof currentObject !== 'undefined' && currentObject) {
              gsap.to(currentObject.rotation, {
                 y: self.progress * Math.PI * 8, // Gira 4 vueltas completas de inicio a fin
