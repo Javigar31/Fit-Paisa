@@ -781,82 +781,126 @@
       50% { border-color: #fff; box-shadow: 0 0 15px rgba(255, 255, 255, 0.4); }
     }
 
-    @media (max-width: 768px) {
+    /* ── Tablet & Mobile Styles (Common for ≤ 1023px) ── */
+    @media (max-width: 1023px) {
       body {
         scroll-snap-type: y proximity;
       }
 
-      .slide-inner {
+      .pane-inner {
         grid-template-columns: 1fr;
-        gap: 40px;
-        padding: 0 24px;
-      }
-
-      .ui-card {
-        display: block;
-        transform: none !important;
+        gap: 32px;
+        padding: 80px 24px;
+        text-align: center;
+        align-items: center;
+        justify-content: center;
       }
 
       .slide-title {
-        font-size: clamp(40px, 12vw, 64px);
+        font-size: clamp(38px, 10vw, 56px);
+        margin-bottom: 20px;
+      }
+
+      .slide-body {
+        margin: 0 auto 32px;
+      }
+
+      .ui-card {
+        transform: scale(0.9) !important;
+        margin: 0 auto;
       }
 
       #logo {
         font-size: 22px;
         top: 20px;
-        left: 20px;
+        left: 24px;
       }
 
       #counter {
-        top: 20px;
-        right: 20px;
+        top: 24px;
+        right: 24px;
+        font-size: 12px;
       }
-
-      #arrows { display: none; }
-
-      #hint {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        bottom: auto;
-        top: 100px;
-        background: rgba(10, 12, 18, 0.95);
-        backdrop-filter: blur(15px);
-        padding: 16px 24px;
-        border-radius: 20px;
-        border: 2px solid var(--accent);
-        min-width: 260px;
-        max-width: 85vw;
-        font-size: 13px;
-        line-height: 1.4;
-        color: var(--text);
-        text-align: center;
-        animation: fadeHint 4.5s ease 3s forwards, borderPulse 1.5s ease-in-out 3s infinite;
-      }
-
-      #hint::before { content: "Desliza para navegar"; }
 
       #nav {
-        width: calc(100% - 32px);
-        bottom: 18px;
-        justify-content: center;
-        background: rgba(15, 18, 25, 0.95);
+        right: auto;
+        left: 50%;
+        bottom: 24px;
+        top: auto;
+        transform: translateX(-50%);
+        flex-direction: row;
+        height: auto;
+        width: auto;
+      }
+
+      #nav::before {
+        width: 100%;
+        height: 1px;
+        top: 50%;
+        left: 0;
+        transform: translateY(-50%);
+      }
+
+      .nav-dot {
+        width: 28px;
+        height: 28px;
+      }
+
+      .nav-dot::before {
+        width: 6px;
+        height: 2px;
+      }
+
+      .nav-dot.active::before {
+        width: 24px;
+        height: 3px;
+      }
+
+      #hint {
+        display: none !important; /* Cleanup old hint if not needed */
       }
     }
 
-    @media (max-width: 520px) {
-      .slide-inner {
+    /* ── Tablet Specific (600px - 1023px) ── */
+    @media (min-width: 600px) and (max-width: 1023px) {
+      .pane-inner {
+        padding: 100px 48px;
+      }
+      
+      .ui-card {
+        transform: scale(0.95) !important;
+        max-width: 500px;
+      }
+    }
+
+    /* ── Mobile Specific (≤ 599px) ── */
+    @media (max-width: 599px) {
+      .pane-inner {
+        padding: 80px 16px 120px;
         gap: 24px;
-        padding: 0 16px;
+      }
+
+      .slide-title {
+        font-size: clamp(32px, 12vw, 44px);
       }
 
       .ui-card {
-        padding: 20px;
-        border-radius: 16px;
+        transform: scale(0.85) !important;
+        padding: 24px 16px;
       }
 
       .stat-grid {
         grid-template-columns: 1fr;
+      }
+
+      .slide-body {
+        font-size: 13px;
+        padding: 12px 16px;
+      }
+
+      .slide-cta {
+        width: 100%;
+        justify-content: center;
       }
     }
 
@@ -1822,7 +1866,14 @@
                 duration: 1.5,
                 ease: "power3.out"
              });
-             const s = 1.6 + 0.3 * Math.sin(self.progress * Math.PI);
+             const isMobile = window.innerWidth <= 599;
+             const isTablet = window.innerWidth > 599 && window.innerWidth <= 1023;
+             
+             let baseScale = 1.6;
+             if (isMobile) baseScale = 1.0;
+             else if (isTablet) baseScale = 1.3;
+             
+             const s = baseScale + 0.3 * Math.sin(self.progress * Math.PI);
              gsap.to(currentObject.scale, {
                 x: s, y: s, z: s,
                 overwrite: "auto",
