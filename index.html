@@ -15,6 +15,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollToPlugin.min.js"></script>
   <style>
     *,
     *::before,
@@ -29,9 +30,9 @@
       overflow-x: hidden;
     }
 
-    /* Motor de Snapping unificado y controlable */
+    /* Motor de Snapping Nativo ELIMINADO en favor de GSAP Magnetic (v7.0.0) */
     html.snaps-enabled {
-      scroll-snap-type: y mandatory;
+      /* Ya no usamos scroll-snap-type nativo */
     }
 
     body {
@@ -43,7 +44,6 @@
       cursor: none;
       overflow-x: hidden;
       position: relative;
-      /* Eliminamos scroll-snap-type de aquí para evitar conflictos */
     }
 
     /* Restore cursor on mobile/touch devices */
@@ -99,14 +99,25 @@
     .vp-slide {
       position: relative;
       width: 100%;
-      min-height: 100dvh;
+      min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      scroll-snap-align: start;
-      scroll-snap-stop: always; /* Obliga a que se detenga en cada slide al hacer scroll rápido */
+      padding: clamp(30px, 8vh, 100px) 0;
+      /* El anclaje ahora es gestionado dinámicamente por GSAP */
       z-index: 1;
-      /* Las opacidades/transform iniciales serán manejadas por GSAP al entrar al viewport */
+    }
+      
+      /* Visibilidad por defecto controlada por GSAP e .is-active */
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.8s ease, visibility 0.8s;
+    }
+
+    .vp-slide.is-active {
+      opacity: 1;
+      visibility: visible;
+      z-index: 2;
     }
 
     /* Each slide gets its Z position set by JS */
@@ -130,10 +141,10 @@
       z-index: 2;
       width: 100%;
       max-width: 1100px;
-      padding: 0 60px;
+      padding: 0 40px;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 80px;
+      gap: clamp(20px, 5vh, 40px);
       align-items: center;
     }
 
@@ -148,10 +159,10 @@
 
     .slide-title {
       font-family: var(--font-d);
-      font-size: clamp(52px, 7vw, 96px);
+      font-size: clamp(42px, 6vw, 86px); /* Un poco más pequeño para dar aire */
       line-height: .95;
       color: var(--text);
-      margin-bottom: 20px;
+      margin-bottom: clamp(10px, 2vh, 20px);
     }
 
     .slide-title em {
@@ -161,8 +172,8 @@
 
     .slide-body {
       font-size: 14px;
-      line-height: 1.8;
-      margin-bottom: 32px;
+      line-height: 1.6;
+      margin-bottom: 20px; /* Reducido de 32px */
       font-weight: 400;
       color: #fff;
       background: rgba(0, 0, 0, 0.5);
@@ -254,7 +265,7 @@
       background-position: 50% 50%;
       border: var(--border-size) solid var(--backup-border);
       border-radius: calc(var(--radius) * 1px);
-      padding: 28px;
+      padding: 24px; /* Reducido de 28px */
       backdrop-filter: blur(20px);
       transform: perspective(800px) rotateY(-8deg) rotateX(4deg);
       transition: transform .6s ease;
@@ -1122,6 +1133,32 @@
       0%, 100% { transform: scale(1); opacity: 1; }
       50% { transform: scale(1.05); opacity: 0.9; }
     }
+
+    /* ── Vertical Responsiveness: Optimization for short screens ── */
+    @media (max-height: 820px) {
+      .vp-slide { padding: 40px 0; }
+      .slide-title { font-size: clamp(38px, 5vw, 68px); }
+      .slide-body { font-size: 13px; margin-bottom: 12px; padding: 10px 18px; }
+      .ui-card { padding: 18px; gap: 0.5rem; }
+      .macro-bar-wrap { margin-bottom: 8px; }
+      .wo-item { padding: 6px 0; }
+      .premium-card { padding: 14px; margin-bottom: 8px; }
+      .price-big { font-size: 38px; }
+      .bubble { padding: 6px 10px; font-size: 12px; margin-bottom: 4px; }
+      .contact-form { gap: 8px; }
+      .contact-form input, .contact-form textarea { padding: 8px 12px; font-size: 13px; }
+      .contact-submit { padding: 10px 20px; }
+      .contact-info { gap: 10px; margin-top: 4px; }
+      .contact-info-icon { width: 32px; height: 32px; }
+    }
+
+    @media (max-height: 700px) {
+      .vp-slide { padding: 25px 0; }
+      .slide-label { margin-bottom: 8px; }
+      .slide-title { font-size: 42px; }
+      .ui-card { transform: scale(0.85) perspective(800px) rotateY(-8deg) rotateX(4deg) !important; }
+      .pane-inner { gap: 15px; }
+    }
   </style>
 </head>
 
@@ -1703,7 +1740,7 @@
               Medellín, Colombia
             </div>
           </div>
-          <button class="slide-cta" style="margin-top: 32px;" onclick="goTo(0)">← Volver al inicio</button>
+          <button class="slide-cta" style="margin-top: 20px;" onclick="goTo(0)">← Volver al inicio</button>
         </div>
         <div class="ui-card">
           <div
@@ -1819,7 +1856,11 @@
     function goTo(n) {
       if (isRegActive) return;
       const target = Math.max(0, Math.min(TOTAL - 1, n));
-      slides[target].scrollIntoView({ behavior: 'auto' });
+      gsap.to(window, { 
+        scrollTo: { y: slides[target], autoKill: false },
+        duration: 0.8,
+        ease: "power2.inOut"
+      });
     }
 
     function go(delta) { goTo(current + delta); }
@@ -1827,42 +1868,75 @@
     // Init — initial state
     updateUI();
 
-    // ── Intersection Observer for Scroll Snap ─────────────────────
-    if (typeof gsap !== 'undefined') {
-      gsap.registerPlugin(ScrollTrigger);
+    let masterSnap;
 
-      // Slide animations on enter
-      slides.forEach((slide, i) => {
-        const inner = slide.querySelector('.pane-inner');
-        if (inner) {
-          gsap.fromTo(Array.from(inner.children),
-            { opacity: 0, y: 50 },
-            { 
-              opacity: 1, y: 0, stagger: 0.35, duration: 0.9, ease: 'power3.out',
-              scrollTrigger: {
-                trigger: slide,
-                start: "top 65%", // When top of the slide hits 65% of viewport
-                toggleActions: "play none none reverse"
-              }
-            }
-          );
+    // ── Magnetic Scroll Engine (v7.0.0) ─────────────────────
+    if (typeof gsap !== 'undefined') {
+      gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
+
+      // Unified Snap & Progress
+      masterSnap = ScrollTrigger.create({
+        trigger: "#carousel",
+        start: "top top",
+        end: "bottom bottom",
+        snap: {
+          snapTo: 1 / (TOTAL - 1),
+          duration: { min: 0.4, max: 0.7 },
+          delay: 0.1,
+          ease: "power2.inOut"
+        },
+        onUpdate: (self) => {
+          // Sync progress line
+          if (progressLine) {
+            progressLine.style.width = (self.progress * 100) + '%';
+          }
         }
       });
 
-      // Update active nav dot
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            const index = Array.from(slides).indexOf(entry.target);
-            if (index !== -1 && current !== index) {
-              current = index;
-              updateUI();
+      // Individual Slide Controllers (Animations & Tracking)
+      slides.forEach((slide, i) => {
+        ScrollTrigger.create({
+          trigger: slide,
+          start: "top 50%",
+          end: "bottom 50%",
+          onToggle: (self) => {
+            if (self.isActive) {
+              // Current slide index update
+              if (current !== i) {
+                current = i;
+                updateUI();
+              }
+
+              // Active state classes
+              slides.forEach(s => s.classList.remove('is-active'));
+              slide.classList.add('is-active');
+
+              // Animate elements
+              const inner = slide.querySelector('.pane-inner');
+              if (inner) {
+                gsap.killTweensOf(Array.from(inner.children));
+                gsap.fromTo(Array.from(inner.children),
+                  { opacity: 0, y: 50, scale: 1.05, filter: 'blur(20px)' },
+                  { 
+                    opacity: 1, y: 0, scale: 1, filter: 'blur(0px)',
+                    stagger: 0.15, duration: 1.2, ease: 'power4.out',
+                    clearProps: "filter"
+                  }
+                );
+              }
+            } else {
+              // Outgoing animation
+              const inner = slide.querySelector('.pane-inner');
+              if (inner) {
+                gsap.to(Array.from(inner.children), {
+                   opacity: 0, y: -30, scale: 0.95, filter: 'blur(10px)',
+                   duration: 0.6, ease: 'power2.in'
+                });
+              }
             }
           }
         });
-      }, { threshold: 0.5 });
-      
-      slides.forEach(slide => observer.observe(slide));
+      });
 
       // Parallax effect for decorative blobs (.deco)
       document.querySelectorAll('.deco').forEach((deco, i) => {
@@ -1880,15 +1954,10 @@
 
       // 3D Dumbbell Scroll Sync
       ScrollTrigger.create({
-        trigger: document.body,
+        trigger: document.documentElement,
         start: "top top",
         end: "bottom bottom",
         onUpdate: (self) => {
-          // Sync progress line
-          if (progressLine) {
-            progressLine.style.width = (self.progress * 100) + '%';
-          }
-
           if (typeof currentObject !== 'undefined' && currentObject) {
              gsap.to(currentObject.rotation, {
                 y: self.progress * Math.PI * 8, 
@@ -1971,7 +2040,7 @@
 
       if (type === 'register') {
         isRegActive = true;
-        document.documentElement.classList.remove('snaps-enabled'); // Desactivar snap para permitir scroll libre en form
+        if (masterSnap) masterSnap.disable(); // Desactivar imán para permitir scroll libre en form
         loginView.classList.remove('is-active');
         registerView.classList.add('is-active');
         demoWrap.style.display = 'none';
@@ -1980,7 +2049,7 @@
         updateUI();
       } else {
         isRegActive = false;
-        document.documentElement.classList.add('snaps-enabled'); // Re-activar snap al volver al login/inicio
+        if (masterSnap) masterSnap.enable(); // Re-activar imán al volver al login/inicio
         registerView.classList.remove('is-active');
         loginView.classList.add('is-active');
         demoWrap.style.display = 'block';
