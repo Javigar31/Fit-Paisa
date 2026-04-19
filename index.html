@@ -2518,13 +2518,13 @@
           body: JSON.stringify({ email }),
         });
         
+        const rawText = await res.text();
         let data;
         try {
-          data = await res.json();
+          data = JSON.parse(rawText);
         } catch (jsonErr) {
-          const raw = await res.text();
-          console.error("Invalid JSON response:", raw.substring(0, 500));
-          throw new Error("Respuesta del servidor no válida (posible error PHP).");
+          console.error("Invalid JSON response:", rawText.substring(0, 500));
+          throw new Error("El servidor no devolvió JSON. Respuesta: " + rawText.substring(0, 100));
         }
 
         if (data.success) {
@@ -2542,7 +2542,7 @@
         }
       } catch (e) {
         console.error("Fetch Error:", e);
-        errEl.textContent = 'Error de conexión: ' + e.message;
+        errEl.textContent = 'Error: ' + e.message;
         errEl.classList.add('on');
         btnEl.textContent = 'ENVIAR CÓDIGO';
         btnEl.style.opacity = '1';
