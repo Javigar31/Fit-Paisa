@@ -2517,13 +2517,20 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email }),
         });
-        const data = await res.json();
+        
+        let data;
+        try {
+          data = await res.json();
+        } catch (jsonErr) {
+          const raw = await res.text();
+          console.error("Invalid JSON response:", raw.substring(0, 500));
+          throw new Error("Respuesta del servidor no válida (posible error PHP).");
+        }
 
         if (data.success) {
-          // Si estamos en desarrollo, el código viene en la respuesta
           if (data.dev_code) {
             console.log("CÓDIGO DE RECUPERACIÓN (DEV):", data.dev_code);
-            alert("TU CÓDIGO (DEV): " + data.dev_code); // Solo para desarrollo
+            alert("TU CÓDIGO (DEV): " + data.dev_code);
           }
           showResetView();
         } else {
@@ -2534,7 +2541,8 @@
           btnEl.style.pointerEvents = 'auto';
         }
       } catch (e) {
-        errEl.textContent = 'Error de conexión.';
+        console.error("Fetch Error:", e);
+        errEl.textContent = 'Error de conexión: ' + e.message;
         errEl.classList.add('on');
         btnEl.textContent = 'ENVIAR CÓDIGO';
         btnEl.style.opacity = '1';
