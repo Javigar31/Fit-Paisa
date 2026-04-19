@@ -413,6 +413,15 @@ function fp_ensure_schema(PDO $db): void
             hits INTEGER DEFAULT 1,
             reset_at TIMESTAMPTZ NOT NULL
         )");
+
+        // 8. Password Recovery Table
+        $db->exec("CREATE TABLE IF NOT EXISTS password_resets (
+            email      VARCHAR(150) NOT NULL REFERENCES users(email) ON DELETE CASCADE,
+            code       VARCHAR(6)   NOT NULL,
+            expires_at TIMESTAMPTZ  NOT NULL,
+            created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+            PRIMARY KEY (email)
+        )");
         
     } catch (PDOException $e) {
         error_log('[FitPaisa][SCHEMA] Fallo en auto-migración: ' . $e->getMessage());

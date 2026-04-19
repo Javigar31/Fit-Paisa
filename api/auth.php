@@ -164,11 +164,12 @@ function jwt_require(): array
 fp_cors();
 $action = fp_sanitize($_GET['action'] ?? '', 32, 'slug');
 
-match ($action) {
-    'register' => handle_register(),
-    'login'    => handle_login(),
-    'me'       => handle_me(),
-    default    => fp_error(400, "Acción desconocida."),
+    'register'        => handle_register(),
+    'login'           => handle_login(),
+    'me'              => handle_me(),
+    'forgot_password' => handle_forgot_password(),
+    'reset_password'  => handle_reset_password(),
+    default           => fp_error(400, "Acción desconocida."),
 };
 
 function handle_register(): never
@@ -224,4 +225,94 @@ function handle_me(): never
     $p = jwt_require();
     $u = fp_query("SELECT u.*, p.profile_id, s.plan_type FROM users u LEFT JOIN profiles p ON p.user_id=u.user_id LEFT JOIN subscriptions s ON s.user_id=u.user_id AND s.status='ACTIVE' WHERE u.user_id=:uid", [':uid'=>$p['user_id']])->fetch();
     fp_success(['user'=>$u]);
+}
+
+/**
+ * Fase 1: Solicitar recuperación de contraseña.
+ * Genera un código de 6 dígitos válido por 15 minutos.
+ */
+function handle_forgot_password(): never
+{
+    $body = fp_json_body();
+    $email = strtolower(fp_sanitize($body['email'] ?? '', 150, 'email'));
+    
+    // Rate limit: 3 intentos por hora para evitar spam
+    fp_rate_limit('auth_forgot', 3, 3600);
+
+    if (empty($email)) fp_error(400, 'Email requerido.');
+
+    // Verificar si el usuario existe (Clean Code: no revelamos si no existe por seguridad)
+    $userExists = fp_query("SELECT 1 FROM users WHERE email = :e", [':e' => $email])->fetchColumn();
+    
+    if (!$userExists) {
+        // Simulamos éxito para no dar pistas a atacantes
+        error_log("[FitPaisa][AUTH] Intento recuperación email inexistente: $email");
+        fp_success(['message' => 'Si el email existe, recibirás un código.']);
+    }
+
+    // Generar código numérico de 6 dígitos
+    $code = (string)random_int(100000, 999999);
+    $expires = date('Y-m-d H:i:s', time() + (15 * 60)); // 15 minutos
+
+    try {
+        fp_query(
+            "INSERT INTO password_resets (email, code, expires_at) 
+             VALUES (:e, :c, :ex) 
+             ON CONFLICT (email) DO UPDATE SET code = :c, expires_at = :ex, created_at = NOW()",
+            [':e' => $email, ':c' => $code, ':ex' => $expires]
+        );
+
+        // TODO: Enviar email real. Por ahora devolvemos el código en la respuesta para desarrollo.
+        fp_success([
+            'message' => 'Código de recuperación generado.',
+            'dev_code' => $code // ELIMINAR EN PRODUCCIÓN
+        ]);
+    } catch (Exception $e) {
+        error_log("[FitPaisa][AUTH] Error forgot_password: " . $e->getMessage());
+        fp_error(500, 'Error al procesar la solicitud.');
+    }
+}
+
+/**
+ * Fase 2: Validar código y cambiar contraseña.
+ */
+function handle_reset_password(): never
+{
+    $body = fp_json_body();
+    $email = strtolower(fp_sanitize($body['email'] ?? '', 150, 'email'));
+    $code  = fp_sanitize($body['code'] ?? '', 6, 'slug');
+    $pass  = $body['password'] ?? '';
+
+    // Rate limit estricto para intentos de código (fuerza bruta)
+    fp_rate_limit('auth_reset_attempt', 5, 300);
+
+    if (empty($email) || empty($code) || empty($pass)) fp_error(400, 'Datos incompletos.');
+
+    // Validar token/código en BD
+    $reset = fp_query(
+        "SELECT * FROM password_resets WHERE email = :e AND code = :c AND expires_at > NOW()",
+        [':e' => $email, ':c' => $code]
+    )->fetch();
+
+    if (!$reset) {
+        fp_error(401, 'Código inválido o expirado.');
+    }
+
+    // Actualizar contraseña del usuario
+    $db = fp_db();
+    $db->beginTransaction();
+    try {
+        $hash = password_hash($pass, PASSWORD_BCRYPT, ['cost' => 12]);
+        fp_query("UPDATE users SET password_hash = :h WHERE email = :e", [':h' => $hash, ':e' => $email]);
+        
+        // Limpiar tokens usados
+        fp_query("DELETE FROM password_resets WHERE email = :e", [':e' => $email]);
+
+        $db->commit();
+        fp_success(['message' => 'Contraseña actualizada con éxito.']);
+    } catch (Exception $e) {
+        $db->rollBack();
+        error_log("[FitPaisa][AUTH] Error reset_password: " . $e->getMessage());
+        fp_error(500, 'Error al actualizar la contraseña.');
+    }
 }

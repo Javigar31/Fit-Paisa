@@ -1327,9 +1327,55 @@
             <div id="btn-login"
               style="background:var(--accent);color:var(--dark);border-radius:8px;padding:12px;text-align:center;font-weight:800;font-size:13px;margin-top:4px;cursor:none;transition:opacity .2s"
               class="btn-hover-scale" onclick="loginUser()">ENTRAR</div>
-            <div class="btn-switch btn-hover-opacity" onclick="toggleForm('register')">
-              ¿Primera vez? <span>Regístrate gratis</span>
+            
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+              <div class="btn-switch btn-hover-opacity" onclick="toggleForm('register')" style="margin-top:0">
+                ¿Primera vez? <span>Regístrate</span>
+              </div>
+              <div class="btn-switch btn-hover-opacity" onclick="showForgotView()" style="margin-top:0">
+                <span>Olvidé mi clave</span>
+              </div>
             </div>
+          </div>
+
+          <!-- Forgot Password View -->
+          <div id="forgot-view" class="form-view">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);font-weight:800">
+                Recuperar acceso</div>
+              <div style="font-size:11px;color:var(--muted);cursor:none" class="btn-hover-opacity" onclick="toggleForm('login')">
+                Volver</div>
+            </div>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:15px">Introduce tu email y te enviaremos un código de 6 dígitos.</p>
+            <div class="field">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Correo electrónico</div>
+              <input type="email" id="forgot-email" class="input" placeholder="correo@fitpaisa.com">
+            </div>
+            <div id="forgot-error" class="error-msg" style="text-align:center"></div>
+            <div id="btn-request-reset"
+              style="background:var(--accent);color:var(--dark);border-radius:8px;padding:12px;text-align:center;font-weight:800;font-size:13px;margin-top:12px;cursor:none"
+              class="btn-hover-scale" onclick="requestReset()">ENVIAR CÓDIGO</div>
+          </div>
+
+          <!-- Reset Password View -->
+          <div id="reset-view" class="form-view">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);font-weight:800">
+                Nueva contraseña</div>
+            </div>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:15px">Ingresa el código que has recibido y tu nueva clave.</p>
+            <div class="field">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Código de 6 dígitos</div>
+              <input type="text" id="reset-code" class="input" placeholder="000 000" maxlength="6" style="text-align:center;letter-spacing:4px;font-size:18px">
+            </div>
+            <div class="field">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Nueva contraseña</div>
+              <input type="password" id="reset-new-pass" class="input" placeholder="••••••••">
+            </div>
+            <div id="reset-error" class="error-msg" style="text-align:center"></div>
+            <div id="btn-handle-reset"
+              style="background:var(--accent);color:var(--dark);border-radius:8px;padding:12px;text-align:center;font-weight:800;font-size:13px;margin-top:12px;cursor:none"
+              class="btn-hover-scale" onclick="handleReset()">CAMBIAR CONTRASEÑA</div>
           </div>
 
           <div id="register-view" class="form-view">
@@ -2435,6 +2481,114 @@
         errEl.textContent = e.message;
         errEl.classList.add('on');
         if (btn) { btn.textContent = selectedPlan === 'premium' ? 'Activar Plan Premium ✓' : 'Crear Cuenta Gratuita ✓'; btn.disabled = false; }
+      }
+    }
+
+    // ── PASSWORD RECOVERY LOGIC ──────────────────
+    function showForgotView() {
+      isRegActive = true;
+      if (masterSnap) masterSnap.disable();
+      document.querySelectorAll('.form-view').forEach(v => v.classList.remove('is-active'));
+      document.getElementById('forgot-view').classList.add('is-active');
+      document.getElementById('demo-selector-wrap').style.display = 'none';
+      updateUI();
+    }
+
+    async function requestReset() {
+      const emailEl = document.getElementById('forgot-email');
+      const errEl = document.getElementById('forgot-error');
+      const btnEl = document.getElementById('btn-request-reset');
+      const email = (emailEl?.value ?? '').trim();
+
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        errEl.textContent = 'Introduce un email válido.';
+        errEl.classList.add('on');
+        return;
+      }
+
+      errEl.classList.remove('on');
+      btnEl.textContent = 'Enviando…';
+      btnEl.style.opacity = '0.6';
+      btnEl.style.pointerEvents = 'none';
+
+      try {
+        const res = await fetch('/api/auth.php?action=forgot_password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          // Si estamos en desarrollo, el código viene en la respuesta
+          if (data.dev_code) {
+            console.log("CÓDIGO DE RECUPERACIÓN (DEV):", data.dev_code);
+            alert("TU CÓDIGO (DEV): " + data.dev_code); // Solo para desarrollo
+          }
+          showResetView();
+        } else {
+          errEl.textContent = data.message || 'Error al solicitar el código.';
+          errEl.classList.add('on');
+          btnEl.textContent = 'ENVIAR CÓDIGO';
+          btnEl.style.opacity = '1';
+          btnEl.style.pointerEvents = 'auto';
+        }
+      } catch (e) {
+        errEl.textContent = 'Error de conexión.';
+        errEl.classList.add('on');
+        btnEl.textContent = 'ENVIAR CÓDIGO';
+        btnEl.style.opacity = '1';
+        btnEl.style.pointerEvents = 'auto';
+      }
+    }
+
+    function showResetView() {
+      document.querySelectorAll('.form-view').forEach(v => v.classList.remove('is-active'));
+      document.getElementById('reset-view').classList.add('is-active');
+    }
+
+    async function handleReset() {
+      const email = document.getElementById('forgot-email').value.trim();
+      const code = document.getElementById('reset-code').value.trim();
+      const pass = document.getElementById('reset-new-pass').value;
+      const errEl = document.getElementById('reset-error');
+      const btnEl = document.getElementById('btn-handle-reset');
+
+      if (code.length < 6 || !pass) {
+        errEl.textContent = 'Introduce el código y la nueva clave.';
+        errEl.classList.add('on');
+        return;
+      }
+
+      errEl.classList.remove('on');
+      btnEl.textContent = 'Cambiando…';
+      btnEl.style.opacity = '0.6';
+      btnEl.style.pointerEvents = 'none';
+
+      try {
+        const res = await fetch('/api/auth.php?action=reset_password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, code, password: pass }),
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          alert("Contraseña actualizada con éxito.");
+          toggleForm('login');
+        } else {
+          errEl.textContent = data.message || 'Error al actualizar.';
+          errEl.classList.add('on');
+          btnEl.textContent = 'CAMBIAR CONTRASEÑA';
+          btnEl.style.opacity = '1';
+          btnEl.style.pointerEvents = 'auto';
+        }
+      } catch (e) {
+        errEl.textContent = 'Error de conexión.';
+        errEl.classList.add('on');
+        btnEl.textContent = 'CAMBIAR CONTRASEÑA';
+        btnEl.style.opacity = '1';
+        btnEl.style.pointerEvents = 'auto';
       }
     }
 
