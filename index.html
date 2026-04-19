@@ -103,8 +103,8 @@
       justify-content: flex-start;
       padding: 0;
       z-index: 1;
-      overflow-x: hidden;
-      /* Encapsula los elementos decorativos para no romper el ancho móvil */
+      overflow-x: clip; /* Corta a los lados sin crear caja de scroll interna */
+      overflow-y: visible; /* Asegura que el scroll vertical pase de largo al body */
     }
 
     /* Each slide gets its Z position set by JS */
