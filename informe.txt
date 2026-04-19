@@ -1,5 +1,6 @@
 
 
+
 ***
 
 # Informe de Traspaso Técnico: Proyecto FitPaisa (v1.2.1)
@@ -496,5 +497,33 @@ Se realiza un `git reset --hard 79defe0` para limpiar la rama de pruebas de traz
 
 ## 5. Resumen de Impacto
 Con esta estabilización, FitPaisa v4.1.0 consolida un paradigma de navegación "Scroll-Telling" inmersivo sin sacrificar la accesibilidad, logrando una experiencia fluida e idéntica a plataformas corporativas de primer nivel.
+
+***
+
+# Informe Técnico (Auth): Recuperación de Contraseña (v4.2.0)
+**Fecha:** 2026-04-19
+**Estado:** IMPLEMENTACIÓN COMPLETADA / TESTING PENDIENTE DE DEPURACIÓN.
+
+## 1. Sistema de Recuperación de Acceso
+*   **Base de Datos**: Creada la tabla `password_resets` para gestionar códigos de 6 dígitos con expiración de 15 minutos.
+*   **Backend (API Monolítica)**: 
+    *   Sincronizado `api/auth.php` con lógica de auto-migración propia para asegurar que la tabla exista en cualquier entorno (`master/testing`).
+    *   Implementados endpoints `forgot_password` (generación de código) y `reset_password` (validación y cambio de clave).
+    *   **Rate Limiting**: Protección añadida (3 solicitudes/hora por email) para evitar ataques de fuerza bruta.
+*   **Frontend (UI/UX)**:
+    *   Nuevas vistas `forgot-view` y `reset-view` integradas en el carrusel de autenticación de `index.html`.
+    *   Mantenida la estética premium y animaciones GSAP consistentes con el resto de la plataforma.
+
+## 2. Incidencia Detectada en Testing
+*   **Error**: "Error de conexión" persistente en el entorno de pruebas de Vercel.
+*   **Diagnóstico Actual**: 
+    1.  La API devuelve una **respuesta vacía** (0 bytes), lo que impide al frontend parsear el JSON.
+    2.  Esto sugiere un **Fallo Fatal de PHP** o una terminación prematura antes de cualquier salida.
+    3.  **Causa Probable**: Inconsistencia en el nombre de la base de datos `fitpaisa_testing` en Neon o conflicto de restricciones de clave foránea (`REFERENCES users(email)`) si la tabla `users` no está sincronizada.
+*   **Depuración Avanzada**: Se ha mejorado `index.html` para loguear la respuesta bruta del servidor en la consola, lo que facilitará la identificación del error en la próxima sesión.
+
+## 3. Estado del Repositorio
+*   **Push**: Todos los cambios están en la rama `testing`.
+*   **Pendiente**: Verificar logs de Vercel y confirmar existencia de la BD de testing para resolver el fallo de conexión.
 
 ***
