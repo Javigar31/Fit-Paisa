@@ -47,6 +47,8 @@ function fp_db(): PDO
              PDO::ATTR_EMULATE_PREPARES => true,
             PDO::ATTR_TIMEOUT => 10
         ]);
+        // Asegurar que la tabla de recuperación existe (Auto-migración)
+        fp_ensure_schema($_fp_pdo);
     } catch (PDOException $e) {
         error_log('[FitPaisa][DB] Auth Fallo: ' . $e->getMessage());
         header('Content-Type: application/json'); http_response_code(500);
@@ -124,6 +126,24 @@ function fp_rate_limit(string $endpoint, int $limit = 60, int $seconds = 60): vo
         if ($record['hits'] >= $limit) fp_error(429, 'Demasiadas peticiones.');
         fp_query("UPDATE rate_limits SET hits = hits + 1 WHERE rate_key = :key", [':key' => $key]);
     } catch (Exception $e) { error_log("[FitPaisa][RATE] " . $e->getMessage()); }
+}
+
+/**
+ * Asegura que las tablas necesarias existen (Auto-Migración)
+ */
+function fp_ensure_schema(PDO $db): void
+{
+    try {
+        $db->exec("CREATE TABLE IF NOT EXISTS password_resets (
+            email      VARCHAR(150) NOT NULL REFERENCES users(email) ON DELETE CASCADE,
+            code       VARCHAR(6)   NOT NULL,
+            expires_at TIMESTAMPTZ  NOT NULL,
+            created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+            PRIMARY KEY (email)
+        )");
+    } catch (PDOException $e) {
+        error_log('[FitPaisa][SCHEMA] Fallo en auto-migración auth.php: ' . $e->getMessage());
+    }
 }
 
 /* ══════════════════════════════════════════════════════════════════════
