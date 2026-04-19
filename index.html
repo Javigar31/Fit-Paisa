@@ -24,21 +24,21 @@
       padding: 0;
     }
 
-    html {
-      height: 100%;
-      scroll-behavior: smooth;
-      scroll-snap-type: y mandatory;
-    }
-
-    body {
-      width: 100%;
-      background: var(--dark);
-      color: var(--text);
-      font-family: var(--font-b);
-      -webkit-font-smoothing: antialiased;
-      cursor: none;
-      overflow-x: hidden;
-    }
+      html {
+        scroll-snap-type: y mandatory;
+        overflow-x: hidden;
+      }
+  
+      body {
+        width: 100%;
+        background: var(--dark);
+        color: var(--text);
+        font-family: var(--font-b);
+        -webkit-font-smoothing: antialiased;
+        cursor: none;
+        overflow-x: hidden;
+        position: relative;
+      }
 
     /* Restore cursor on mobile/touch devices */
     @media (pointer: coarse) {
@@ -610,6 +610,7 @@
       font-size: 14px;
       color: var(--muted);
       letter-spacing: .1em;
+      pointer-events: none;
     }
 
     #counter span {
@@ -627,6 +628,7 @@
       color: var(--accent);
       letter-spacing: .05em;
       transition: opacity .4s ease, transform .4s ease;
+      pointer-events: none;
     }
 
     #logo.is-hidden {
@@ -817,15 +819,15 @@
       }
 
       #logo {
-        font-size: 20px;
+        font-size: 18px;
         top: 15px;
-        left: 20px;
+        left: 15px;
       }
 
       #counter {
-        top: 24px;
-        right: 24px;
-        font-size: 12px;
+        top: 15px;
+        right: 15px;
+        font-size: 11px;
       }
 
       #nav {
