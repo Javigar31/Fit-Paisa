@@ -52,7 +52,8 @@ function fp_db(): PDO
     } catch (PDOException $e) {
         error_log('[FitPaisa][DB] Auth Fallo: ' . $e->getMessage());
         header('Content-Type: application/json'); http_response_code(500);
-        echo json_encode(['success'=>false, 'message'=>'Error de conexión.']); exit;
+        $debugMsg = (getenv('VERCEL_ENV') !== 'production') ? ' Error: ' . $e->getMessage() : '';
+        echo json_encode(['success'=>false, 'message'=>'Error de conexión.' . $debugMsg]); exit;
     }
     return $_fp_pdo;
 }
