@@ -902,6 +902,22 @@
         width: 100%;
         justify-content: center;
       }
+
+      /* Stack form grids in mobile */
+      #register-view div[style*="grid-template-columns: 1fr 1fr"],
+      #register-view div[style*="grid-template-columns:1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+      }
+
+      #register-view div[style*="grid-template-columns:repeat(3,1fr)"] {
+        grid-template-columns: 1fr !important;
+      }
+
+      .input {
+        font-size: 14px !important;
+        padding: 12px !important;
+      }
     }
 
     /* ── Interactive role cards ── */
