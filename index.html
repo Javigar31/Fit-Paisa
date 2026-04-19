@@ -25,21 +25,26 @@
     }
 
     html {
-      scroll-snap-type: y mandatory;
+      scroll-behavior: auto;
       overflow-x: hidden;
-      scroll-behavior: auto; /* Dejamos que el snap gestione el suavizado para evitar luchas con JS */
     }
-  
-      body {
-        width: 100%;
-        background: var(--dark);
-        color: var(--text);
-        font-family: var(--font-b);
-        -webkit-font-smoothing: antialiased;
-        cursor: none;
-        overflow-x: hidden;
-        position: relative;
-      }
+
+    /* Motor de Snapping unificado y controlable */
+    html.snaps-enabled {
+      scroll-snap-type: y mandatory;
+    }
+
+    body {
+      width: 100%;
+      background: var(--dark);
+      color: var(--text);
+      font-family: var(--font-b);
+      -webkit-font-smoothing: antialiased;
+      cursor: none;
+      overflow-x: hidden;
+      position: relative;
+      /* Eliminamos scroll-snap-type de aquí para evitar conflictos */
+    }
 
     /* Restore cursor on mobile/touch devices */
     @media (pointer: coarse) {
@@ -787,9 +792,7 @@
 
     /* ── Tablet & Mobile Styles (Common for ≤ 1023px) ── */
     @media (max-width: 1023px) {
-      body {
-        scroll-snap-type: y proximity;
-      }
+      /* Ya no aplicamos snap al body aquí, se hereda del html.snaps-enabled */
 
       .pane-inner {
         grid-template-columns: 1fr;
@@ -1888,10 +1891,10 @@
 
           if (typeof currentObject !== 'undefined' && currentObject) {
              gsap.to(currentObject.rotation, {
-                y: self.progress * Math.PI * 8, // Gira 4 vueltas completas de inicio a fin
+                y: self.progress * Math.PI * 8, 
                 overwrite: "auto",
-                duration: 1.5,
-                ease: "power3.out"
+                duration: 0.6, // Reducido de 1.5 a 0.6 para eliminar el 'lag' visual
+                ease: "power2.out"
              });
              const isMobile = window.innerWidth <= 599;
              const isTablet = window.innerWidth > 599 && window.innerWidth <= 1023;
@@ -1904,13 +1907,16 @@
              gsap.to(currentObject.scale, {
                 x: s, y: s, z: s,
                 overwrite: "auto",
-                duration: 1.5,
-                ease: "power3.out"
+                duration: 0.6, // Reducido de 1.5 a 0.6 para eliminar el 'lag' visual
+                ease: "power2.out"
              });
           }
         }
       });
     }
+
+    // --- Init: habilitar Snaps ---
+    document.documentElement.classList.add('snaps-enabled');
 
     // ── Custom cursor ─────────────────────
     const cursor = document.getElementById('cursor');
@@ -1965,6 +1971,7 @@
 
       if (type === 'register') {
         isRegActive = true;
+        document.documentElement.classList.remove('snaps-enabled'); // Desactivar snap para permitir scroll libre en form
         loginView.classList.remove('is-active');
         registerView.classList.add('is-active');
         demoWrap.style.display = 'none';
@@ -1973,6 +1980,7 @@
         updateUI();
       } else {
         isRegActive = false;
+        document.documentElement.classList.add('snaps-enabled'); // Re-activar snap al volver al login/inicio
         registerView.classList.remove('is-active');
         loginView.classList.add('is-active');
         demoWrap.style.display = 'block';
