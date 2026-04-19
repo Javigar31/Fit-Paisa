@@ -24,10 +24,11 @@
       padding: 0;
     }
 
-      html {
-        scroll-snap-type: y mandatory;
-        overflow-x: hidden;
-      }
+    html {
+      scroll-snap-type: y mandatory;
+      overflow-x: hidden;
+      scroll-behavior: auto; /* Dejamos que el snap gestione el suavizado para evitar luchas con JS */
+    }
   
       body {
         width: 100%;
@@ -98,6 +99,7 @@
       align-items: center;
       justify-content: center;
       scroll-snap-align: start;
+      scroll-snap-stop: always; /* Obliga a que se detenga en cada slide al hacer scroll rápido */
       z-index: 1;
       /* Las opacidades/transform iniciales serán manejadas por GSAP al entrar al viewport */
     }
@@ -1814,7 +1816,7 @@
     function goTo(n) {
       if (isRegActive) return;
       const target = Math.max(0, Math.min(TOTAL - 1, n));
-      slides[target].scrollIntoView({ behavior: 'smooth' });
+      slides[target].scrollIntoView({ behavior: 'auto' });
     }
 
     function go(delta) { goTo(current + delta); }
