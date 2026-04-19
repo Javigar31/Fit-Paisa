@@ -467,3 +467,34 @@ Se realiza un `git reset --hard 79defe0` para limpiar la rama de pruebas de traz
 *   Barra de Progreso: Sincronizada la línea de progreso superior con el porcentaje real de scroll del documento.
 
 ***
+
+# Informe Técnico (UX & Performance): Scroll Nativo y Safe Centering (v4.1.0)
+**Fecha:** 2026-04-19
+**Estado:** DESPLEGADO. Fluidez absoluta en Desktop y Mobile.
+
+## 1. Restauración del "Root Scroller" (Bug de Scroll Atascado)
+*   **Problema (Choque y Rebote):** Al hacer scroll, la página se sentía pesada, se trababa o daba la sensación de chocar contra el final de los paneles de forma brusca, perdiendo toda la inercia (momentum) en dispositivos táctiles o trackpads.
+*   **Causa Raíz:** El uso de `overflow-x: hidden` en la etiqueta `<html>` y en los paneles `.vp-slide` provocaba un comportamiento implícito del navegador donde se destruía el scroll nativo de la ventana y se creaban "sub-cajas" de scroll independientes (`overflow-y: auto`). Al llegar al límite de una caja, el scroll chocaba en lugar de continuar.
+*   **Solución Arquitectónica:** 
+    1. Se limpió la etiqueta `<html>` de toda restricción de *overflow*, devolviéndole el control absoluto de la aceleración por hardware a la ventana del navegador.
+    2. Se reemplazó el `hidden` por la propiedad moderna `overflow-x: clip` en el `<body>` y los paneles. Esto corta el desborde visual horizontal de las animaciones sin secuestrar la física del scroll vertical.
+
+## 2. Prevención del "Flexbox Center Overflow Bug" (Responsividad)
+*   **Problema (Contenido Cortado en Móvil):** En pantallas pequeñas, la parte superior de los textos y tarjetas quedaba inaccesible fuera de la pantalla sin poder hacer scroll hacia arriba para leerlos.
+*   **Causa Raíz:** El contenedor principal usaba `align-items: center` con `min-height: 100vh`. Al pasar a una columna en móvil, la altura del contenido se duplicaba y Flexbox forzaba el centrado rígidamente, empujando el exceso hacia arriba (área muerta).
+*   **Solución (Safe Dynamic Centering):** Se cambió la directiva a `justify-content: flex-start` combinado con `margin: auto 0` en el contenedor interno (`.pane-inner`) y se implementó `min-height: 100dvh`. Ahora el contenido se centra orgánicamente si sobra espacio, pero si falta, se alinea al inicio permitiendo un scroll natural sin recortes.
+
+## 3. Armonía Matemática del Motor 3D (Anti-Congelamiento)
+*   **Problema:** La mancuerna 3D dejaba de rotar por sí sola tras implementar la interpolación suave (*Lerp*) para el scroll.
+*   **Causa Raíz:** El cálculo de interpolación contrarrestaba el drift automático en cada fotograma, resultando en una cancelación matemática que congelaba el modelo si el usuario no interactuaba.
+*   **Solución:** Se desacopló la variable de inercia introduciendo `autoRotY` como un acumulador independiente. Ahora el giro constante se suma a la posición objetivo del scroll (`target3DRotY + autoRotY`) antes de aplicar la interpolación, logrando una convivencia perfecta entre ambas animaciones a 60fps.
+
+## 4. UI Móvil: Prevención de Layout Thrashing
+*   **Problema:** Al hacer scroll en móvil, se producían saltos horizontales o roturas de pantalla repentinas.
+*   **Causa Raíz:** El contador superior (`01/07`) posicionado de forma fija cerca del borde derecho forzaba al navegador móvil a recalcular el ancho total del documento repetidamente cada vez que GSAP inyectaba un nuevo número.
+*   **Solución:** Se transformó el contador en una sutil cápsula premium semitransparente (`backdrop-filter`) con padding estable, evitando desbordamientos de renderizado y limpiando la interfaz táctil.
+
+## 5. Resumen de Impacto
+Con esta estabilización, FitPaisa v4.1.0 consolida un paradigma de navegación "Scroll-Telling" inmersivo sin sacrificar la accesibilidad, logrando una experiencia fluida e idéntica a plataformas corporativas de primer nivel.
+
+***
