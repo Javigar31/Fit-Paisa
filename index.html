@@ -281,11 +281,11 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
             </div>
             <div class="field">
               <label for="reset-new-pass" style="font-size:11px;color:var(--muted);margin-bottom:6px">Nueva contraseña</label>
-              <div style="position:relative">
+              <div class="pass-wrapper">
                 <input type="password" id="reset-new-pass" class="input" placeholder="••••••••">
-                <button type="button" class="eye-toggle" onclick="togglePass('reset-new-pass', this)">
+                <div class="eye-toggle btn-hover-scale" onclick="togglePass('reset-new-pass', this)">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                </button>
+                </div>
               </div>
             </div>
             <div id="reset-error" class="error-msg" style="text-align:center" role="alert" aria-live="polite"></div>
