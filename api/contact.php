@@ -32,7 +32,7 @@ $honeypot = $input['_website'] ?? ''; // El campo trampa
 // 1. Seguridad: Honeypot (Si está relleno, es un bot)
 if (!empty($honeypot)) {
     // Respondemos con éxito pero ignoramos el envío para no dar pistas al bot
-    fp_success('Mensaje recibido (bot filtered).');
+    fp_success(['message' => 'Mensaje recibido (bot filtered).']);
 }
 
 // 2. Validación básica
@@ -61,7 +61,7 @@ try {
     $userBody = fp_get_contact_confirmation_template($name, $message);
     fp_mail($email, "Hemos recibido tu mensaje — FitPaisa", $userBody);
 
-    fp_success('¡Mensaje enviado con éxito! Revisa tu bandeja de entrada.');
+    fp_success(['message' => '¡Mensaje enviado con éxito! Revisa tu bandeja de entrada.']);
 
 } catch (Exception $e) {
     error_log("[FitPaisa][CONTACT] Error: " . $e->getMessage());
