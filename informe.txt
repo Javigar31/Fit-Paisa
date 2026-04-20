@@ -194,5 +194,25 @@ Con esta estabilización, FitPaisa v4.1.0 consolida un paradigma de navegación 
     *   **Navegación**: Sincronización del pulso con los cambios de sección (ScrollTrigger), reforzando visualmente la transición entre contenidos.
 
 ## 3. Optimización y Corrección Técnica
-*   **Estética de Marca**: Forzado de fondo "Negro Puro" (#000000) para maximizar el contraste del resplandor rojo y la saturación (1.5x) de los puntos activos.
 *   **Estabilización de Carga**: Se resolvió un error crítico de sintaxis (cierre de IIFE) detectado durante la inyección del script de fondo, asegurando que el loader de la web funcione correctamente.
+
+***
+
+# Informe Técnico (Crítico): Estandarización de Conexiones y Recuperación de Auth (v6.0.0)
+**Fecha:** 2026-04-20
+**Estado:** ESTABLE / DESPLEGADO en master y testing.
+
+## 1. Resolución del Fallo Fatal de Login
+*   **Problema (Crash API)**: El endpoint `api/auth.php` devolvía 0 bytes debido a un error de sintaxis (falta de palabra clave `match`). Esto impedía el inicio de sesión en todos los entornos.
+*   **Solución**: Se restauró la estructura lógica y se eliminó la duplicación de código redundante.
+
+## 2. Estandarización Monolítica de Conexión
+*   **Refactorización**: Se ha forzado a toda la API a utilizar `api/_db.php` como única fuente de verdad para la conexión PDO. 
+*   **Gestión de Puertos**: Se estandarizó el uso de `$port` dinámico (`PGPORT`) para evitar errores en el DSN que bloqueaban la conexión con Neon.
+*   **Paridad de Entornos**: Se implementó una lógica de detección automática que asegura que el entorno de `preview` use siempre la base de datos `fitpaisa_testing` de forma segura.
+
+## 3. Acceso a Diagnóstico
+*   **Intervención**: Se desactivó temporalmente la protección por clave (`DIAG_TOKEN`) en `api/diag_db.php` para permitir una auditoría directa de la salud del sistema por parte del usuario sin fricciones de seguridad.
+
+***
+
