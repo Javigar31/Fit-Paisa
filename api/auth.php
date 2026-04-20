@@ -12,141 +12,7 @@
 
 declare(strict_types=1);
 
-/* ══════════════════════════════════════════════════════════════════════
-   CORE HELPERS (Inyectados)
-   ══════════════════════════════════════════════════════════════════════ */
-
-$_fp_pdo = null;
-
-function fp_db(): PDO
-{
-    global $_fp_pdo;
-    if ($_fp_pdo instanceof PDO) return $_fp_pdo;
-    $env = getenv('VERCEL_ENV') ?: 'local';
-    if ($env === 'production') {
-        $host = getenv('PGHOST_PROD')     ?: getenv('POSTGRES_HOST');
-        $user = getenv('PGUSER_PROD')     ?: getenv('POSTGRES_USER');
-        $pass = getenv('DB_PASSWORD_NUEVA') ?: getenv('PGPASSWORD_PROD') ?: getenv('POSTGRES_PASSWORD');
-        $db   = getenv('PGDATABASE_PROD') ?: 'neondb';
-        $port = getenv('PGPORT')          ?: '5432';
-    } else {
-        $host = getenv('PGHOST')          ?: getenv('POSTGRES_HOST');
-        $user = getenv('PGUSER')          ?: getenv('POSTGRES_USER');
-        $pass = getenv('DB_PASSWORD_NUEVA') ?: getenv('PGPASSWORD') ?: getenv('POSTGRES_PASSWORD');
-        $db   = getenv('PGDATABASE')      ?: getenv('POSTGRES_DATABASE');
-        $port = getenv('PGPORT')          ?: '5432';
-
-        if ($db === 'neondb' || empty($db) || $env === 'preview') {
-            $db = 'fitpaisa_testing';
-        }
-    }
-    $dsn = "pgsql:host={$host};port={$port};dbname={$db};sslmode=require";
-    try {
-        $_fp_pdo = new PDO($dsn, $user, $pass, [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-             PDO::ATTR_EMULATE_PREPARES => true,
-            PDO::ATTR_TIMEOUT => 10
-        ]);
-        // Asegurar que la tabla de recuperación existe (Auto-migración)
-        fp_ensure_schema($_fp_pdo);
-    } catch (PDOException $e) {
-        error_log('[FitPaisa][DB] Auth Fallo: ' . $e->getMessage());
-        header('Content-Type: application/json'); http_response_code(500);
-        $debugMsg = (getenv('VERCEL_ENV') !== 'production') ? ' Error: ' . $e->getMessage() : '';
-        echo json_encode(['success'=>false, 'message'=>'Error de conexión.' . $debugMsg]); exit;
-    }
-    return $_fp_pdo;
-}
-
-function fp_query(string $sql, array $params = []): PDOStatement
-{
-    try {
-        $stmt = fp_db()->prepare($sql);
-        $stmt->execute($params);
-        return $stmt;
-    } catch (PDOException $e) {
-        error_log('[FitPaisa][QUERY] ' . $e->getMessage());
-        fp_error(500, 'Error interno.');
-    }
-}
-
-function fp_error(int $code, string $message): never
-{
-    http_response_code($code); header('Content-Type: application/json');
-    echo json_encode(['success'=>false, 'message'=>htmlspecialchars($message, ENT_QUOTES, 'UTF-8')], JSON_UNESCAPED_UNICODE); exit;
-}
-
-function fp_success(array $data = [], int $code = 200): never
-{
-    http_response_code($code); header('Content-Type: application/json');
-    echo json_encode(array_merge(['success'=>true], $data), JSON_UNESCAPED_UNICODE); exit;
-}
-
-function fp_sanitize(mixed $value, int $maxLen = 255, string $type = 'string'): mixed
-{
-    $val = trim((string)($value ?? ''));
-    switch ($type) {
-        case 'email': $val = filter_var($val, FILTER_SANITIZE_EMAIL); break;
-        case 'int': return (int)$val;
-        case 'float': return (float)$val;
-        case 'slug': $val = preg_replace('/[^a-z0-9\-_]/', '', strtolower($val)); break;
-        default: $val = strip_tags($val); $val = htmlspecialchars($val, ENT_QUOTES | ENT_HTML5, 'UTF-8'); break;
-    }
-    return mb_substr($val, 0, $maxLen);
-}
-
-function fp_json_body(): array
-{
-    $raw = file_get_contents('php://input');
-    return is_string($raw) ? (json_decode($raw, true) ?: []) : [];
-}
-
-function fp_cors(): void
-{
-    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-    header("Access-Control-Allow-Origin: " . ($origin ?: '*'));
-    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type, Authorization');
-    header('Access-Control-Allow-Credentials: true');
-    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
-}
-
-function fp_rate_limit(string $endpoint, int $limit = 60, int $seconds = 60): void
-{
-    $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-    $ip = trim(explode(',', $ip)[0]);
-    $key = hash('sha256', "rate:{$ip}:{$endpoint}");
-    try {
-        $db = fp_db();
-        $record = fp_query("SELECT hits, reset_at FROM rate_limits WHERE rate_key = :key", [':key' => $key])->fetch();
-        if (!$record || time() > strtotime($record['reset_at'])) {
-            $resetAt = date('Y-m-d H:i:s', time() + $seconds);
-            fp_query("INSERT INTO rate_limits (rate_key, hits, reset_at) VALUES (:key, 1, :reset) ON CONFLICT (rate_key) DO UPDATE SET hits=1, reset_at=:reset", [':key'=>$key, ':reset'=>$resetAt]);
-            return;
-        }
-        if ($record['hits'] >= $limit) fp_error(429, 'Demasiadas peticiones.');
-        fp_query("UPDATE rate_limits SET hits = hits + 1 WHERE rate_key = :key", [':key' => $key]);
-    } catch (Exception $e) { error_log("[FitPaisa][RATE] " . $e->getMessage()); }
-}
-
-/**
- * Asegura que las tablas necesarias existen (Auto-Migración)
- */
-function fp_ensure_schema(PDO $db): void
-{
-    try {
-        $db->exec("CREATE TABLE IF NOT EXISTS password_resets (
-            email      VARCHAR(150) NOT NULL REFERENCES users(email) ON DELETE CASCADE,
-            code       VARCHAR(6)   NOT NULL,
-            expires_at TIMESTAMPTZ  NOT NULL,
-            created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-            PRIMARY KEY (email)
-        )");
-    } catch (PDOException $e) {
-        error_log('[FitPaisa][SCHEMA] Fallo en auto-migración auth.php: ' . $e->getMessage());
-    }
-}
+require_once __DIR__ . '/_db.php';
 
 /* ══════════════════════════════════════════════════════════════════════
    JWT LOGIC
@@ -186,6 +52,7 @@ function jwt_require(): array
 fp_cors();
 $action = fp_sanitize($_GET['action'] ?? '', 32, 'slug');
 
+match ($action) {
     'register'        => handle_register(),
     'login'           => handle_login(),
     'me'              => handle_me(),

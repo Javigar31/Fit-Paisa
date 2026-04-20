@@ -52,49 +52,44 @@ echo "</ul></div>";
 
 // 3. Intento de Conexión Real con Prioridad
 echo "<div class='card'>";
-echo "<h3>3. Prueba de Fuego: Conexión PDO</h3>";
+echo "<h3>3. Prueba de Fuego: Conexión PDO (Kernel Centralizado)</h3>";
 
 try {
-    $host = getenv('PGHOST') ?: getenv('POSTGRES_HOST');
-    $user = getenv('PGUSER') ?: getenv('POSTGRES_USER');
-    $db   = getenv('PGDATABASE') ?: getenv('POSTGRES_DATABASE');
-    
-    // REGLA DE ORO de ayer: Priorizar DB_PASSWORD_NUEVA
-    $pass = getenv('DB_PASSWORD_NUEVA') ?: getenv('PGPASSWORD');
-
-    echo "<p>Intentando conectar a <code>$host</code> con usuario <code>$user</code>...</p>";
+    require_once __DIR__ . '/_db.php';
     
     $start = microtime(true);
-    $dsn = "pgsql:host=$host;port=5432;dbname=$db;sslmode=require";
-    $pdo = new PDO($dsn, $user, $pass, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_TIMEOUT => 5
-    ]);
+    $pdo = fp_db();
     $end = microtime(true);
     $time = round(($end - $start) * 1000, 2);
 
+    $info = fp_env_info();
+    echo "<p>Entorno detectado: <strong>" . $info['env'] . "</strong></p>";
+    echo "<p>Base de datos activa: <code>" . $info['database'] . "</code></p>";
     echo "<p class='ok'>✅ Conexión exitosa en $time ms.</p>";
     
     // Verificar tablas críticas
-    $tables = ['users', 'profiles', 'workout_plans', 'food_entries'];
-    echo "<p>Estructura:</p><ul>";
+    $tables = ['users', 'profiles', 'subscriptions', 'workout_plans', 'food_catalog', 'rate_limits'];
+    echo "<p>Estructura de Tablas:</p><ul>";
     foreach ($tables as $t) {
-        $q = $pdo->query("SELECT 1 FROM information_schema.tables WHERE table_name = '$t'");
-        if ($q && $q->fetch()) {
+        $stmt = $pdo->prepare("SELECT 1 FROM information_schema.tables WHERE table_name = :t");
+        $stmt->execute([':t' => $t]);
+        if ($stmt->fetch()) {
             echo "<li>Tabla <code>$t</code>: <span class='ok'>EXISTE</span></li>";
         } else {
-            echo "<li>Tabla <code>$t</code>: <span class='err'>NOT FOUND</span></li>";
+            echo "<li>Tabla <code>$t</code>: <span class='err'>NO ENCONTRADA</span></li>";
         }
     }
     echo "</ul>";
 
-} catch (PDOException $e) {
-    echo "<p class='err'>❌ FALLO DE CONEXIÓN:</p>";
+} catch (Exception $e) {
+    echo "<p class='err'>❌ FALLO CRÍTICO DE CONEXIÓN:</p>";
     echo "<pre style='background:#2d1a1a;padding:10px;border:1px solid #ff7b72'>" . $e->getMessage() . "</pre>";
     
-    if (strpos($e->getMessage(), 'authentication failed') !== false) {
-        echo "<p class='warn'>💡 Sugerencia: El error es de contraseña. Verifica que DB_PASSWORD_NUEVA sea correcta.</p>";
-    }
+    echo "<h4>Posibles Causas:</h4><ul>
+        <li>Variables de entorno no propagadas en Vercel.</li>
+        <li>Nombre de BD incorrecto (actualmente forzando 'fitpaisa_testing' en previews).</li>
+        <li>SSL Requirements: Neon requiere sslmode=require.</li>
+    </ul>";
 }
 echo "</div>";
 
