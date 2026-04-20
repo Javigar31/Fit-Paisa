@@ -1126,25 +1126,38 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
     function toggleForm(type) {
       const loginView = document.getElementById('login-view');
       const registerView = document.getElementById('register-view');
+      const forgotView = document.getElementById('forgot-view');
+      const resetView = document.getElementById('reset-view');
       const demoWrap = document.getElementById('demo-selector-wrap');
+
+      // Limpiar todas las vistas activas para evitar solapamientos
+      document.querySelectorAll('.form-view').forEach(v => v.classList.remove('is-active'));
 
       if (type === 'register') {
         isRegActive = true;
-        if (masterSnap) masterSnap.disable(); // Desactivar imán para permitir scroll libre en form
-        loginView.classList.remove('is-active');
+        if (masterSnap) masterSnap.disable();
         registerView.classList.add('is-active');
         demoWrap.style.display = 'none';
         currentRegStep = 1;
         setStep(1);
-        updateUI();
+      } else if (type === 'forgot') {
+        isRegActive = true;
+        if (masterSnap) masterSnap.disable();
+        forgotView.classList.add('is-active');
+        demoWrap.style.display = 'none';
+      } else if (type === 'reset') {
+        isRegActive = true;
+        if (masterSnap) masterSnap.disable();
+        resetView.classList.add('is-active');
+        demoWrap.style.display = 'none';
       } else {
+        // Default: login
         isRegActive = false;
-        if (masterSnap) masterSnap.enable(); // Re-activar imán al volver al login/inicio
-        registerView.classList.remove('is-active');
+        if (masterSnap) masterSnap.enable();
         loginView.classList.add('is-active');
         demoWrap.style.display = 'block';
-        updateUI();
       }
+      updateUI();
     }
 
     function setStep(step, btn) {
@@ -1433,72 +1446,11 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
 
     // ── PASSWORD RECOVERY LOGIC ──────────────────
     function showForgotView() {
-      isRegActive = true;
-      if (masterSnap) masterSnap.disable();
-      document.querySelectorAll('.form-view').forEach(v => v.classList.remove('is-active'));
-      document.getElementById('forgot-view').classList.add('is-active');
-      document.getElementById('demo-selector-wrap').style.display = 'none';
-      updateUI();
-    }
-
-    let resetEmail = '';
-
-    async function requestReset() {
-      const emailEl = document.getElementById('forgot-email');
-      const errEl = document.getElementById('forgot-error');
-      const btnEl = document.getElementById('btn-request-reset');
-      const email = (emailEl?.value ?? '').trim();
-
-      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        errEl.textContent = 'Introduce un email válido.';
-        errEl.classList.add('on');
-        return;
-      }
-
-      resetEmail = email; // Persistencia del email
-      errEl.classList.remove('on');
-      btnEl.textContent = 'Enviando...';
-      btnEl.style.opacity = '0.6';
-      btnEl.style.pointerEvents = 'none';
-
-      try {
-        const res = await fetch('/api/auth.php?action=forgot_password', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email }),
-        });
-        
-        const rawText = await res.text();
-        let data;
-        try {
-          data = JSON.parse(rawText);
-        } catch (jsonErr) {
-          throw new Error("El servidor no devolvió JSON.");
-        }
-
-        if (data.success) {
-          if (data.dev_code) {
-            console.warn("DEV CODE:", data.dev_code);
-            alert("MODO DEV - Código: " + data.dev_code);
-          }
-          showResetView();
-        } else {
-          errEl.textContent = data.message || 'Error al solicitar el código.';
-          errEl.classList.add('on');
-        }
-      } catch (e) {
-        errEl.textContent = 'Error: ' + e.message;
-        errEl.classList.add('on');
-      } finally {
-        btnEl.textContent = 'ENVIAR CÓDIGO';
-        btnEl.style.opacity = '1';
-        btnEl.style.pointerEvents = 'auto';
-      }
+      toggleForm('forgot');
     }
 
     function showResetView() {
-      document.querySelectorAll('.form-view').forEach(v => v.classList.remove('is-active'));
-      document.getElementById('reset-view').classList.add('is-active');
+      toggleForm('reset');
     }
 
     async function handleReset() {
