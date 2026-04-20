@@ -1,88 +1,9 @@
-#loader {
-  position: fixed;
-  inset: 0;
-  z-index: 10000;
-  background: var(--dark, #080a0f);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 1s ease, visibility 1s;
-  pointer-events: all;
-  color: var(--text, #f0f4f8);
-  font-family: var(--font-b, 'Cabinet Grotesk', sans-serif);
-}
-
-#loader.is-hidden {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-.loader-content {
-  text-align: center;
-  position: relative;
-}
-
-.loader-percent {
-  font-family: var(--font-d, 'Bebas Neue', sans-serif);
-  font-size: clamp(80px, 15vw, 180px);
-  line-height: 1;
-  color: var(--accent, #ff3b3b);
-  opacity: 0.1;
-  user-select: none;
-}
-
-.loader-msg {
-  position: absolute;
-  top: 55%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 11px;
-  letter-spacing: 0.4em;
-  text-transform: uppercase;
-  font-weight: 700;
-  white-space: nowrap;
-  color: var(--text);
-  opacity: 0.8;
-}
-
-.loader-bar-wrap {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.loader-bar {
-  height: 100%;
-  width: 0%;
-  background: var(--accent);
-  transition: width 0.4s cubic-bezier(0.1, 0, 0.3, 1);
-  box-shadow: 0 0 15px var(--accent);
-}
-
-/* Glow effect like GuildMind */
-#loader::after {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: conic-gradient(
-    from 180deg at 50% 50%,
-    transparent 0deg,
-    rgba(255, 59, 59, 0.03) 90deg,
-    transparent 180deg
-  );
-  animation: rotateGlow 10s linear infinite;
-  pointer-events: none;
-}
-
-@keyframes rotateGlow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
+#loader { position: fixed; inset: 0; z-index: 10000; background: var(--dark, #080a0f); display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 1s ease, visibility 1s; pointer-events: all; color: var(--text, #f0f4f8); font-family: var(--font-b, 'Cabinet Grotesk', sans-serif); }
+#loader.is-hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.loader-content { text-align: center; position: relative; }
+.loader-percent { font-family: var(--font-d, 'Bebas Neue', sans-serif); font-size: clamp(80px, 15vw, 180px); line-height: 1; color: var(--accent, #ff3b3b); opacity: 0.1; user-select: none; }
+.loader-msg { position: absolute; top: 55%; left: 50%; transform: translate(-50%, -50%); font-size: 11px; letter-spacing: 0.4em; text-transform: uppercase; font-weight: 700; white-space: nowrap; color: var(--text); opacity: 0.8; }
+.loader-bar-wrap { position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background: rgba(255, 255, 255, 0.05); }
+.loader-bar { height: 100%; width: 0%; background: var(--accent); transition: width 0.4s cubic-bezier(0.1, 0, 0.3, 1); box-shadow: 0 0 15px var(--accent); }
+/* Glow effect like GuildMind */ #loader::after { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: conic-gradient( from 180deg at 50% 50%, transparent 0deg, rgba(255, 59, 59, 0.03) 90deg, transparent 180deg ); animation: rotateGlow 10s linear infinite; pointer-events: none; }
+@keyframes rotateGlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
