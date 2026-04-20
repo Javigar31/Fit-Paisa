@@ -264,6 +264,8 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
               <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);font-weight:800">
                 Nueva contraseña</div>
+              <button style="background:none;border:none;font-family:inherit;font-size:11px;color:var(--muted);cursor:pointer" class="btn-hover-opacity" onclick="toggleForm('forgot')">
+                Volver</button>
             </div>
             <p style="font-size:12px;color:var(--muted);margin-bottom:15px">Ingresa el código que has recibido y tu nueva clave.</p>
             <div class="field">
@@ -272,7 +274,12 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
             </div>
             <div class="field">
               <label for="reset-new-pass" style="font-size:11px;color:var(--muted);margin-bottom:6px">Nueva contraseña</label>
-              <input type="password" id="reset-new-pass" class="input" placeholder="••••••••">
+              <div style="position:relative">
+                <input type="password" id="reset-new-pass" class="input" placeholder="••••••••">
+                <button type="button" class="eye-toggle" onclick="togglePass('reset-new-pass', this)">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
             </div>
             <div id="reset-error" class="error-msg" style="text-align:center" role="alert" aria-live="polite"></div>
             <button id="btn-handle-reset"
@@ -1407,6 +1414,8 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
       updateUI();
     }
 
+    let resetEmail = '';
+
     async function requestReset() {
       const emailEl = document.getElementById('forgot-email');
       const errEl = document.getElementById('forgot-error');
@@ -1419,8 +1428,9 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
         return;
       }
 
+      resetEmail = email; // Persistencia del email
       errEl.classList.remove('on');
-      btnEl.textContent = 'Enviando…';
+      btnEl.textContent = 'Enviando...';
       btnEl.style.opacity = '0.6';
       btnEl.style.pointerEvents = 'none';
 
@@ -1436,27 +1446,23 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
         try {
           data = JSON.parse(rawText);
         } catch (jsonErr) {
-          console.error("Invalid JSON response:", rawText.substring(0, 500));
-          throw new Error("El servidor no devolvió JSON. Respuesta: " + rawText.substring(0, 100));
+          throw new Error("El servidor no devolvió JSON.");
         }
 
         if (data.success) {
           if (data.dev_code) {
-            console.log("CÓDIGO DE RECUPERACIÓN (DEV):", data.dev_code);
-            alert("TU CÓDIGO (DEV): " + data.dev_code);
+            console.warn("DEV CODE:", data.dev_code);
+            alert("MODO DEV - Código: " + data.dev_code);
           }
           showResetView();
         } else {
           errEl.textContent = data.message || 'Error al solicitar el código.';
           errEl.classList.add('on');
-          btnEl.textContent = 'ENVIAR CÓDIGO';
-          btnEl.style.opacity = '1';
-          btnEl.style.pointerEvents = 'auto';
         }
       } catch (e) {
-        console.error("Fetch Error:", e);
         errEl.textContent = 'Error: ' + e.message;
         errEl.classList.add('on');
+      } finally {
         btnEl.textContent = 'ENVIAR CÓDIGO';
         btnEl.style.opacity = '1';
         btnEl.style.pointerEvents = 'auto';
@@ -1469,20 +1475,27 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
     }
 
     async function handleReset() {
-      const email = document.getElementById('forgot-email').value.trim();
       const code = document.getElementById('reset-code').value.trim();
       const pass = document.getElementById('reset-new-pass').value;
       const errEl = document.getElementById('reset-error');
       const btnEl = document.getElementById('btn-handle-reset');
 
-      if (code.length < 6 || !pass) {
-        errEl.textContent = 'Introduce el código y la nueva clave.';
+      if (!code || code.length < 6) {
+        errEl.textContent = 'Introduce el código de 6 dígitos.';
+        errEl.classList.add('on');
+        return;
+      }
+
+      // Validación de complejidad (Frontend) - Al menos 8 chars, 1 Mayus, 1 Num, 1 Simbolo
+      const passRegex = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9])(?=.{8,})/;
+      if (!passRegex.test(pass)) {
+        errEl.textContent = 'Mín. 8 caracteres, 1 Mayús, 1 Núm y 1 Símbolo.';
         errEl.classList.add('on');
         return;
       }
 
       errEl.classList.remove('on');
-      btnEl.textContent = 'Cambiando…';
+      btnEl.textContent = 'Cambiando...';
       btnEl.style.opacity = '0.6';
       btnEl.style.pointerEvents = 'none';
 
@@ -1490,7 +1503,7 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
         const res = await fetch('/api/auth.php?action=reset_password', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, code, password: pass }),
+          body: JSON.stringify({ email: resetEmail, code, password: pass }),
         });
         const data = await res.json();
 
@@ -1500,13 +1513,11 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
         } else {
           errEl.textContent = data.message || 'Error al actualizar.';
           errEl.classList.add('on');
-          btnEl.textContent = 'CAMBIAR CONTRASEÑA';
-          btnEl.style.opacity = '1';
-          btnEl.style.pointerEvents = 'auto';
         }
       } catch (e) {
         errEl.textContent = 'Error de conexión.';
         errEl.classList.add('on');
+      } finally {
         btnEl.textContent = 'CAMBIAR CONTRASEÑA';
         btnEl.style.opacity = '1';
         btnEl.style.pointerEvents = 'auto';

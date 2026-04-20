@@ -13,6 +13,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/_db.php';
+require_once __DIR__ . '/_mailer.php';
 
 /* ══════════════════════════════════════════════════════════════════════
    JWT LOGIC
@@ -130,32 +131,43 @@ function handle_forgot_password(): never
 
     if (empty($email)) fp_error(400, 'Email requerido.');
 
-    // Verificar si el usuario existe (Clean Code: no revelamos si no existe por seguridad)
+    // 1. Limpieza de tokens previos/expirados para este email
+    fp_query("DELETE FROM password_resets WHERE email = :e OR expires_at < NOW()", [':e' => $email]);
+
+    // 2. Verificar si el usuario existe (Sin confirmación pública por seguridad)
     $userExists = fp_query("SELECT 1 FROM users WHERE email = :e", [':e' => $email])->fetchColumn();
     
     if (!$userExists) {
-        // Simulamos éxito para no dar pistas a atacantes
-        error_log("[FitPaisa][AUTH] Intento recuperación email inexistente: $email");
+        // Anonimizar email en log de producción
+        $logEmail = substr($email, 0, 1) . '***' . strstr($email, '@');
+        error_log("[FitPaisa][AUTH] Intento recuperación inexistente: $logEmail");
         fp_success(['message' => 'Si el email existe, recibirás un código.']);
     }
 
-    // Generar código numérico de 6 dígitos
+    // 3. Generar código numérico de 6 dígitos
     $code = (string)random_int(100000, 999999);
     $expires = date('Y-m-d H:i:s', time() + (15 * 60)); // 15 minutos
 
     try {
         fp_query(
-            "INSERT INTO password_resets (email, code, expires_at) 
-             VALUES (:e, :c, :ex) 
-             ON CONFLICT (email) DO UPDATE SET code = :c, expires_at = :ex, created_at = NOW()",
+            "INSERT INTO password_resets (email, code, expires_at) VALUES (:e, :c, :ex)",
             [':e' => $email, ':c' => $code, ':ex' => $expires]
         );
 
-        // TODO: Enviar email real. Por ahora devolvemos el código en la respuesta para desarrollo.
-        fp_success([
-            'message' => 'Código de recuperación generado.',
-            'dev_code' => $code // ELIMINAR EN PRODUCCIÓN
-        ]);
+        // 4. Enviar email real usando la plantilla Antigravity
+        $html = fp_get_recovery_template($code);
+        $sent = fp_mail($email, "Recupera tu acceso a FitPaisa", $html);
+
+        $res = ['message' => 'Código de recuperación enviado.'];
+        
+        // Devolver código solo en desarrollo/testing para facilitar pruebas sin mailer local
+        $env = getenv('VERCEL_ENV') ?: 'local';
+        if ($env !== 'production' || !$sent) {
+            $res['dev_code'] = $code;
+            if (!$sent) $res['warning'] = 'Mailer falló, usando fallback dev_code.';
+        }
+
+        fp_success($res);
     } catch (Exception $e) {
         error_log("[FitPaisa][AUTH] Error forgot_password: " . $e->getMessage());
         fp_error(500, 'Error al procesar la solicitud.');
@@ -176,6 +188,11 @@ function handle_reset_password(): never
     fp_rate_limit('auth_reset_attempt', 5, 300);
 
     if (empty($email) || empty($code) || empty($pass)) fp_error(400, 'Datos incompletos.');
+
+    // Validar complejidad de contraseña (Backend) - Al menos 8 chars, 1 Mayus, 1 Num, 1 Simbolo
+    if (!preg_match('/^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9])(?=.{8,})/', $pass)) {
+        fp_error(400, 'La contraseña no cumple los requisitos de seguridad.');
+    }
 
     // Validar token/código en BD
     $reset = fp_query(
