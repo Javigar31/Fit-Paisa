@@ -26,6 +26,8 @@ Este archivo contiene los comandos rápidos y las instrucciones de uso para todo
 | **RecallMax** | `/recall` | "Resume la sesión o inyecta contexto largo." |
 | **Design Expert** | `/design` | "Estilo Antigravity: profundidad y GSAP." |
 | **Viral Growth** | `/growth` | "Diseña programa de referidos/afiliados." |
+| **Brainstorming** | `/brainstorm` | "Revisión multi-agente para diseño de [X]." |
+
 
 ---
 
@@ -45,8 +47,10 @@ Este archivo contiene los comandos rápidos y las instrucciones de uso para todo
 *   **RecallMax:** Memoria infinita (hasta 1M tokens) sin alucinaciones.
 *   **Design Expert:** Dashboards de alta gama con GSAP, glassmorphism y profundidad 3D.
 *   **Viral Growth:** Estrategias de referidos y cálculo de LTV/CAC para crecimiento.
+*   **Brainstorming:** Revisión extrema estructurada con Escéptico, Guardián y Árbitro.
 
 ---
+
 
 ## ⚡ Modo de Ahorro (Optimización de Tokens)
 
@@ -60,6 +64,8 @@ Usa estos parámetros para evitar escaneos completos del repositorio:
 6.  **RecallMax:** Usa `--summary-only` para compresión de hilo.
 7.  **Design Expert:** Usa `--motion-only` para enfocarte solo en animaciones GSAP.
 8.  **Nutrition:** Pide `--macros-only` si no necesitas desglose de vitaminas.
+9.  **Brainstorming:** Usa `--role-skeptic` para forzar solo modo de crítica destructiva.
+
 
 ---
 *Configuración almacenada en `.agent/skills/`*

@@ -216,3 +216,20 @@ Con esta estabilización, FitPaisa v4.1.0 consolida un paradigma de navegación 
 
 ***
 
+# Informe Técnico (IA & Workflow): Brainstorming Multi-Agente y Manual de Skills (v6.1.0)
+**Fecha:** 2026-04-20
+**Estado:** COMPLETADO / DISPONIBLE. Mejora del flujo de trabajo de diseño y documentación.
+
+## 1. Integración de Brainstorming Multi-Agente
+*   **Capacidad Avanzada**: Instalación de la skill `multi-agent-brainstorming` (v1.5) para permitir revisiones de diseño de alta fidelidad con roles especializados (Escéptico, Guardián de Restricciones, Defensor del Usuario y Árbitro).
+*   **Localización Completa**: Traducción integral al castellano de toda la lógica de la skill, permitiendo una interacción natural y alineada con el idioma del proyecto.
+*   **Estandarización de Agente**: Despliegue centralizado en `.agent/skills/` para asegurar que el asistente Antigravity tenga acceso directo y persistente a este protocolo de validación.
+
+## 2. Actualización del Manual de Usuario (`SKILLS_HELP.md`)
+*   **Comando Rápido**: Inclusión del acceso directo `/brainstorm` para invocación inmediata.
+*   **Guía de Optimización**: Añadida sección de "Modo de Ahorro" con el parámetro `--role-skeptic` para agilizar auditorías destructivas rápidas.
+
+## 3. Limpieza y Consolidación de Espacio
+*   **Mantenimiento**: Eliminación de duplicados y consolidación de la estructura de skills en el workspace para evitar conflictos de versiones.
+
+***
