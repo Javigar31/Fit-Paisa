@@ -81,8 +81,34 @@
       position: fixed;
       inset: 0;
       z-index: 0;
-      background: var(--dark);
-      transition: background .8s ease;
+      background: #000000; /* Negro Puro */
+      overflow: hidden;
+    }
+
+    .mesh-grid {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      will-change: transform;
+    }
+
+    /* Estructura de la Malla (The Grid) */
+    .mesh-grid--base {
+      background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1.5px, transparent 0);
+      background-size: 12px 12px;
+      opacity: 1;
+    }
+
+    .mesh-grid--active {
+      --mouse-x: 50%;
+      --mouse-y: 50%;
+      --mask-radius: 200px;
+      background-image: radial-gradient(#E30613 1.5px, transparent 0);
+      background-size: 12px 12px;
+      /* Capa Activa: Neon Effect & Masking */
+      filter: drop-shadow(0 0 3px #E30613) saturate(1.5);
+      -webkit-mask-image: radial-gradient(circle var(--mask-radius) at var(--mouse-x) var(--mouse-y), black 0%, transparent 100%);
+      mask-image: radial-gradient(circle var(--mask-radius) at var(--mouse-x) var(--mouse-y), black 0%, transparent 100%);
     }
 
     /* ── Carousel: Scroll natural ── */
@@ -1259,7 +1285,10 @@
 
 <body>
 
-  <div id="global-bg"></div>
+  <div id="global-bg">
+    <div class="mesh-grid mesh-grid--base"></div>
+    <div class="mesh-grid mesh-grid--active"></div>
+  </div>
   <div id="canvas-3d" style="position:fixed;inset:0;z-index:1;pointer-events:none;opacity:1"></div>
 
   <!-- Loader / Splash Screen -->
@@ -2095,6 +2124,8 @@
               updateUI();
               slides.forEach(s => s.classList.remove('is-active'));
               slide.classList.add('is-active');
+              // Pulse Mesh on section change
+              if (window.pulseMeshBackground) window.pulseMeshBackground();
             }
           }
         });
@@ -3041,6 +3072,53 @@
           }, 500);
         }
       }, 60);
+    })();
+
+    // ── Mesh Background Logic (Fit Paisa Redux) ─────────────────
+    (function initMeshBg() {
+      const meshGridActive = document.querySelector('.mesh-grid--active');
+      if (!meshGridActive) return;
+
+      let meshX = 50, meshY = 50;
+      let targetX = 50, targetY = 50;
+
+      window.addEventListener('mousemove', (e) => {
+        targetX = (e.clientX / window.innerWidth) * 100;
+        targetY = (e.clientY / window.innerHeight) * 100;
+      });
+
+      // Quick Pulse on clicks or section transitions
+      const pulseMesh = () => {
+        gsap.to(meshGridActive, {
+          '--mask-radius': '350px',
+          duration: 0.4,
+          ease: 'power2.out',
+          onComplete: () => {
+            gsap.to(meshGridActive, {
+              '--mask-radius': '200px',
+              duration: 0.8,
+              ease: 'power2.inOut'
+            });
+          }
+        });
+      };
+
+      window.addEventListener('mousedown', pulseMesh);
+      
+      // Integrate with section changes (if 'go' or scrolling triggers)
+      // The current SPA uses ScrollTrigger toggles, so we can pulse when section changes.
+      
+      gsap.ticker.add(() => {
+        // Inertia tracking
+        meshX += (targetX - meshX) * 0.12;
+        meshY += (targetY - meshY) * 0.12;
+        
+        meshGridActive.style.setProperty('--mouse-x', `${meshX}%`);
+        meshGridActive.style.setProperty('--mouse-y', `${meshY}%`);
+      });
+
+      // Expose pulse to global scope if needed for section transitions
+      window.pulseMeshBackground = pulseMesh;
     })();
 
   </script>

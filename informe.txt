@@ -174,3 +174,25 @@ Con esta estabilización, FitPaisa v4.1.0 consolida un paradigma de navegación 
 *   **Resolución de Conflictos**: Eliminación de `setTimeout` redundantes en favor de la orquestación nativa de ScrollTrigger.
 
 ***
+
+# Informe Técnico (UX/UI): Mesh Background "Stitch Style" y Neón FitPaisa (v5.1.0)
+**Fecha:** 2026-04-20
+**Estado:** DESPLEGADO. Estética Google Stitch personalizada aplicada.
+
+## 1. Fondo de Malla Dinámico (Mesh Grid)
+*   **Referencia Estética**: Implementación de una cuadrícula de puntos inspirada en Google Stitch, optimizada para el contraste y la inmersión de marca.
+*   **Estructura de Capas**:
+    1.  **Capa Base**: Puntos estáticos en gris tenue (opacidad 0.08) que definen la geometría del espacio.
+    2.  **Capa Activa**: Puntos en Rojo FitPaisa (#E30613) con efecto de iluminación LED/Neón activado por proximidad.
+*   **Geometría**: Rejilla de alta densidad con puntos de 1.5px separados por 12px.
+
+## 2. Interacción y Feedback "Alto Rendimiento"
+*   **Máscara Radial Reactiva**: Seguimiento del cursor mediante una máscara circular de 200px de radio que revela la capa de neón.
+*   **Cinemática GSAP**: Implementación de inercia asíncrona mediante el ticker de GSAP, logrando que el brillo siga al mouse con una fluidez orgánica y sin rigidez.
+*   **Efecto Pulso (Heartbeat)**: 
+    *   **Interactividad**: El radio de iluminación aumenta momentáneamente a 350px al hacer clic, simulando una pulsación de energía.
+    *   **Navegación**: Sincronización del pulso con los cambios de sección (ScrollTrigger), reforzando visualmente la transición entre contenidos.
+
+## 3. Optimización y Corrección Técnica
+*   **Estética de Marca**: Forzado de fondo "Negro Puro" (#000000) para maximizar el contraste del resplandor rojo y la saturación (1.5x) de los puntos activos.
+*   **Estabilización de Carga**: Se resolvió un error crítico de sintaxis (cierre de IIFE) detectado durante la inyección del script de fondo, asegurando que el loader de la web funcione correctamente.
