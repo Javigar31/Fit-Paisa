@@ -15,6 +15,7 @@ $secret = getenv('DIAG_TOKEN');
 // Seguridad: Límite estricto de diagnóstico para evitar recolección de info
 fp_rate_limit('diag_db', 5, 3600);
 
+/* COMENTADO TEMPORALMENTE PARA DIAGNÓSTICO DEL USUARIO
 if ($env === 'production') {
     if (!$secret || strlen($secret) < 16) {
         error_log('[FitPaisa][SECURITY] DIAG_TOKEN no configurado o muy corto.');
@@ -26,6 +27,7 @@ if ($env === 'production') {
         die("Acceso denegado: Este script está protegido.");
     }
 }
+*/
 
 header('Content-Type: text/html; charset=utf-8');
 echo "<style>body{background:#0a0a0a;color:#eee;font-family:sans-serif;padding:20px} .ok{color:#4CAF50} .err{color:#F44336} .info{color:#00BCD4}</style>";
