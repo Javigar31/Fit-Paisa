@@ -389,6 +389,19 @@ run_step($db, 'TABLE: progress_photos', "
 ");
 
 /* ══════════════════════════════════════════════════════════════════════
+   TABLA: password_resets — Gestión de recuperación de contraseñas
+   ══════════════════════════════════════════════════════════════════════ */
+run_step($db, 'TABLE: password_resets', "
+    CREATE TABLE IF NOT EXISTS password_resets (
+        email      VARCHAR(150) NOT NULL REFERENCES users(email) ON DELETE CASCADE,
+        code       VARCHAR(6)   NOT NULL,
+        expires_at TIMESTAMPTZ  NOT NULL,
+        created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (email)
+    );
+");
+
+/* ══════════════════════════════════════════════════════════════════════
    TABLA: notifications — Notificaciones del sistema
    ══════════════════════════════════════════════════════════════════════ */
 run_step($db, 'TABLE: notifications', "

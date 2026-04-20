@@ -36,7 +36,7 @@
       color: var(--text);
       font-family: var(--font-b);
       -webkit-font-smoothing: antialiased;
-      cursor: none;
+      /* cursor: none; -- Removed for accessibility (WCAG 2.1) */
       position: relative;
       overflow-x: hidden;
       /* Contenemos el desborde horizontal de las animaciones solo en el body */
@@ -128,12 +128,17 @@
       z-index: 2;
       width: 100%;
       max-width: 1100px;
-      margin: auto 0;
+      margin: auto;
       padding: clamp(60px, 10vh, 120px) 40px;
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: clamp(20px, 5vh, 40px);
       align-items: center;
+    }
+
+    /* Initial hidden state is managed by GSAP to avoid CSS specificity clashes */
+    .pane-inner > * {
+       will-change: transform, opacity;
     }
 
     .slide-label {
@@ -182,13 +187,20 @@
       background: var(--accent);
       color: var(--dark);
       padding: 14px 28px;
+      border: none; /* Reset button default */
       border-radius: 4px;
       font-weight: 800;
+      font-family: inherit;
       font-size: 14px;
       letter-spacing: .05em;
       cursor: pointer;
       transition: transform .2s, box-shadow .2s;
       text-transform: uppercase;
+    }
+
+    .slide-cta:focus-visible {
+      outline: 2px solid var(--text);
+      outline-offset: 4px;
     }
 
     .slide-cta:hover {
@@ -543,10 +555,11 @@
       align-items: center;
       gap: 0px;
       /* No gap ensures the track flows seamlessly */
-      background: transparent;
+      background: transparent !important;
       border: none;
       padding: 0;
       pointer-events: auto;
+      box-shadow: none !important; /* Ensure no default shadow or background */
     }
 
     /* Subtle vertical guide track */
@@ -569,6 +582,10 @@
       cursor: pointer;
       position: relative;
       z-index: 1;
+      background: none; /* Removed grey background for A11y button */
+      border: none;
+      padding: 0;
+      display: block;
     }
 
     .nav-dot::before {
@@ -762,7 +779,7 @@
     }
 
     #hint::before {
-      content: "Haz scroll o presiona las flechas para navegar";
+      content: "Haz scroll para navegar";
     }
 
     @keyframes fadeHint {
@@ -1314,22 +1331,68 @@
               style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-bottom:8px;font-weight:700">
               Acceso rápido</div>
             <div class="field">
-              <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Correo electrónico</div>
+              <label for="login-email" style="font-size:11px;color:var(--muted);margin-bottom:6px">Correo electrónico</label>
               <input type="email" id="login-email" class="input" placeholder="correo@fitpaisa.com" autocomplete="email"
                 onkeydown="if(event.key==='Enter') loginUser()">
             </div>
             <div class="field">
-              <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Contraseña</div>
+              <label for="login-password" style="font-size:11px;color:var(--muted);margin-bottom:6px">Contraseña</label>
               <input type="password" id="login-password" class="input" placeholder="••••••••"
                 autocomplete="current-password" onkeydown="if(event.key==='Enter') loginUser()">
             </div>
-            <div id="login-error" class="error-msg" style="text-align:center"></div>
-            <div id="btn-login"
-              style="background:var(--accent);color:var(--dark);border-radius:8px;padding:12px;text-align:center;font-weight:800;font-size:13px;margin-top:4px;cursor:none;transition:opacity .2s"
-              class="btn-hover-scale" onclick="loginUser()">ENTRAR</div>
-            <div class="btn-switch btn-hover-opacity" onclick="toggleForm('register')">
-              ¿Primera vez? <span>Regístrate gratis</span>
+            <div id="login-error" class="error-msg" style="text-align:center" role="alert" aria-live="polite"></div>
+            <button type="button" id="btn-login"
+              style="background:var(--accent);color:var(--dark);border:none;border-radius:8px;padding:12px;text-align:center;font-weight:800;font-size:13px;margin-top:4px;cursor:pointer;transition:opacity .2s;width:100%"
+              class="btn-hover-scale" onclick="loginUser()">ENTRAR</button>
+            
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+              <button type="button" class="btn-switch btn-hover-opacity" onclick="toggleForm('register')" style="margin-top:0;background:none;border:none;font-family:inherit;font-size:13px;padding:12px;border-radius:8px">
+                ¿Primera vez? <span style="color:var(--accent);font-weight:800;text-decoration:underline;text-underline-offset:4px">Regístrate</span>
+              </button>
+              <button type="button" class="btn-switch btn-hover-opacity" onclick="showForgotView()" style="margin-top:0;background:none;border:none;font-family:inherit;font-size:13px;padding:12px;border-radius:8px">
+                <span style="color:var(--accent);font-weight:800;text-decoration:underline;text-underline-offset:4px">Olvidé mi clave</span>
+              </button>
             </div>
+          </div>
+
+          <!-- Forgot Password View -->
+          <div id="forgot-view" class="form-view">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);font-weight:800">
+                Recuperar acceso</div>
+              <button style="background:none;border:none;font-family:inherit;font-size:11px;color:var(--muted);cursor:pointer" class="btn-hover-opacity" onclick="toggleForm('login')">
+                Volver</button>
+            </div>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:15px">Introduce tu email y te enviaremos un código de 6 dígitos.</p>
+            <div class="field">
+              <label for="forgot-email" style="font-size:11px;color:var(--muted);margin-bottom:6px">Correo electrónico</label>
+              <input type="email" id="forgot-email" class="input" placeholder="correo@fitpaisa.com">
+            </div>
+            <div id="forgot-error" class="error-msg" style="text-align:center" role="alert" aria-live="polite"></div>
+            <button id="btn-request-reset"
+              style="background:var(--accent);color:var(--dark);border:none;border-radius:8px;padding:12px;text-align:center;font-weight:800;font-size:13px;margin-top:12px;cursor:pointer;width:100%"
+              class="btn-hover-scale" onclick="requestReset()">ENVIAR CÓDIGO</button>
+          </div>
+
+          <!-- Reset Password View -->
+          <div id="reset-view" class="form-view">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);font-weight:800">
+                Nueva contraseña</div>
+            </div>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:15px">Ingresa el código que has recibido y tu nueva clave.</p>
+            <div class="field">
+              <label for="reset-code" style="font-size:11px;color:var(--muted);margin-bottom:6px">Código de 6 dígitos</label>
+              <input type="text" id="reset-code" class="input" placeholder="000 000" maxlength="6" style="text-align:center;letter-spacing:4px;font-size:18px">
+            </div>
+            <div class="field">
+              <label for="reset-new-pass" style="font-size:11px;color:var(--muted);margin-bottom:6px">Nueva contraseña</label>
+              <input type="password" id="reset-new-pass" class="input" placeholder="••••••••">
+            </div>
+            <div id="reset-error" class="error-msg" style="text-align:center" role="alert" aria-live="polite"></div>
+            <button id="btn-handle-reset"
+              style="background:var(--accent);color:var(--dark);border:none;border-radius:8px;padding:12px;text-align:center;font-weight:800;font-size:13px;margin-top:12px;cursor:pointer;width:100%"
+              class="btn-hover-scale" onclick="handleReset()">CAMBIAR CONTRASEÑA</button>
           </div>
 
           <div id="register-view" class="form-view">
@@ -1337,35 +1400,38 @@
               <div
                 style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);font-weight:800">
                 Registro Paso <span id="reg-step-label">1</span> de 2</div>
-              <div style="font-size:11px;color:var(--muted);cursor:none" class="btn-hover-opacity" onclick="regBack()">
-                Volver</div>
+              <button type="button" style="background:none;border:none;font-family:inherit;font-size:11px;color:var(--muted);cursor:pointer" class="btn-hover-opacity" onclick="regBack()">
+                Volver</button>
             </div>
 
             <!-- Step 1: Account & Identity -->
             <div class="register-step is-active" id="step-1">
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
                 <div class="field">
-                  <label class="label">Nombre completo</label>
+                  <label for="reg-name" class="label">Nombre completo</label>
                   <input type="text" id="reg-name" class="input" placeholder="Tu nombre"
                     onkeydown="if(event.key==='Enter') setStep(2, document.querySelector('#step-1 .slide-cta'))">
-                  <div class="error-msg" id="err-name">Inválido.</div>
+                  <div class="error-msg" id="err-name" role="alert" aria-live="polite">Inválido.</div>
                 </div>
                 <div class="field" style="gap:2px">
-                  <label class="label">Sexo</label>
-                  <div style="display:flex;gap:4px">
-                    <div class="goal-card" onclick="selectGender(this, 'M')"
+                  <span class="label">Sexo</span>
+                  <div style="display:flex;gap:4px" role="radiogroup" aria-label="Selecciona tu sexo">
+                    <div class="goal-card" role="radio" aria-checked="false" tabindex="0" onclick="selectGender(this, 'M')"
+                      onkeydown="if(event.key==='Enter' || event.key===' ') selectGender(this, 'M')"
                       style="flex:1;padding:10px;min-height:auto;display:flex;align-items:center;justify-content:center">
                       <div class="goal-icon"
                         style="font-size:12px;margin-bottom:0;text-transform:uppercase;font-weight:700;letter-spacing:1px">
                         Hombre</div>
                     </div>
-                    <div class="goal-card" onclick="selectGender(this, 'F')"
+                    <div class="goal-card" role="radio" aria-checked="false" tabindex="0" onclick="selectGender(this, 'F')"
+                      onkeydown="if(event.key==='Enter' || event.key===' ') selectGender(this, 'F')"
                       style="flex:1;padding:10px;min-height:auto;display:flex;align-items:center;justify-content:center">
                       <div class="goal-icon"
                         style="font-size:12px;margin-bottom:0;text-transform:uppercase;font-weight:700;letter-spacing:1px">
                         Mujer</div>
                     </div>
-                    <div class="goal-card" onclick="selectGender(this, 'O')"
+                    <div class="goal-card" role="radio" aria-checked="false" tabindex="0" onclick="selectGender(this, 'O')"
+                      onkeydown="if(event.key==='Enter' || event.key===' ') selectGender(this, 'O')"
                       style="flex:1;padding:10px;min-height:auto;display:flex;align-items:center;justify-content:center">
                       <div class="goal-icon"
                         style="font-size:12px;margin-bottom:0;text-transform:uppercase;font-weight:700;letter-spacing:1px">
@@ -1377,16 +1443,16 @@
 
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
                 <div class="field">
-                  <label class="label">Email</label>
+                  <label for="reg-email" class="label">Email</label>
                   <input type="email" id="reg-email" class="input" placeholder="ej@fitpaisa.com"
                     onkeydown="if(event.key==='Enter') setStep(2, document.querySelector('#step-1 .slide-cta'))">
-                  <div class="error-msg" id="err-email">Formato inválido.</div>
+                  <div class="error-msg" id="err-email" role="alert" aria-live="polite">Formato inválido.</div>
                 </div>
                 <div class="field">
-                  <label class="label">Teléfono</label>
+                  <label for="reg-phone" class="label">Teléfono</label>
                   <input type="tel" id="reg-phone" class="input" placeholder="600 000 000"
                     onkeydown="if(event.key==='Enter') setStep(2, document.querySelector('#step-1 .slide-cta'))">
-                  <div class="error-msg" id="err-phone">Inválido.</div>
+                  <div class="error-msg" id="err-phone" role="alert" aria-live="polite">Inválido.</div>
                 </div>
               </div>
 
@@ -1426,7 +1492,7 @@
 
               <div style="text-align:center;margin-top:12px">
                 <button class="slide-cta"
-                  style="justify-content:center;transition:transform .15s cubic-bezier(.34,1.56,.64,1);position:relative;z-index:10"
+                  style="justify-content:center;transition:transform .15s cubic-bezier(.34,1.56,.64,1);position:relative;z-index:10;width:100%"
                   onmouseenter="if(!validateStep(currentRegStep)) { jumpButton(this); } else { this.style.transform = 'translate(0,0)'; }"
                   onclick="setStep(2, this)">Continuar →</button>
               </div>
@@ -1435,9 +1501,10 @@
             <!-- Step 2: Plan & Payment -->
             <div class="register-step" id="step-2">
               <div class="field" style="gap:10px;margin-bottom:16px">
-                <label class="label">Selecciona tu Plan</label>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-                  <div class="goal-card on" id="plan-free" onclick="selectPlan('free')"
+                <span class="label">Selecciona tu Plan</span>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" role="radiogroup" aria-label="Selecciona un plan">
+                  <div class="goal-card on" id="plan-free" role="radio" aria-checked="true" tabindex="0" onclick="selectPlan('free')"
+                    onkeydown="if(event.key==='Enter' || event.key===' ') selectPlan('free')"
                     style="display:flex;flex-direction:row;align-items:center;padding:12px;gap:12px">
                     <div class="goal-icon" style="font-size:24px;margin:0">🌱</div>
                     <div style="text-align:left">
@@ -1445,7 +1512,8 @@
                       <div style="font-size:10px;color:var(--muted)">Gratis</div>
                     </div>
                   </div>
-                  <div class="goal-card" id="plan-premium" onclick="selectPlan('premium')"
+                  <div class="goal-card" id="plan-premium" role="radio" aria-checked="false" tabindex="0" onclick="selectPlan('premium')"
+                    onkeydown="if(event.key==='Enter' || event.key===' ') selectPlan('premium')"
                     style="display:flex;flex-direction:row;align-items:center;padding:12px;gap:12px">
                     <div class="goal-icon" style="font-size:24px;margin:0">⚡</div>
                     <div style="text-align:left">
@@ -1461,17 +1529,20 @@
 
 
                 <div class="field" style="gap:10px;margin-bottom:12px">
-                  <label class="label">Método de Pago</label>
-                  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-                    <div class="goal-card on" id="m-card" onclick="selectPayMethod('card')">
+                  <span class="label">Método de Pago</span>
+                  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px" role="radiogroup" aria-label="Método de pago">
+                    <div class="goal-card on" id="m-card" role="radio" aria-checked="true" tabindex="0" onclick="selectPayMethod('card')"
+                      onkeydown="if(event.key==='Enter' || event.key===' ') selectPayMethod('card')">
                       <div class="goal-icon">💳</div>
                       <div class="goal-name">Tarjeta</div>
                     </div>
-                    <div class="goal-card" id="m-bizum" onclick="selectPayMethod('bizum')">
+                    <div class="goal-card" id="m-bizum" role="radio" aria-checked="false" tabindex="0" onclick="selectPayMethod('bizum')"
+                      onkeydown="if(event.key==='Enter' || event.key===' ') selectPayMethod('bizum')">
                       <div class="goal-icon" style="color:#00AAAD">📱</div>
                       <div class="goal-name">Bizum</div>
                     </div>
-                    <div class="goal-card" id="m-paypal" onclick="selectPayMethod('paypal')">
+                    <div class="goal-card" id="m-paypal" role="radio" aria-checked="false" tabindex="0" onclick="selectPayMethod('paypal')"
+                      onkeydown="if(event.key==='Enter' || event.key===' ') selectPayMethod('paypal')">
                       <div class="goal-icon" style="color:#003087">🅿️</div>
                       <div class="goal-name">PayPal</div>
                     </div>
@@ -1481,23 +1552,23 @@
                 <!-- Card View -->
                 <div id="view-card">
                   <div class="field">
-                    <label class="label">Titular de la tarjeta</label>
+                    <label for="pay-name" class="label">Titular de la tarjeta</label>
                     <input type="text" id="pay-name" class="input" placeholder="Nombre completo"
                       onkeydown="if(event.key==='Enter') finishReg(document.getElementById('btn-finish'))">
                   </div>
                   <div class="field" style="margin-top:8px">
-                    <label class="label">Número de tarjeta</label>
+                    <label for="pay-card" class="label">Número de tarjeta</label>
                     <input type="text" id="pay-card" class="input" placeholder="0000 0000 0000 0000" maxlength="19"
                       onkeydown="if(event.key==='Enter') finishReg(document.getElementById('btn-finish'))">
                   </div>
                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
                     <div class="field">
-                      <label class="label">Fecha (MM/YY)</label>
+                      <label for="pay-expiry" class="label">Fecha (MM/YY)</label>
                       <input type="text" id="pay-expiry" class="input" placeholder="12/28" maxlength="5"
                         onkeydown="if(event.key==='Enter') finishReg(document.getElementById('btn-finish'))">
                     </div>
                     <div class="field">
-                      <label class="label">CVC</label>
+                      <label for="pay-cvc" class="label">CVC</label>
                       <input type="text" id="pay-cvc" class="input" placeholder="000" maxlength="3"
                         onkeydown="if(event.key==='Enter') finishReg(document.getElementById('btn-finish'))">
                     </div>
@@ -1507,7 +1578,7 @@
                 <!-- Bizum View -->
                 <div id="view-bizum" style="display:none">
                   <div class="field">
-                    <label class="label">Teléfono Bizum</label>
+                    <label for="pay-bizum-phone" class="label">Teléfono Bizum</label>
                     <input type="text" id="pay-bizum-phone" class="input" placeholder="600 000 000" maxlength="11"
                       onkeydown="if(event.key==='Enter') finishReg(document.getElementById('btn-finish'))">
                   </div>
@@ -1888,15 +1959,15 @@
   </div><!-- /carousel -->
 
   <!-- Nav dots -->
-  <div id="nav">
-    <div class="nav-dot active" onclick="goTo(0)"></div>
-    <div class="nav-dot" onclick="goTo(1)"></div>
-    <div class="nav-dot" onclick="goTo(2)"></div>
-    <div class="nav-dot" onclick="goTo(3)"></div>
-    <div class="nav-dot" onclick="goTo(4)"></div>
-    <div class="nav-dot" onclick="goTo(5)"></div>
-    <div class="nav-dot" onclick="goTo(6)"></div>
-  </div>
+  <nav id="nav" aria-label="Navegación de secciones">
+    <button type="button" class="nav-dot active" onclick="goTo(0)" aria-label="Ir al inicio" aria-current="true"></button>
+    <button type="button" class="nav-dot" onclick="goTo(1)" aria-label="Ir a Dashboard"></button>
+    <button type="button" class="nav-dot" onclick="goTo(2)" aria-label="Ir a Entrenamiento"></button>
+    <button type="button" class="nav-dot" onclick="goTo(3)" aria-label="Ir a Nutrición"></button>
+    <button type="button" class="nav-dot" onclick="goTo(4)" aria-label="Ir a Mensajería"></button>
+    <button type="button" class="nav-dot" onclick="goTo(5)" aria-label="Ir a Premium"></button>
+    <button type="button" class="nav-dot" onclick="goTo(6)" aria-label="Ir a Contacto"></button>
+  </nav>
 
 
   <script>
@@ -1958,7 +2029,13 @@
     ];
 
     function updateUI() {
-      dots.forEach((d, i) => d.classList.toggle('active', i === current));
+      dots.forEach((d, i) => {
+        const isActive = (i === current);
+        d.classList.toggle('active', isActive);
+        if (d.tagName === 'BUTTON') {
+          d.setAttribute('aria-current', isActive ? 'true' : 'false');
+        }
+      });
       curEl.textContent = String(current + 1).padStart(2, '0');
 
       const navDots = document.getElementById('nav');
@@ -2007,48 +2084,43 @@
 
       // Individual Slide Controllers (Animations & Tracking)
       slides.forEach((slide, i) => {
+        // Track active slide for UI (Dots/Counter)
         ScrollTrigger.create({
           trigger: slide,
           start: "top 50%",
           end: "bottom 50%",
           onToggle: (self) => {
             if (self.isActive) {
-              // Current slide index update
-              if (current !== i) {
-                current = i;
-                updateUI();
-              }
-
-              // Active state classes
+              current = i;
+              updateUI();
               slides.forEach(s => s.classList.remove('is-active'));
               slide.classList.add('is-active');
-
-              // Animate elements
-              const inner = slide.querySelector('.pane-inner');
-              if (inner) {
-                gsap.killTweensOf(Array.from(inner.children));
-                gsap.fromTo(Array.from(inner.children),
-                  { opacity: 0, y: 40 },
-                  {
-                    opacity: 1, y: 0,
-                    stagger: 0.12, duration: 0.9, ease: 'power3.out',
-                    clearProps: "transform"
-                  }
-                );
-              }
-            } else {
-              // Outgoing animation
-              const inner = slide.querySelector('.pane-inner');
-              if (inner) {
-                gsap.to(Array.from(inner.children), {
-                  opacity: 0, y: -20,
-                  duration: 0.4, ease: 'power2.in', overwrite: "auto"
-                });
-              }
             }
           }
         });
+
+        // Entrance animation for content (Antigravity Style)
+        const inner = slide.querySelector('.pane-inner');
+        if (inner && inner.children.length > 0) {
+          gsap.from(Array.from(inner.children), {
+            scrollTrigger: {
+              trigger: slide,
+              start: "top 55%",
+              toggleActions: "play none none reverse"
+            },
+            opacity: 0,
+            y: 40,
+            skewX: -2,
+            duration: 1.2,
+            stagger: 0.12,
+            ease: "power4.out",
+            overwrite: "auto"
+          });
+        }
       });
+
+      // Recalculate ScrollTrigger positions after everything is initialized
+      ScrollTrigger.refresh();
 
       // Parallax effect for decorative blobs (.deco)
       document.querySelectorAll('.deco').forEach((deco, i) => {
@@ -2435,6 +2507,122 @@
         errEl.textContent = e.message;
         errEl.classList.add('on');
         if (btn) { btn.textContent = selectedPlan === 'premium' ? 'Activar Plan Premium ✓' : 'Crear Cuenta Gratuita ✓'; btn.disabled = false; }
+      }
+    }
+
+    // ── PASSWORD RECOVERY LOGIC ──────────────────
+    function showForgotView() {
+      isRegActive = true;
+      if (masterSnap) masterSnap.disable();
+      document.querySelectorAll('.form-view').forEach(v => v.classList.remove('is-active'));
+      document.getElementById('forgot-view').classList.add('is-active');
+      document.getElementById('demo-selector-wrap').style.display = 'none';
+      updateUI();
+    }
+
+    async function requestReset() {
+      const emailEl = document.getElementById('forgot-email');
+      const errEl = document.getElementById('forgot-error');
+      const btnEl = document.getElementById('btn-request-reset');
+      const email = (emailEl?.value ?? '').trim();
+
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        errEl.textContent = 'Introduce un email válido.';
+        errEl.classList.add('on');
+        return;
+      }
+
+      errEl.classList.remove('on');
+      btnEl.textContent = 'Enviando…';
+      btnEl.style.opacity = '0.6';
+      btnEl.style.pointerEvents = 'none';
+
+      try {
+        const res = await fetch('/api/auth.php?action=forgot_password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        
+        const rawText = await res.text();
+        let data;
+        try {
+          data = JSON.parse(rawText);
+        } catch (jsonErr) {
+          console.error("Invalid JSON response:", rawText.substring(0, 500));
+          throw new Error("El servidor no devolvió JSON. Respuesta: " + rawText.substring(0, 100));
+        }
+
+        if (data.success) {
+          if (data.dev_code) {
+            console.log("CÓDIGO DE RECUPERACIÓN (DEV):", data.dev_code);
+            alert("TU CÓDIGO (DEV): " + data.dev_code);
+          }
+          showResetView();
+        } else {
+          errEl.textContent = data.message || 'Error al solicitar el código.';
+          errEl.classList.add('on');
+          btnEl.textContent = 'ENVIAR CÓDIGO';
+          btnEl.style.opacity = '1';
+          btnEl.style.pointerEvents = 'auto';
+        }
+      } catch (e) {
+        console.error("Fetch Error:", e);
+        errEl.textContent = 'Error: ' + e.message;
+        errEl.classList.add('on');
+        btnEl.textContent = 'ENVIAR CÓDIGO';
+        btnEl.style.opacity = '1';
+        btnEl.style.pointerEvents = 'auto';
+      }
+    }
+
+    function showResetView() {
+      document.querySelectorAll('.form-view').forEach(v => v.classList.remove('is-active'));
+      document.getElementById('reset-view').classList.add('is-active');
+    }
+
+    async function handleReset() {
+      const email = document.getElementById('forgot-email').value.trim();
+      const code = document.getElementById('reset-code').value.trim();
+      const pass = document.getElementById('reset-new-pass').value;
+      const errEl = document.getElementById('reset-error');
+      const btnEl = document.getElementById('btn-handle-reset');
+
+      if (code.length < 6 || !pass) {
+        errEl.textContent = 'Introduce el código y la nueva clave.';
+        errEl.classList.add('on');
+        return;
+      }
+
+      errEl.classList.remove('on');
+      btnEl.textContent = 'Cambiando…';
+      btnEl.style.opacity = '0.6';
+      btnEl.style.pointerEvents = 'none';
+
+      try {
+        const res = await fetch('/api/auth.php?action=reset_password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, code, password: pass }),
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          alert("Contraseña actualizada con éxito.");
+          toggleForm('login');
+        } else {
+          errEl.textContent = data.message || 'Error al actualizar.';
+          errEl.classList.add('on');
+          btnEl.textContent = 'CAMBIAR CONTRASEÑA';
+          btnEl.style.opacity = '1';
+          btnEl.style.pointerEvents = 'auto';
+        }
+      } catch (e) {
+        errEl.textContent = 'Error de conexión.';
+        errEl.classList.add('on');
+        btnEl.textContent = 'CAMBIAR CONTRASEÑA';
+        btnEl.style.opacity = '1';
+        btnEl.style.pointerEvents = 'auto';
       }
     }
 
