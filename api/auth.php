@@ -126,8 +126,8 @@ function handle_forgot_password(): never
     $body = fp_json_body();
     $email = strtolower(fp_sanitize($body['email'] ?? '', 150, 'email'));
     
-    // Rate limit: 3 intentos por hora para evitar spam
-    fp_rate_limit('auth_forgot', 3, 3600);
+    // Rate limit: Aumentado temporalmente para permitir pruebas (20 por hora)
+    fp_rate_limit('auth_forgot', 20, 3600);
 
     if (empty($email)) fp_error(400, 'Email requerido.');
 
