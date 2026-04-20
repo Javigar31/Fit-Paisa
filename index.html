@@ -1453,6 +1453,61 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
       toggleForm('reset');
     }
 
+    let resetEmail = '';
+
+    async function requestReset() {
+      const emailEl = document.getElementById('forgot-email');
+      const errEl = document.getElementById('forgot-error');
+      const btnEl = document.getElementById('btn-request-reset');
+      const email = (emailEl?.value ?? '').trim();
+
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        errEl.textContent = 'Introduce un email válido.';
+        errEl.classList.add('on');
+        return;
+      }
+
+      resetEmail = email; // Persistencia del email
+      errEl.classList.remove('on');
+      btnEl.textContent = 'Enviando...';
+      btnEl.style.opacity = '0.6';
+      btnEl.style.pointerEvents = 'none';
+
+      try {
+        const res = await fetch('/api/auth.php?action=forgot_password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        
+        const rawText = await res.text();
+        let data;
+        try {
+          data = JSON.parse(rawText);
+        } catch (jsonErr) {
+          throw new Error("El servidor no devolvió JSON.");
+        }
+
+        if (data.success) {
+          if (data.dev_code) {
+            console.warn("DEV CODE:", data.dev_code);
+            alert("MODO DEV - Código: " + data.dev_code);
+          }
+          showResetView();
+        } else {
+          errEl.textContent = data.message || 'Error al solicitar el código.';
+          errEl.classList.add('on');
+        }
+      } catch (e) {
+        errEl.textContent = 'Error: ' + e.message;
+        errEl.classList.add('on');
+      } finally {
+        btnEl.textContent = 'ENVIAR CÓDIGO';
+        btnEl.style.opacity = '1';
+        btnEl.style.pointerEvents = 'auto';
+      }
+    }
+
     async function handleReset() {
       const code = document.getElementById('reset-code').value.trim();
       const pass = document.getElementById('reset-new-pass').value;
