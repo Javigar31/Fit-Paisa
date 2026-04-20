@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "multi-agent-brainstorming": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "22675ff160ca8f48e2b09fa780ccc8761ed21ad8e91dda96f61e16904fc2cb79"
+    }
+  }
+}
