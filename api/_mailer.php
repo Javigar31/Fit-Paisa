@@ -44,7 +44,7 @@ function fp_mail(string $to, string $subject, string $html, string $code): bool
         'content' => [
             [
                 'type'  => 'text/plain',
-                'value' => "Recupera tu acceso a FitPaisa. Tu código de verificación es: $code\n\nEste código expirará en 15 minutos."
+                'value' => $code ? "Tu código de verificación es: $code" : "Bienvenido a FitPaisa. Estamos emocionados de tenerte con nosotros."
             ],
             [
                 'type'  => 'text/html',
@@ -126,4 +126,73 @@ function fp_get_recovery_template(string $code): string
 HTML;
 
     return str_replace('{{CODE}}', $code, $template);
+}
+
+/**
+ * Genera el cuerpo del email de bienvenida (Newsletter Premium).
+ * Basado en el concepto "Kinetic Void" de Stitch (Antigravity).
+ *
+ * @param string $name Nombre del usuario.
+ * @return string      HTML completo.
+ */
+function fp_get_welcome_template(string $name): string
+{
+    $name = htmlspecialchars($name);
+    $template = <<<'HTML'
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;700&display=swap');
+        body { margin: 0; padding: 0; background-color: #080a0f; font-family: 'Inter', Arial, sans-serif; color: #e2e2e9; }
+        .wrapper { width: 100%; table-layout: fixed; background-color: #080a0f; padding-bottom: 40px; }
+        .main { background-color: #080a0f; margin: 0 auto; width: 100%; max-width: 600px; border-spacing: 0; color: #e2e2e9; }
+        .header { padding: 40px 20px; text-align: center; }
+        .logo { color: #ff3b3b; font-family: 'Bebas Neue', sans-serif; font-size: 42px; text-decoration: none; letter-spacing: 2px; }
+        .hero { background-color: #111319; border: 1px solid #33353a; border-radius: 16px; margin: 0 20px; padding: 40px 30px; text-align: center; }
+        .title { font-family: 'Bebas Neue', sans-serif; font-size: 48px; color: #ffffff; line-height: 1; margin: 0 0 20px 0; letter-spacing: 1px; }
+        .text { font-size: 16px; line-height: 1.6; color: #9ca3af; margin-bottom: 30px; }
+        .btn-container { margin-bottom: 20px; }
+        .btn { background-color: #ff3b3b; color: #080a0f !important; padding: 16px 32px; border-radius: 8px; text-decoration: none; font-weight: 800; font-size: 14px; display: inline-block; text-transform: uppercase; letter-spacing: 1px; }
+        .secondary-btn { background-color: transparent; color: #ff3b3b !important; border: 1px solid #ff3b3b; margin-left: 10px; }
+        .footer { padding: 40px 20px; text-align: center; font-size: 12px; color: #4b5563; }
+        .footer a { color: #ff3b3b; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <center class="wrapper">
+        <table class="main" width="100%">
+            <tr>
+                <td class="header">
+                    <a href="https://fit-paisa.vercel.app" class="logo">FITPAISA</a>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="hero">
+                        <h1 class="title">BIENVENIDO A LA ÉLITE</h1>
+                        <p class="text">Hola {{NAME}},<br><br>Has dado el primer paso hacia tu mejor versión. En FitPaisa no solo entrenamos, optimizamos. Estamos aquí para proporcionarte las herramientas de precisión que necesitas para dominar tus objetivos.</p>
+                        <div class="btn-container">
+                            <a href="https://fit-paisa.vercel.app" class="btn">EMPEZAR ENTRENAMIENTO</a>
+                        </div>
+                        <p style="font-size: 13px; color: #6b7280;">Prepárate para experimentar el rendimiento definitivo.</p>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="footer">
+                    &copy; 2026 FitPaisa. Diseñado para el Alto Rendimiento.<br>
+                    <a href="https://fit-paisa.vercel.app">Web App</a> &bull; <a href="#">Instagram</a> &bull; <a href="#">Soporte</a>
+                </td>
+            </tr>
+        </table>
+    </center>
+</body>
+</html>
+HTML;
+
+    $template = str_replace('{{NAME}}', $name, $template);
+    return $template;
 }

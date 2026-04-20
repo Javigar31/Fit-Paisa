@@ -83,6 +83,15 @@ function handle_register(): never
         
         $db->commit();
         $token = jwt_create(['user_id'=>$uid, 'email'=>$email, 'role'=>'USER', 'name'=>$body['name']??'']);
+
+        // Enviar Email de Bienvenida (Sin bloquear el registro si falla)
+        try {
+            $welcomeHtml = fp_get_welcome_template($body['name'] ?? 'Usuario');
+            fp_mail($email, "¡Bienvenido a la Élite, " . ($body['name'] ?? '') . "!", $welcomeHtml, "");
+        } catch (Exception $mailErr) {
+            error_log("[FitPaisa][AUTH] Error enviando bienvenida: " . $mailErr->getMessage());
+        }
+
         fp_success([
             'token' => $token,
             'user'  => [
