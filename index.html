@@ -143,6 +143,19 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
   .modal-progress { position: absolute; bottom: 0; left: 0; height: 3px; background: var(--accent); width: 100%; transform-origin: left; }
   /* Fix overlapping */
   .form-view:not(.is-active) { display: none !important; }
+  
+  /* Utils A11y */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
 </style>
 </head>
 
@@ -835,19 +848,38 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
           <div
             style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);font-weight:700;margin-bottom:16px">
             Formulario de contacto</div>
-          <form class="contact-form" action="https://formsubmit.co/garciajavierandres@hotmail.com" method="POST">
-            <input type="hidden" name="_subject" value="Nuevo mensaje desde FitPaisa">
-            <input type="hidden" name="_captcha" value="false">
-            <input type="hidden" name="_template" value="box">
-            <input type="text" name="name" placeholder="Tu nombre" required>
-            <input type="email" name="email" placeholder="Tu correo electrónico" required>
-            <input type="text" name="subject" placeholder="Asunto">
-            <textarea name="message" placeholder="Escribe tu mensaje aquí..." required></textarea>
-            <button type="submit" class="contact-submit">Enviar mensaje <svg width="14" height="14" viewBox="0 0 24 24"
-                fill="none" stroke="currentColor" stroke-width="2.5">
+          <form id="contact-form" class="contact-form" onsubmit="handleContact(event)">
+            <input type="text" name="_website" class="sr-only" tabindex="-1" autocomplete="off">
+            
+            <div class="field">
+              <label for="contact-name" class="sr-only">Tu nombre</label>
+              <input type="text" id="contact-name" name="name" placeholder="Tu nombre" required class="input">
+            </div>
+            
+            <div class="field">
+              <label for="contact-email" class="sr-only">Tu correo electrónico</label>
+              <input type="email" id="contact-email" name="email" placeholder="Tu correo electrónico" required class="input">
+            </div>
+            
+            <div class="field">
+              <label for="contact-subject" class="sr-only">Asunto</label>
+              <input type="text" id="contact-subject" name="subject" placeholder="Asunto" class="input">
+            </div>
+            
+            <div class="field">
+              <label for="contact-message" class="sr-only">Mensaje</label>
+              <textarea id="contact-message" name="message" placeholder="Escribe tu mensaje aquí..." required class="input" style="min-height:100px;resize:vertical"></textarea>
+            </div>
+
+            <div id="contact-error" class="error-msg" style="margin-bottom:10px" role="alert" aria-live="polite"></div>
+
+            <button type="submit" id="contact-submit" class="contact-submit">
+              <span>Enviar mensaje</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <line x1="22" y1="2" x2="11" y2="13" />
                 <polygon points="22 2 15 22 11 13 2 9 22 2" />
-              </svg></button>
+              </svg>
+            </button>
           </form>
           <div style="margin-top:14px;font-size:11px;color:var(--muted);text-align:center">🔒 Tus datos están protegidos
             y no se comparten con terceros.</div>
@@ -1596,6 +1628,86 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
       userGender = val;
       // Remove red border error
       document.querySelectorAll('#step-1 .goal-card').forEach(c => c.style.borderColor = 'var(--border)');
+    }
+
+    /* ── CONTACT LOGIC ─────────────────── */
+    async function handleContact(e) {
+      e.preventDefault();
+      const form = e.target;
+      const btn = document.getElementById('contact-submit');
+      const errEl = document.getElementById('contact-error');
+      const btnText = btn.querySelector('span');
+
+      errEl.classList.remove('on');
+      errEl.textContent = '';
+
+      // Loading state
+      const originalHtml = btn.innerHTML;
+      btn.style.opacity = '0.6';
+      btn.style.pointerEvents = 'none';
+      btnText.textContent = 'Enviando...';
+
+      const formData = new FormData(form);
+      const data = Object.from_rows ? null : {}; // Use standard object
+      formData.forEach((value, key) => data[key] = value);
+
+      try {
+        const res = await fetch('/api/contact.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        const result = await res.json();
+
+        if (result.success) {
+          // Reset form
+          form.reset();
+          btn.innerHTML = originalHtml;
+          btn.style.opacity = '1';
+          btn.style.pointerEvents = 'auto';
+
+          // Show success modal with custom message
+          const modalTitle = document.querySelector('#success-modal h2');
+          const modalText = document.querySelector('#success-modal p');
+          const modalBtn = document.querySelector('#success-modal button');
+
+          const oldTitle = modalTitle.textContent;
+          const oldText = modalText.textContent;
+          const oldBtn = modalBtn.textContent;
+
+          modalTitle.textContent = '¡MENSAJE ENVIADO!';
+          modalText.textContent = result.message || 'Hemos recibido tu consulta. Te responderemos en menos de 24 horas.';
+          modalBtn.textContent = 'ENTENDIDO';
+          
+          // Modify button action to just close
+          const originalOnClick = modalBtn.onclick;
+          modalBtn.onclick = () => {
+             closeSuccessModal();
+             // Restore Original content after close for Reset Password use
+             setTimeout(() => {
+                modalTitle.textContent = oldTitle;
+                modalText.textContent = oldText;
+                modalBtn.textContent = oldBtn;
+                modalBtn.onclick = originalOnClick;
+             }, 500);
+          };
+
+          openSuccessModal();
+        } else {
+          errEl.textContent = result.message || 'Error al enviar de mensaje.';
+          errEl.classList.add('on');
+          btn.innerHTML = originalHtml;
+          btn.style.opacity = '1';
+          btn.style.pointerEvents = 'auto';
+        }
+      } catch (err) {
+        errEl.textContent = 'Error de conexión. Inténtalo de nuevo.';
+        errEl.classList.add('on');
+        btn.innerHTML = originalHtml;
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+      }
     }
 
     // Hover effect on interactive elements

@@ -179,3 +179,93 @@ HTML;
 
     return str_replace('{{NAME}}', $name, $template);
 }
+
+/**
+ * Genera el cuerpo del email de confirmación de contacto.
+ * Estilo Clean White para máxima entregabilidad.
+ *
+ * @param string $name    Nombre del remitente.
+ * @param string $message Mensaje original (fragmento).
+ * @return string         HTML completo.
+ */
+function fp_get_contact_confirmation_template(string $name, string $message): string
+{
+    $name = htmlspecialchars($name);
+    $excerpt = htmlspecialchars(mb_strimwidth($message, 0, 100, "..."));
+    
+    // Stitch Tokens: Kinetic Void
+    // Accent: #ff544e (Primary Container)
+    // Dark: #111319 (Background)
+    // Surface: #ffffff
+    
+    $template = <<<'HTML'
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mensaje Transmitido</title>
+    <style>
+        /* Stitch 'Kinetic Void' Strategy */
+        body { margin: 0; padding: 0; background-color: #111319; font-family: 'Space Grotesk', 'Inter', -apple-system, sans-serif; color: #ffffff; }
+        .wrapper { width: 100%; table-layout: fixed; background-color: #111319; }
+        .container { width: 100%; max-width: 600px; margin: 0 auto; }
+        .content { padding: 60px 24px; }
+        .card { background-color: #1e1f25; border-radius: 4px; border: 1px solid rgba(255, 84, 78, 0.2); overflow: hidden; position: relative; }
+        .accent-line { height: 2px; background: linear-gradient(90deg, #ff544e, #c00018); width: 100%; }
+        .card-body { padding: 48px; }
+        .logo { font-size: 20px; font-weight: 900; letter-spacing: 3px; color: #ffffff; text-decoration: none; display: block; margin-bottom: 50px; }
+        .logo span { color: #ff544e; }
+        .title { font-size: 32px; font-weight: 800; color: #ffffff; margin: 0 0 20px 0; line-height: 1.1; text-transform: uppercase; letter-spacing: -1px; }
+        .subtitle { font-size: 16px; color: #e2e2e9; line-height: 1.7; margin: 0 0 40px 0; font-weight: 300; }
+        .quote-box { background-color: rgba(255, 255, 255, 0.03); border-left: 2px solid #ff544e; padding: 24px; border-radius: 0 4px 4px 0; margin-bottom: 40px; }
+        .quote-text { font-style: italic; color: #ad8884; font-size: 14px; line-height: 1.6; margin: 0; }
+        .footer { padding: 40px 24px; text-align: left; font-size: 11px; color: #5d3f3c; text-transform: uppercase; letter-spacing: 2px; }
+        .footer a { color: #ff544e; text-decoration: none; font-weight: 700; margin-right: 15px; }
+        
+        @media only screen and (max-width: 600px) {
+            .content { padding: 30px 16px; }
+            .card-body { padding: 30px; }
+            .title { font-size: 26px; }
+        }
+    </style>
+</head>
+<body>
+    <table class="wrapper" width="100%" cellpadding="0" cellspacing="0" role="presentation">
+        <tr>
+            <td align="center">
+                <div class="container">
+                    <div class="content">
+                        <div class="card">
+                            <div class="accent-line"></div>
+                            <div class="card-body">
+                                <a href="https://fit-paisa.vercel.app" class="logo">FIT<span>PAISA</span></a>
+                                <h1 class="title">Mensaje<br>Transmitido</h1>
+                                <p class="subtitle">Hemos recibido tu transmisión en el ecosistema. Nuestro equipo de alto rendimiento está revisando los datos y se pondrá en contacto contigo en breve.</p>
+                                
+                                <div style="font-size:10px; text-transform:uppercase; letter-spacing:3px; color:#ff544e; margin-bottom:12px; font-weight:700;">Resumen de Datos</div>
+                                <div class="quote-box">
+                                    <p class="quote-text">"{{EXCERPT}}"</p>
+                                </div>
+                                
+                                <p style="font-size:13px; color:#ad8884; margin:0;">No es necesario responder. El sistema está en proceso.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="footer">
+                            <strong>Kinetic Void &copy; 2026</strong><br><br>
+                            <a href="https://fit-paisa.vercel.app">Ecosistema</a>
+                            <a href="https://fit-paisa.vercel.app/dashboard">Transmisiones</a>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+HTML;
+
+    $template = str_replace(['{{NAME}}', '{{EXCERPT}}'], [$name, $excerpt], $template);
+    return $template;
+}
