@@ -95,34 +95,31 @@ function fp_get_recovery_template(string $code): string
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Recupera tu acceso a FitPaisa</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Código de Verificación - FitPaisa</title>
     <style>
-        body { margin: 0; padding: 0; background-color: #080a0f; font-family: sans-serif; color: #f0f4f8; }
-        .wrapper { width: 100%; background-color: #080a0f; padding: 40px 0; }
-        .main { background-color: #0d1117; margin: 0 auto; width: 100%; max-width: 500px; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; }
-        .header { background: #1a0d12; padding: 30px; text-align: center; border-bottom: 1px solid #ff3b3b; }
-        .logo { font-size: 24px; font-weight: 900; color: #ff3b3b; text-decoration: none; }
-        .content { padding: 40px 20px; text-align: center; }
-        .title { font-size: 22px; color: #fff; margin-bottom: 15px; }
-        .code-box { background: rgba(255, 59, 59, 0.1); border: 2px dashed #ff3b3b; border-radius: 8px; padding: 20px; margin: 20px 0; }
-        .code-text { font-size: 40px; font-weight: bold; color: #ff3b3b; letter-spacing: 8px; margin: 0; }
+        body { margin: 0; padding: 0; background-color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f2937; }
+        .container { width: 100%; max-width: 600px; margin: 0 auto; padding: 40px 20px; }
+        .card { background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 32px; text-align: center; }
+        .logo { color: #dc2626; font-size: 24px; font-weight: bold; text-decoration: none; display: block; margin-bottom: 24px; }
+        .title { font-size: 20px; font-weight: 600; color: #111827; margin-bottom: 16px; }
+        .text { font-size: 16px; color: #4b5563; line-height: 1.5; margin-bottom: 24px; }
+        .code { font-size: 36px; font-weight: bold; color: #dc2626; letter-spacing: 4px; padding: 16px; background-color: #fef2f2; border-radius: 6px; display: inline-block; }
+        .footer { font-size: 12px; color: #9ca3af; margin-top: 32px; }
     </style>
 </head>
 <body>
-    <div class="wrapper">
-        <center>
-            <table class="main">
-                <tr><td class="header"><a href="#" class="logo">FITPAISA</a></td></tr>
-                <tr>
-                    <td class="content">
-                        <h1 class="title">Código de verificación</h1>
-                        <p>Has solicitado restablecer tu contraseña en FitPaisa.</p>
-                        <div class="code-box"><h2 class="code-text">{{CODE}}</h2></div>
-                        <p style="font-size: 12px; color: #71717a;">Este código expirará en 15 minutos.</p>
-                    </td>
-                </tr>
-            </table>
-        </center>
+    <div class="container">
+        <div class="card">
+            <a href="#" class="logo">FitPaisa</a>
+            <h1 class="title">Verifica tu identidad</h1>
+            <p class="text">Has solicitado restablecer tu contraseña. Utiliza el siguiente código para completar el proceso:</p>
+            <div class="code">{{CODE}}</div>
+            <p class="text" style="font-size: 14px; margin-top: 24px;">Por seguridad, este código expirará en 15 minutos.</p>
+        </div>
+        <div class="footer">
+            Si no has solicitado este cambio, puedes ignorar este mensaje de forma segura.
+        </div>
     </div>
 </body>
 </html>
