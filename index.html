@@ -136,6 +136,13 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
 @keyframes envPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.05); opacity: 0.9; } }
 /* ── Vertical Responsiveness: Optimization for short screens ── */ @media (max-height: 820px) { .vp-slide { padding: 40px 0; } .slide-title { font-size: clamp(38px, 5vw, 68px); } .slide-body { font-size: 13px; margin-bottom: 12px; padding: 10px 18px; } .ui-card { padding: 18px; gap: 0.5rem; } .macro-bar-wrap { margin-bottom: 8px; } .wo-item { padding: 6px 0; } .premium-card { padding: 14px; margin-bottom: 8px; } .price-big { font-size: 38px; } .bubble { padding: 6px 10px; font-size: 12px; margin-bottom: 4px; } .contact-form { gap: 8px; } .contact-form input, .contact-form textarea { padding: 8px 12px; font-size: 13px; } .contact-submit { padding: 10px 20px; } .contact-info { gap: 10px; margin-top: 4px; } .contact-info-icon { width: 32px; height: 32px; } }
 @media (max-height: 700px) { .vp-slide { padding: 25px 0; } .slide-label { margin-bottom: 8px; } .slide-title { font-size: 42px; } .ui-card { transform: scale(0.85) !important; } .pane-inner { gap: 15px; } }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); z-index: 20000; display: none; align-items: center; justify-content: center; opacity: 0; }
+  .success-modal { background: #080a0f; border: 1px solid var(--accent); border-radius: 16px; padding: 40px; width: 90%; max-width: 400px; text-align: center; position: relative; box-shadow: 0 0 50px rgba(255,59,59,0.2); transform: scale(0.9); }
+  .modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--muted); cursor: pointer; padding: 4px; transition: color 0.2s; }
+  .modal-close:hover { color: var(--accent); }
+  .modal-progress { position: absolute; bottom: 0; left: 0; height: 3px; background: var(--accent); width: 100%; transform-origin: left; }
+  /* Fix overlapping */
+  .form-view:not(.is-active) { display: none !important; }
 </style>
 </head>
 
@@ -850,6 +857,26 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
 
   </div><!-- /carousel -->
 
+  <!-- Premium Success Modal -->
+  <div id="modal-overlay" class="modal-overlay" onclick="if(event.target===this) closeSuccessModal()">
+    <div id="success-modal" class="success-modal">
+      <button class="modal-close" onclick="closeSuccessModal()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+      <div style="margin-bottom:24px">
+        <div style="width:64px;height:64px;background:rgba(255,59,59,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;border:1px solid var(--accent);box-shadow:0 0 20px rgba(255,59,59,0.2)">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+      </div>
+      <h2 style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--text);margin-bottom:8px;letter-spacing:1px">¡LISTO!</h2>
+      <p style="color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:20px">Tu contraseña ha sido actualizada correctamente. Ya puedes entrar con tus nuevas credenciales.</p>
+      <button onclick="closeSuccessModal()" style="background:var(--accent);color:var(--dark);border:none;border-radius:8px;padding:12px 24px;font-weight:800;font-size:13px;cursor:pointer;width:100%" class="btn-hover-scale">ENTRAR AHORA</button>
+      <div id="modal-timer-bar" class="modal-progress"></div>
+    </div>
+  </div>
+
   <!-- Nav dots -->
   <nav id="nav" aria-label="Navegación de secciones">
     <button type="button" class="nav-dot active" onclick="goTo(0)" aria-label="Ir al inicio" aria-current="true"></button>
@@ -1508,8 +1535,7 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
         const data = await res.json();
 
         if (data.success) {
-          alert("Contraseña actualizada con éxito.");
-          toggleForm('login');
+          openSuccessModal();
         } else {
           errEl.textContent = data.message || 'Error al actualizar.';
           errEl.classList.add('on');
@@ -1522,6 +1548,38 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
         btnEl.style.opacity = '1';
         btnEl.style.pointerEvents = 'auto';
       }
+    }
+
+    let modalTimer;
+    function openSuccessModal() {
+      const overlay = document.getElementById('modal-overlay');
+      const modal = document.getElementById('success-modal');
+      const bar = document.getElementById('modal-timer-bar');
+      
+      overlay.style.display = 'flex';
+      gsap.to(overlay, { opacity: 1, duration: 0.4 });
+      gsap.fromTo(modal, { scale: 0.8, y: 20 }, { scale: 1, y: 0, duration: 0.6, ease: "back.out(1.7)" });
+      
+      // Timer bar animation (10s)
+      gsap.fromTo(bar, { scaleX: 1 }, { scaleX: 0, duration: 10, ease: "none" });
+      
+      modalTimer = setTimeout(() => {
+        closeSuccessModal();
+      }, 10000);
+    }
+
+    function closeSuccessModal() {
+      clearTimeout(modalTimer);
+      const overlay = document.getElementById('modal-overlay');
+      const modal = document.getElementById('success-modal');
+      
+      gsap.to(modal, { scale: 0.9, opacity: 0, duration: 0.3 });
+      gsap.to(overlay, { opacity: 0, duration: 0.4, onComplete: () => {
+        overlay.style.display = 'none';
+        modal.style.opacity = 1; // reset for next time
+        modal.style.transform = '';
+        toggleForm('login');
+      }});
     }
 
     function selectGender(el, val) {
