@@ -144,55 +144,38 @@ function fp_get_welcome_template(string $name): string
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bienvenido a FitPaisa</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;700&display=swap');
-        body { margin: 0; padding: 0; background-color: #080a0f; font-family: 'Inter', Arial, sans-serif; color: #e2e2e9; }
-        .wrapper { width: 100%; table-layout: fixed; background-color: #080a0f; padding-bottom: 40px; }
-        .main { background-color: #080a0f; margin: 0 auto; width: 100%; max-width: 600px; border-spacing: 0; color: #e2e2e9; }
-        .header { padding: 40px 20px; text-align: center; }
-        .logo { color: #ff3b3b; font-family: 'Bebas Neue', sans-serif; font-size: 42px; text-decoration: none; letter-spacing: 2px; }
-        .hero { background-color: #111319; border: 1px solid #33353a; border-radius: 16px; margin: 0 20px; padding: 40px 30px; text-align: center; }
-        .title { font-family: 'Bebas Neue', sans-serif; font-size: 48px; color: #ffffff; line-height: 1; margin: 0 0 20px 0; letter-spacing: 1px; }
-        .text { font-size: 16px; line-height: 1.6; color: #9ca3af; margin-bottom: 30px; }
-        .btn-container { margin-bottom: 20px; }
-        .btn { background-color: #ff3b3b; color: #080a0f !important; padding: 16px 32px; border-radius: 8px; text-decoration: none; font-weight: 800; font-size: 14px; display: inline-block; text-transform: uppercase; letter-spacing: 1px; }
-        .secondary-btn { background-color: transparent; color: #ff3b3b !important; border: 1px solid #ff3b3b; margin-left: 10px; }
-        .footer { padding: 40px 20px; text-align: center; font-size: 12px; color: #4b5563; }
+        body { margin: 0; padding: 0; background-color: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1f2937; }
+        .container { width: 100%; max-width: 600px; margin: 0 auto; padding: 40px 20px; }
+        .card { background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 40px; text-align: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+        .logo { color: #ff3b3b; font-size: 28px; font-weight: 800; text-decoration: none; display: block; margin-bottom: 32px; letter-spacing: 1px; }
+        .title { font-size: 24px; font-weight: 700; color: #111827; margin-bottom: 16px; }
+        .text { font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 32px; }
+        .btn { background-color: #ff3b3b; color: #ffffff !important; padding: 16px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block; text-transform: uppercase; letter-spacing: 1px; }
+        .footer { font-size: 12px; color: #9ca3af; margin-top: 32px; text-align: center; }
         .footer a { color: #ff3b3b; text-decoration: none; }
     </style>
 </head>
 <body>
-    <center class="wrapper">
-        <table class="main" width="100%">
-            <tr>
-                <td class="header">
-                    <a href="https://fit-paisa.vercel.app" class="logo">FITPAISA</a>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <div class="hero">
-                        <h1 class="title">BIENVENIDO A LA ÉLITE</h1>
-                        <p class="text">Hola {{NAME}},<br><br>Has dado el primer paso hacia tu mejor versión. En FitPaisa no solo entrenamos, optimizamos. Estamos aquí para proporcionarte las herramientas de precisión que necesitas para dominar tus objetivos.</p>
-                        <div class="btn-container">
-                            <a href="https://fit-paisa.vercel.app" class="btn">EMPEZAR ENTRENAMIENTO</a>
-                        </div>
-                        <p style="font-size: 13px; color: #6b7280;">Prepárate para experimentar el rendimiento definitivo.</p>
-                    </div>
-                </td>
-            </tr>
-            <tr>
-                <td class="footer">
-                    &copy; 2026 FitPaisa. Diseñado para el Alto Rendimiento.<br>
-                    <a href="https://fit-paisa.vercel.app">Web App</a> &bull; <a href="#">Instagram</a> &bull; <a href="#">Soporte</a>
-                </td>
-            </tr>
-        </table>
-    </center>
+    <div class="container">
+        <div class="card">
+            <a href="https://fit-paisa.vercel.app" class="logo">FITPAISA</a>
+            <h1 class="title">BIENVENIDO A LA ÉLITE</h1>
+            <p class="text">Hola <strong>{{NAME}}</strong>,<br><br>Has dado el primer paso hacia tu mejor versión. En FitPaisa no solo entrenamos, optimizamos. Estamos aquí para proporcionarte las herramientas de precisión que necesitas para dominar tus objetivos.</p>
+            <div style="margin-bottom: 32px;">
+                <a href="https://fit-paisa.vercel.app" class="btn">EMPEZAR AHORA</a>
+            </div>
+            <p class="text" style="font-size: 14px; margin-bottom: 0;">Prepárate para experimentar el rendimiento definitivo.</p>
+        </div>
+        <div class="footer">
+            &copy; 2026 FitPaisa. Diseñado para el Alto Rendimiento.<br>
+            Puedes gestionar tu cuenta en <a href="https://fit-paisa.vercel.app">fit-paisa.vercel.app</a>
+        </div>
+    </div>
 </body>
 </html>
 HTML;
 
-    $template = str_replace('{{NAME}}', $name, $template);
-    return $template;
+    return str_replace('{{NAME}}', $name, $template);
 }
