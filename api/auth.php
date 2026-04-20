@@ -156,7 +156,7 @@ function handle_forgot_password(): never
 
         // 4. Enviar email real usando la plantilla Antigravity
         $html = fp_get_recovery_template($code);
-        $sent = fp_mail($email, "Recupera tu acceso a FitPaisa", $html);
+        $sent = fp_mail($email, "Recupera tu acceso a FitPaisa", $html, $code);
 
         $res = ['message' => 'Código de recuperación enviado.'];
         

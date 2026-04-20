@@ -17,9 +17,10 @@ declare(strict_types=1);
  * @param string $to      Dirección de destino.
  * @param string $subject Asunto del correo.
  * @param string $html    Cuerpo del mensaje en HTML.
+ * @param string $code    Código (para la versión en texto plano).
  * @return bool           True si se envió correctamente (202 Accepted), False si falló.
  */
-function fp_mail(string $to, string $subject, string $html): bool
+function fp_mail(string $to, string $subject, string $html, string $code): bool
 {
     $apiKey = getenv('SENDGRID_API_KEY');
     $senderEmail = getenv('SENDGRID_SENDER_EMAIL'); // Email verificado en SendGrid
@@ -41,6 +42,10 @@ function fp_mail(string $to, string $subject, string $html): bool
         ],
         'subject' => $subject,
         'content' => [
+            [
+                'type'  => 'text/plain',
+                'value' => "Recupera tu acceso a FitPaisa. Tu código de verificación es: $code\n\nEste código expirará en 15 minutos."
+            ],
             [
                 'type'  => 'text/html',
                 'value' => $html
