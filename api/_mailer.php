@@ -11,6 +11,15 @@
 
 declare(strict_types=1);
 
+// Cargar PHPMailer vía Composer Autoload
+if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
+    require_once __DIR__ . '/../vendor/autoload.php';
+}
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+use PHPMailer\PHPMailer\SMTP;
+
 /**
  * Envía un correo electrónico usando la API de SendGrid.
  *
@@ -22,65 +31,48 @@ declare(strict_types=1);
  */
 function fp_mail(string $to, string $subject, string $html, string $code): bool
 {
-    $apiKey = getenv('SENDGRID_API_KEY');
-    $senderEmail = getenv('SENDGRID_SENDER_EMAIL'); // Email verificado en SendGrid
+    // Credenciales (Prioridad: Variables de Entorno)
+    $senderUser = getenv('GMAIL_USER')     ?: 'fit.paisa.app@gmail.com';
+    $appPass    = getenv('GMAIL_APP_PASS') ?: 'zken sojj drej circ'; // Fallback con el código proporcionado
     
-    if (!$apiKey || !$senderEmail) {
-        error_log("[FitPaisa][MAILER] Error: SENDGRID_API_KEY o SENDGRID_SENDER_EMAIL no configuradas.");
+    if (!$senderUser || !$appPass) {
+        error_log("[FitPaisa][MAILER] Error: GMAIL_USER o GMAIL_APP_PASS no configuradas.");
         return false;
     }
 
-    $payload = [
-        'personalizations' => [
-            [
-                'to' => [['email' => $to]]
-            ]
-        ],
-        'from' => [
-            'email' => $senderEmail,
-            'name'  => 'FitPaisa'
-        ],
-        'subject' => $subject,
-        'content' => [
-            [
-                'type'  => 'text/plain',
-                'value' => $code ? "Tu código de verificación es: $code" : "Bienvenido a FitPaisa. Estamos emocionados de tenerte con nosotros."
-            ],
-            [
-                'type'  => 'text/html',
-                'value' => $html
-            ]
-        ]
-    ];
+    $mail = new PHPMailer(true);
 
-    $ch = curl_init('https://api.sendgrid.com/v3/mail/send');
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Authorization: Bearer ' . $apiKey,
-        'Content-Type: application/json',
-        'Reply-To: ' . $senderEmail
-    ]);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    try {
+        // Configuración del Servidor
+        $mail->isSMTP();
+        $mail->Host       = 'smtp.gmail.com';
+        $mail->SMTPAuth   = true;
+        $mail->Username   = $senderUser;
+        $mail->Password   = $appPass;
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port       = 587;
+        $mail->CharSet    = 'UTF-8';
 
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curlError = curl_error($ch);
-    curl_close($ch);
+        // Remitente y Destinatario
+        $mail->setFrom($senderUser, 'FitPaisa');
+        $mail->addAddress($to);
+        $mail->addReplyTo($senderUser, 'FitPaisa Support');
 
-    if ($curlError) {
-        error_log("[FitPaisa][MAILER] Fallo cURL: " . $curlError);
-        return false;
-    }
+        // Contenido
+        $mail->isHTML(true);
+        $mail->Subject = $subject;
+        $mail->Body    = $html;
+        
+        // Versión en texto plano para evitar filtros de spam
+        $mail->AltBody = $code ? "Tu código de verificación es: $code" : "Bienvenido a FitPaisa. Accede desde la web para ver tu contenido.";
 
-    // SendGrid devuelve 202 si ha aceptado el correo para procesarlo
-    if ($httpCode === 202) {
+        $mail->send();
         return true;
-    }
 
-    error_log("[FitPaisa][MAILER] Error API SendGrid (HTTP $httpCode): " . $response);
-    return false;
+    } catch (Exception $e) {
+        error_log("[FitPaisa][MAILER] Error PHPMailer: " . $mail->ErrorInfo);
+        return false;
+    }
 }
 
 /**
