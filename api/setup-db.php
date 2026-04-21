@@ -227,25 +227,25 @@ $stmtCount = $db->query("SELECT COUNT(*) FROM food_catalog");
 if ((int)$stmtCount->fetchColumn() === 0) {
         $foods = [
             // Carnes y Aves
-        ['Pechuga de pollo (cruda)', 120, 22.5, 0, 2.6, null, null, null, null, null, false],
-        ['Alitas de pollo (con piel)', 215, 18, 0.5, 15, 'Ala', 35, null, null, null, false],
-        ['Jamón cocido', 101, 18, 1, 3, 'Loncha', 20, null, null, null, false],
+        ['Pechuga de pollo (cruda)', 120, 22.5, 0, 2.6, null, null, null, null, null, 0],
+        ['Alitas de pollo (con piel)', 215, 18, 0.5, 15, 'Ala', 35, null, null, null, 0],
+        ['Jamón cocido', 101, 18, 1, 3, 'Loncha', 20, null, null, null, 0],
 
         // Huevos y Lácteos
-        ['Huevo entero', 143, 12.6, 0.7, 9.5, 'Huevo', 50, 40, 50, 60, false],
-        ['Yema de huevo', 322, 15.9, 3.6, 26.5, 'Yema', 17, null, null, null, false],
-        ['Leche entera', 61, 3.2, 4.8, 3.3, 'Vaso', 250, null, null, null, true],
-        ['Yogur natural', 61, 3.5, 4.7, 3.3, 'Unidad', 125, null, null, null, false],
+        ['Huevo entero', 143, 12.6, 0.7, 9.5, 'Huevo', 50, 40, 50, 60, 0],
+        ['Yema de huevo', 322, 15.9, 3.6, 26.5, 'Yema', 17, null, null, null, 0],
+        ['Leche entera', 61, 3.2, 4.8, 3.3, 'Vaso', 250, null, null, null, 1],
+        ['Yogur natural', 61, 3.5, 4.7, 3.3, 'Unidad', 125, null, null, null, 0],
 
         // Cereales y Pan
-        ['Arroz blanco (crudo)', 360, 6.6, 79.3, 0.6, 'Taza', 180, null, null, null, false],
-        ['Pan blanco', 265, 8.8, 49, 3.2, 'Rebanada', 30, null, null, null, false],
-        ['Pan integral', 252, 12.4, 42.7, 3.5, 'Rebanada', 35, null, null, null, false],
-        ['Galleta María', 440, 7, 75, 13, 'Galleta', 6, null, null, null, false],
+        ['Arroz blanco (crudo)', 360, 6.6, 79.3, 0.6, 'Taza', 180, null, null, null, 0],
+        ['Pan blanco', 265, 8.8, 49, 3.2, 'Rebanada', 30, null, null, null, 0],
+        ['Pan integral', 252, 12.4, 42.7, 3.5, 'Rebanada', 35, null, null, null, 0],
+        ['Galleta María', 440, 7, 75, 13, 'Galleta', 6, null, null, null, 0],
 
         // Otros y Líquidos
-        ['Aceite de oliva', 884, 0, 0, 100, 'Cucharada', 15, null, null, null, true],
-        ['Vino tinto', 85, 0.1, 2.6, 0, 'Copa', 150, null, null, null, true],
+        ['Aceite de oliva', 884, 0, 0, 100, 'Cucharada', 15, null, null, null, 1],
+        ['Vino tinto', 85, 0.1, 2.6, 0, 'Copa', 150, null, null, null, 1],
     ];
 
     $stmt = $db->prepare("INSERT INTO food_catalog (name, calories_100g, protein_100g, carbs_100g, fat_100g, unit_name, weight_std, weight_small, weight_medium, weight_large, is_liquid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
