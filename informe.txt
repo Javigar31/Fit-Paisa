@@ -184,3 +184,28 @@ git checkout master  # rama final de trabajo
 ```
 
 ***
+
+# Informe Técnico (Fixes): Corrección de Bugs en Testing (v7.1.0)
+**Fecha:** 2026-04-21
+**Estado:** DESPLEGADO en `testing` ? Mergeado a `master`.
+
+## 1. Bug: Formulario de Contacto (`Error de conexión`)
+*   **Causa**: `fp_mail()` en `api/_mailer.php` tenía el parámetro `\` como obligatorio. `contact.php` lo llamaba con 3 argumentos, provocando un **Fatal PHP Error** silencioso.
+*   **Fix**: `string \ = ''` (parámetro opcional con valor por defecto vacío).
+
+## 2. Bug: Timer Bar del Modal Descolocado
+*   **Causa**: `.modal-progress` sin `overflow: hidden` en el contenedor `.success-modal`, la barra se salía del borde redondeado.
+*   **Fix**: `overflow: hidden` + `padding-bottom: 44px` en `.success-modal`. Barra a `4px` con `border-radius` en esquinas inferiores.
+
+## 3. Bug: Error al Crear Admin/Coach en Testing
+*   **Causa**: Tabla `users` en `fitpaisa_testing` recreada sin columnas `is_active`, `phone`, `login_attempts`, `locked_until`, `last_login`.
+*   **Fix**: Parche SQL en Neon Console para añadir columnas faltantes antes de llamar a `seed-admin.php`.
+
+## 4. Archivos Modificados
+| Archivo | Cambio |
+|---------|--------|
+| `api/_mailer.php` | `\ = ''` — parámetro opcional |
+| `index.html` | `overflow:hidden` + timer bar corregida |
+| `.agent/skills/fitpaisa-db-doctor/SKILL.md` | v7.1.0 documentado |
+
+***
