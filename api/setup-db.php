@@ -12,7 +12,7 @@
  *
  * @package  FitPaisa\Api
  * @author   Javier Andrés García Vargas
- * @version  1.0.0
+ * @version  2.1.0 (Full Schema Migration)
  */
 
 declare(strict_types=1);
@@ -197,10 +197,20 @@ run_step($db, 'TABLE: profiles', "
 // Safely alter existing profiles table
 try {
     $db->exec("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS target_weight DECIMAL(5,2)");
-} catch (PDOException $e) { /* ignore if already exists or IF NOT EXISTS handled it */ }
-try {
     $db->exec("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS target_time_weeks SMALLINT");
-} catch (PDOException $e) { /* ignore if already exists */ }
+    $db->exec("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS timezone VARCHAR(50)");
+} catch (PDOException $e) { /* ignore */ }
+
+/* ══════════════════════════════════════════════════════════════════════
+   TABLA: rate_limits — Control de peticiones (Rate Limiting)
+   ══════════════════════════════════════════════════════════════════════ */
+run_step($db, 'TABLE: rate_limits', "
+    CREATE TABLE IF NOT EXISTS rate_limits (
+        rate_key VARCHAR(255) PRIMARY KEY,
+        hits INTEGER DEFAULT 1,
+        reset_at TIMESTAMPTZ NOT NULL
+    )
+");
 
 /* ══════════════════════════════════════════════════════════════════════
    TABLA: food_catalog — Catálogo local de alimentos
@@ -218,9 +228,21 @@ run_step($db, 'TABLE: food_catalog', "
         weight_small  DECIMAL(5,2),
         weight_medium DECIMAL(5,2),
         weight_large  DECIMAL(5,2),
-        is_liquid     BOOLEAN         DEFAULT FALSE
+        is_liquid     BOOLEAN         NOT NULL DEFAULT FALSE,
+        created_at    TIMESTAMPTZ     NOT NULL DEFAULT NOW()
     );
 ");
+
+// Patch existing food_catalog if needed
+try {
+    $db->exec("ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS unit_name VARCHAR(50)");
+    $db->exec("ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS weight_std DECIMAL(5,2)");
+    $db->exec("ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS weight_small DECIMAL(5,2)");
+    $db->exec("ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS weight_medium DECIMAL(5,2)");
+    $db->exec("ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS weight_large DECIMAL(5,2)");
+    $db->exec("ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS is_liquid BOOLEAN DEFAULT FALSE");
+    $db->exec("ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()");
+} catch (PDOException $e) { /* ignore */ }
 
 // Seeder para food_catalog
 $stmtCount = $db->query("SELECT COUNT(*) FROM food_catalog");
@@ -276,6 +298,13 @@ run_step($db, 'TABLE: food_entries', "
         created_at    TIMESTAMPTZ     NOT NULL DEFAULT NOW()
     );
 ");
+
+// Patch existing food_entries if needed (added for compatibility with v1.x)
+try {
+    $db->exec("ALTER TABLE food_entries ADD COLUMN IF NOT EXISTS portion_amount DECIMAL(6,2)");
+    $db->exec("ALTER TABLE food_entries ADD COLUMN IF NOT EXISTS portion_unit VARCHAR(50)");
+    $db->exec("ALTER TABLE food_entries ADD COLUMN IF NOT EXISTS unit_size VARCHAR(20)");
+} catch (PDOException $e) { /* ignore */ }
 
 
 run_step($db, 'INDEX: food_entries_profile_date', "
@@ -371,9 +400,25 @@ run_step($db, 'TABLE: subscriptions', "
         start_date      DATE                 NOT NULL DEFAULT CURRENT_DATE,
         end_date        DATE                 NOT NULL,
         amount          DECIMAL(8,2)         NOT NULL CHECK (amount >= 0),
-        created_at      TIMESTAMPTZ          NOT NULL DEFAULT NOW()
+        created_at      TIMESTAMPTZ          NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ          NOT NULL DEFAULT NOW(),
+        starts_at       TIMESTAMPTZ,
+        ends_at         TIMESTAMPTZ,
+        provider        VARCHAR(50)
     );
 ");
+
+// Patch existing subscriptions
+try {
+    $db->exec("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()");
+    $db->exec("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS starts_at TIMESTAMPTZ");
+    $db->exec("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS ends_at TIMESTAMPTZ");
+    $db->exec("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS provider VARCHAR(50)");
+    
+    // Sincronizar datos si las nuevas columnas están vacías
+    $db->exec("UPDATE subscriptions SET starts_at = start_date::timestamptz WHERE starts_at IS NULL AND start_date IS NOT NULL");
+    $db->exec("UPDATE subscriptions SET ends_at = end_date::timestamptz WHERE ends_at IS NULL AND end_date IS NOT NULL");
+} catch (PDOException $e) { /* ignore */ }
 
 /* ══════════════════════════════════════════════════════════════════════
    TABLA: progress_photos — Fotos de progreso
@@ -432,3 +477,15 @@ echo json_encode([
         count($errors)
     ),
 ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+
+/* ══════════════════════════════════════════════════════════════════════
+   PASO FINAL: Índices de rendimiento extra
+   ══════════════════════════════════════════════════════════════════════ */
+try {
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_users_role_status ON users(role, is_active)");
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_users_created_at_desc ON users(created_at DESC)");
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_subs_status_plan ON subscriptions(status, plan_type)");
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_subs_updated_at ON subscriptions(updated_at, status)");
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_wp_coach_status ON workout_plans(coach_id, status)");
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_subs_user_id ON subscriptions(user_id)");
+} catch (PDOException $e) { /* ignore */ }

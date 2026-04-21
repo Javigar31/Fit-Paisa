@@ -60,6 +60,7 @@ function fp_mail(string $to, string $subject, string $html, string $code): bool
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         'Authorization: Bearer ' . $apiKey,
         'Content-Type: application/json',
+        'Reply-To: ' . $senderEmail
     ]);
     curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 
@@ -161,12 +162,12 @@ function fp_get_welcome_template(string $name): string
     <div class="container">
         <div class="card">
             <a href="https://fit-paisa.vercel.app" class="logo">FITPAISA</a>
-            <h1 class="title">BIENVENIDO A LA ÉLITE</h1>
-            <p class="text">Hola <strong>{{NAME}}</strong>,<br><br>Has dado el primer paso hacia tu mejor versión. En FitPaisa no solo entrenamos, optimizamos. Estamos aquí para proporcionarte las herramientas de precisión que necesitas para dominar tus objetivos.</p>
+            <h1 class="title">Te damos la bienvenida</h1>
+            <p class="text">Hola <strong>{{NAME}}</strong>,<br><br>Tu cuenta en FitPaisa ha sido creada con éxito. Ya puedes acceder al ecosistema para gestionar tus objetivos y consultar tus planes.</p>
             <div style="margin-bottom: 32px;">
                 <a href="https://fit-paisa.vercel.app" class="btn">EMPEZAR AHORA</a>
             </div>
-            <p class="text" style="font-size: 14px; margin-bottom: 0;">Prepárate para experimentar el rendimiento definitivo.</p>
+            <p class="text" style="font-size: 14px; margin-bottom: 0;">Gracias por formar parte de FitPaisa.</p>
         </div>
         <div class="footer">
             &copy; 2026 FitPaisa. Diseñado para el Alto Rendimiento.<br>
