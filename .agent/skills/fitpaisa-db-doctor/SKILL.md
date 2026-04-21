@@ -1,6 +1,6 @@
 ---
 name: fitpaisa-db-doctor
-description: Experto en diagnóstico y reparación de conexiones de base de datos Neon PostgreSQL para el ecosistema FitPaisa (PHP + Vercel). Incluye soporte para el catálogo híbrido con Open Food Facts, el sistema de correo Gmail SMTP y la gestión de usuarios privilegiados.
+description: Experto en diagnóstico y reparación de conexiones de base de datos Neon PostgreSQL para el ecosistema FitPaisa (PHP + Vercel). Incluye soporte para el catálogo híbrido con Open Food Facts, el sistema de correo Gmail SMTP, la gestión de usuarios privilegiados y el sistema de emails premium de soporte.
 ---
 
 # FitPaisa DB Doctor Skill
@@ -30,8 +30,7 @@ FitPaisa utiliza un sistema de conexión centralizado. **Cualquier cambio en la 
 | Producción  | `neondb`            | `PGDATABASE_PROD`   |
 | Testing     | `fitpaisa_testing`  | `PGDATABASE`        |
 
-### Esquema Completo (Tablas v7.1.0)
-Las siguientes tablas deben existir en AMBAS bases de datos:
+### Esquema Completo (Tablas v7.2.0)
 
 | Tabla                | Descripción                                        |
 |----------------------|----------------------------------------------------|
@@ -51,12 +50,27 @@ Las siguientes tablas deben existir en AMBAS bases de datos:
 
 ### Columnas Críticas en `users`:
 ```sql
--- La tabla users SIEMPRE debe tener estas columnas (la versión simplificada las omitía):
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(30);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS login_attempts SMALLINT NOT NULL DEFAULT 0;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMPTZ;
+```
+
+### Columnas Críticas en `profiles` (parche completo v7.2.0):
+```sql
+-- ⚠️ CRÍTICO: CREATE TABLE IF NOT EXISTS NO modifica tablas existentes.
+-- Si profiles fue recreada con esquema simplificado, ejecutar TODO este bloque:
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS weight         DECIMAL(5,2)   NOT NULL DEFAULT 0.01;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS height         DECIMAL(5,2)   NOT NULL DEFAULT 0.01;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS age            SMALLINT       NOT NULL DEFAULT 25;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS gender         gender_type    NOT NULL DEFAULT 'OTHER';
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS objective      objective_type NOT NULL DEFAULT 'MAINTAIN';
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS activity_level activity_level NOT NULL DEFAULT 'MODERATE';
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS target_weight  DECIMAL(5,2);
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS target_time_weeks SMALLINT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS timezone       VARCHAR(50);
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS updated_at     TIMESTAMPTZ    NOT NULL DEFAULT NOW();
 ```
 
 ### Columnas Críticas en `food_catalog` (v7.0.0):
@@ -80,10 +94,9 @@ El sistema de correo fue **migrado de SendGrid a Gmail SMTP** el 2026-04-21.
 
 ### ⚠️ Firma de `fp_mail()` — CRÍTICO:
 ```php
-// El 4º parámetro $code ES OPCIONAL. Llamar sin él (p.ej. desde contact.php) es correcto.
+// El 4º parámetro $code ES OPCIONAL. Llamar sin él es correcto.
 function fp_mail(string $to, string $subject, string $html, string $code = ''): bool
 ```
-> **Bug conocido (resuelto v7.1.0)**: Si `$code` es obligatorio, el formulario de contacto lanza un Fatal PHP Error porque `contact.php` llama a `fp_mail()` con solo 3 argumentos.
 
 ### Variables de Entorno Requeridas en Vercel:
 
@@ -104,7 +117,38 @@ function fp_mail(string $to, string $subject, string $html, string $code = ''): 
 
 ---
 
-## 4. Gestión de Usuarios Privilegiados (Admin / Coach)
+## 4. Sistema de Emails de Soporte (v7.2.0)
+
+### Archivos involucrados:
+| Archivo | Propósito |
+|---------|-----------|
+| `api/email-soporte.php` | Template HTML premium del email de confirmación |
+| `api/contact.php` | Endpoint que genera el Ticket ID y envía los emails |
+
+### Función del template:
+```php
+// Genera el HTML del email premium. Llamar desde contact.php.
+require_once __DIR__ . '/email-soporte.php';
+$html = fp_email_soporte($nombre, $correo, $mensaje, $ticketId);
+```
+
+### Generación del Ticket ID:
+```php
+$ticketId = 'FP-' . strtoupper(substr(uniqid('', true), -8));
+// Ejemplo: FP-A3F7C2B1
+```
+
+### Diseño del email (Stitch — Kinetic Void):
+- Background: `#080a0f` (obsidiana profunda)
+- Acento: `#ff3b3b` (rojo cinético)
+- Tipografía: Space Grotesk (headlines) + Inter (body)
+- Card glassmorphic con detalles del ticket
+- Badge rojo con Ticket ID único
+- Botón CTA gradiente → `https://fit-paisa.vercel.app`
+
+---
+
+## 5. Gestión de Usuarios Privilegiados (Admin / Coach)
 
 El script `api/seed-admin.php` crea o actualiza usuarios con rol especial.
 
@@ -117,87 +161,89 @@ https://[HOST]/api/seed-admin.php
   &password=TuPass123!
   &name=Nombre+Completo
 ```
-- Si el usuario ya existe: **actualiza** rol y contraseña.
-- Si no existe: **crea** el usuario nuevo.
 
-### ⚠️ Prerequisito:
-La tabla `users` DEBE tener la columna `is_active`. Si se recreó desde el esquema simplificado, ejecutar el SQL de parche de la sección 2 antes de llamar a este script.
+### ⚠️ Prerequisito CRÍTICO:
+La tabla `users` DEBE tener `is_active`. La tabla `profiles` DEBE tener las 10 columnas del parche.
+Ejecutar SIEMPRE `setup-db.php` antes de llamar a `seed-admin.php`.
 
 ---
 
-## 5. Catálogo Híbrido (Open Food Facts)
-
-Desde v7.0.0 el sistema de alimentos opera en modo híbrido:
+## 6. Catálogo Híbrido (Open Food Facts)
 
 1. **Local**: Busca primero en `food_catalog` donde `is_verified = TRUE`.
 2. **OFF Fallback**: Si hay < 5 resultados, consulta Open Food Facts API (timeout 2.5s).
-3. **Persistencia Automática**: Al seleccionar un alimento externo, se guarda en `food_catalog` con `is_verified = FALSE`.
+3. **Persistencia Automática**: Al seleccionar un alimento externo, se guarda con `is_verified = FALSE`.
 
 ---
 
-## 6. Diagnóstico de Errores Comunes
+## 7. Diagnóstico de Errores Comunes
 
-### Error de "0 bytes" / Respuesta Vacía (Fatal PHP Error)
-- **Causa**: Error de sintaxis en algún controlador.
+### "SQLSTATE[42703]: Undefined column updated_at of relation profiles"
+- **Causa**: La tabla `profiles` fue recreada con esquema simplificado sin `updated_at` (ni otras 6 columnas).
+- **Causa raíz**: `CREATE TABLE IF NOT EXISTS` no altera tablas existentes. El setup antiguo solo parchaba 3 columnas.
+- **Fix**: Ejecutar el parche SQL completo de la Sección 2 en Neon Console.
+
+### Error de respuesta vacía / "0 bytes"
+- **Causa**: Error de sintaxis PHP en algún controlador.
 - **Acción**: `php -l api/auth.php` para detectar el error exacto.
 
-### "Error de conexión. Inténtalo de nuevo." (formulario de contacto)
+### "Error de conexión." (formulario de contacto o soporte)
 - **Causa más probable**: `fp_mail()` tiene `$code` como parámetro obligatorio.
-- **Fix**: Asegúrate de que `_mailer.php` tenga `string $code = ''` (con valor por defecto).
+- **Fix**: `string $code = ''` en `_mailer.php`.
 
 ### Timer del modal descolocado
 - **Causa**: Falta `overflow: hidden` en `.success-modal`.
-- **Fix**: Añadir `overflow: hidden` y `padding-bottom: 44px` al `.success-modal` en `index.html`.
+- **Fix**: `overflow: hidden` + `padding-bottom: 44px` en `.success-modal` (index.html).
 
-### Correos que no llegan / van a SPAM
-- **Causa**: Credenciales de Gmail incorrectas.
-- **Diagnóstico**: `GET /api/test-mail.php?to=correo@gmail.com`
-
----
-
-## 7. Procedimiento de Reparación Estándar
-
-1. **Verificar el Kernel**: `api/_db.php` no debe estar modificado accidentalmente.
-2. **Eliminar Duplicidades**: Si un archivo tiene su propio `fp_db()`, eliminarlo y usar `require_once '_db.php'`.
-3. **Auditoría de DSN**: `"pgsql:host={$host};port={$port};dbname={$db};sslmode=require"`.
-4. **Diagnóstico**: Acceder a `/api/diag_db.php` para auditoría en tiempo real.
+### Correos que no llegan
+- **Diagnóstico**: `GET /api/test-mail.php?to=EMAIL`
 
 ---
 
-## 8. URLs de Referencia
+## 8. Procedimiento de Reparación Estándar
+
+1. Verificar kernel `api/_db.php` sin modificaciones accidentales.
+2. Eliminar duplicidades de `fp_db()` — usar solo `require_once '_db.php'`.
+3. Auditar DSN: `"pgsql:host={$host};port={$port};dbname={$db};sslmode=require"`.
+4. Ejecutar `setup-db.php` para parchar columnas faltantes.
+5. Diagnóstico: `/api/diag_db.php`.
+
+---
+
+## 9. URLs de Referencia
 
 | Acción                    | URL |
 |---------------------------|-----|
 | Setup DB (Producción)     | `https://fit-paisa.vercel.app/api/setup-db.php?token=fitpaisa_setup_2026` |
 | Setup DB (Testing)        | `https://fit-paisa-git-testing-fit-paisa.vercel.app/api/setup-db.php?token=fitpaisa_setup_2026` |
-| Crear Admin (Testing)     | `https://fit-paisa-git-testing-fit-paisa.vercel.app/api/seed-admin.php?token=fitpaisa_setup_2026&role=ADMIN&email=...&password=...` |
+| Crear Admin (Testing)     | `https://fit-paisa-git-testing-fit-paisa.vercel.app/api/seed-admin.php?token=fitpaisa_setup_2026&role=ADMIN&email=...` |
 | Test de Correo            | `https://fit-paisa.vercel.app/api/test-mail.php?to=EMAIL` |
 | Diagnóstico DB            | `https://fit-paisa.vercel.app/api/diag_db.php` |
 
 ---
 
-## 9. Flujo de Sincronización de Ramas
+## 10. Flujo de Sincronización de Ramas
 
 ```powershell
-# Verificar sintaxis PHP
+# Verificar sintaxis
 php -l api/auth.php
 
-# Sincronizar master → testing (propagar fixes de producción)
+# Testing → Master (promover a producción)
+git checkout master; git merge testing; git push origin master
+
+# Master → Testing (propagar fixes de producción)
 git checkout testing; git merge master; git push origin testing
 
-# Sincronizar testing → master (promover a producción)
-git checkout master; git merge testing; git push origin master
 git checkout master  # volver a trabajar en master
 ```
 
 ---
 
-## 10. Recreación de la BD de Testing desde Cero
+## 11. Recreación de la BD de Testing desde Cero
 
-Si la base de datos `fitpaisa_testing` se pierde o corrompe:
+1. **En Neon Console**: Crear nueva BD `fitpaisa_testing`.
+2. **Ejecutar ENUMs** desde la consola SQL (ver `api/setup-db.php`).
+3. **Ejecutar `setup-db.php`** desde la URL de testing — parcheará todas las columnas.
+4. **Crear usuarios privilegiados** via `seed-admin.php`.
 
-1. **En Neon Console**: Crear nueva base de datos `fitpaisa_testing`.
-2. **Ejecutar ENUMs y tablas base** desde la consola SQL de Neon (ver el SQL completo en `api/setup-db.php`).
-3. **Parche de columnas faltantes** en `users` (sección 2 de esta skill).
-4. **Ejecutar setup-db.php** desde la URL de testing para poblar los datos base.
-5. **Crear usuarios privilegiados** via `seed-admin.php` con los mismos datos que producción.
+> ⚠️ **NUNCA** usar SQL manual simplificado para crear las tablas. Siempre ejecutar `setup-db.php` que es idempotente y garantiza el esquema completo.

@@ -209,3 +209,36 @@ git checkout master  # rama final de trabajo
 | `.agent/skills/fitpaisa-db-doctor/SKILL.md` | v7.1.0 documentado |
 
 ***
+
+# Informe Técnico: Formulario de Soporte Premium + Registro de Clientes (v7.2.0)
+**Fecha:** 2026-04-21
+**Estado:** DESPLEGADO en `testing` -> Mergeado a `master`.
+
+## 1. Feature: Formulario de Soporte del Panel Cliente Conectado
+*   **Problema**: El formulario en `fitpaisa_cliente-v2.html` usaba `formsubmit.co` (servicio externo sin control, sin ticket ID, sin branding).
+*   **Solucion**: Migrado a `fetch()` -> `api/contact.php` en JSON.
+*   **Estados visuales**: Loading (boton deshabilitado), Exito (con ticket ID rojo), Error (mensaje rojo).
+*   **Honeypot anti-bot**: Campo oculto `_website` que filtra bots sin mostrar captcha.
+
+## 2. Feature: Email Premium de Confirmacion de Soporte
+*   **Nuevo archivo**: `api/email-soporte.php` - Template PHP del email de confirmacion.
+*   **Disenado en**: Google Stitch (proyecto FitPaisa Brand Assets) con design system Kinetic Void.
+*   **Estetica**: Fondo obsidiana `#080a0f`, acento rojo `#ff3b3b`, tipografia Space Grotesk + Inter.
+*   **Componentes**: Header FITPAISA, seccion hero con checkmark animado, ticket card glassmorphic, badge de Ticket ID, boton CTA gradiente, footer legal.
+*   **Ticket ID**: Generado como `FP-XXXXXXXX` (8 caracteres hex en mayusculas) usando `uniqid()`.
+
+## 3. Fix: Registro de Clientes en Testing
+*   **Problema**: `SQLSTATE[42703]: Undefined column updated_at of relation profiles`. La tabla `profiles` fue creada con esquema simplificado, omitiendo 7 columnas criticas.
+*   **Causa raiz**: `CREATE TABLE IF NOT EXISTS` no modifica tablas existentes. El bloque `ALTER TABLE` solo parchaba 3 columnas (`target_weight`, `target_time_weeks`, `timezone`).
+*   **Fix inmediato**: Parche SQL ejecutado en Neon Console para `fitpaisa_testing`.
+*   **Fix permanente**: `setup-db.php` actualizado con parche idempotente completo de 10 columnas para `profiles`.
+
+## 4. Archivos Modificados o Creados
+| Archivo | Accion | Descripcion |
+|---------|--------|-------------|
+| `api/email-soporte.php` | NUEVO | Template HTML del email premium de soporte |
+| `api/contact.php` | MODIFICADO v2.0.0 | Genera ticket ID, usa email-soporte.php |
+| `fitpaisa_cliente-v2.html` | MODIFICADO | Form soporte -> fetch() + estados premium |
+| `api/setup-db.php` | MODIFICADO | Parche idempotente completo de profiles (10 cols) |
+
+***
