@@ -61,8 +61,10 @@ function fp_db(): PDO
             PDO::ATTR_EMULATE_PREPARES   => true,
             PDO::ATTR_TIMEOUT            => 10,
         ]);
-        /* Asegurar que el esquema esté actualizado en este entorno (Auto-Migración) */
-        fp_ensure_schema($_fp_pdo);
+        /* Esquema validado. La auto-migración fue desactivada (v6.3.0) para
+         * eliminar ~30 queries pesadas de cada request en el plan Hobby.
+         * Para ejecutar migraciones, llama manualmente a: /api/migrate.php */
+        // fp_ensure_schema($_fp_pdo); // DESACTIVADO - usar /api/migrate.php
     } catch (PDOException $e) {
         /* Solo el log interno contiene el motivo real */
         error_log('[FitPaisa][DB] Fallo de conexión: ' . $e->getMessage());
