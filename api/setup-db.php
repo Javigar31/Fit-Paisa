@@ -194,12 +194,24 @@ run_step($db, 'TABLE: profiles', "
     );
 ");
 
-// Safely alter existing profiles table
-try {
-    $db->exec("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS target_weight DECIMAL(5,2)");
-    $db->exec("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS target_time_weeks SMALLINT");
-    $db->exec("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS timezone VARCHAR(50)");
-} catch (PDOException $e) { /* ignore */ }
+// Safely alter existing profiles table — full idempotent patch
+// Handles cases where the table was created with a simplified schema.
+$profilePatches = [
+    "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS weight         DECIMAL(5,2)   NOT NULL DEFAULT 0.01",
+    "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS height         DECIMAL(5,2)   NOT NULL DEFAULT 0.01",
+    "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS age            SMALLINT       NOT NULL DEFAULT 25",
+    "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS gender         gender_type    NOT NULL DEFAULT 'OTHER'",
+    "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS objective      objective_type NOT NULL DEFAULT 'MAINTAIN'",
+    "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS activity_level activity_level NOT NULL DEFAULT 'MODERATE'",
+    "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS target_weight  DECIMAL(5,2)",
+    "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS target_time_weeks SMALLINT",
+    "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS timezone       VARCHAR(50)",
+    "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS updated_at     TIMESTAMPTZ    NOT NULL DEFAULT NOW()",
+];
+foreach ($profilePatches as $patch) {
+    try { $db->exec($patch); $results[] = "✓ PATCH: profiles → " . substr($patch, 43, 30); }
+    catch (PDOException $e) { /* column already exists — ignore */ }
+}
 
 /* ══════════════════════════════════════════════════════════════════════
    TABLA: rate_limits — Control de peticiones (Rate Limiting)
