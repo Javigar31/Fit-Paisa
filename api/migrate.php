@@ -34,6 +34,14 @@ $db = fp_db();
 $results = [];
 $errors  = [];
 
+// Paso 0: Crear tablas base (necesario en BD nueva)
+try {
+    fp_ensure_schema();
+    $results[] = ['status' => 'OK', 'sql' => 'fp_ensure_schema(): tablas base creadas...'];
+} catch (Throwable $e) {
+    $errors[] = ['status' => 'ERROR', 'sql' => 'fp_ensure_schema()', 'error' => $e->getMessage()];
+}
+
 $migrations = [
     // Profiles
     "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS target_weight DECIMAL(5,2)",
