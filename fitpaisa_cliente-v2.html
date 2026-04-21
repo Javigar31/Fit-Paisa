@@ -1,4 +1,4 @@
-<!-- FitPaisa Version: 1.2.1 - Forced Deploy Reset -->
+﻿<!-- FitPaisa Version: 1.2.1 - Forced Deploy Reset -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -806,14 +806,28 @@ body.ready .sidebar, body.ready .main{opacity:1}
         <div class="slide-panel">
           <div class="card">
             <div class="card-title">Formulario de soporte</div>
-            <form class="contact-form" action="https://formsubmit.co/garciajavierandres@hotmail.com" method="POST">
-              <input type="hidden" name="_subject" value="Soporte Cliente FitPaisa">
-              <input type="hidden" name="_captcha" value="false">
-              <input type="text" name="name" placeholder="Tu nombre" required>
-              <input type="email" name="email" placeholder="Tu correo electrónico" required>
-              <textarea name="message" placeholder="¿En qué podemos ayudarte?" required></textarea>
-              <button type="submit" class="contact-submit" style="width:100%">Enviar mensaje</button>
+            <form id="support-form" class="contact-form" onsubmit="handleSupportSubmit(event)">
+              <input type="text"  id="sup-name"    placeholder="Tu nombre" required autocomplete="name">
+              <input type="email" id="sup-email"   placeholder="Tu correo electrónico" required autocomplete="email">
+              <textarea           id="sup-message" placeholder="¿En qué podemos ayudarte?" required rows="4"></textarea>
+              <input type="text" id="sup-website" name="_website" style="display:none" tabindex="-1" autocomplete="off">
+              <button type="submit" id="support-btn" class="contact-submit" style="width:100%">
+                <span id="support-btn-text">Enviar mensaje</span>
+              </button>
             </form>
+           <!-- Estado: Éxito -->
+            <div id="support-success" style="display:none;text-align:center;padding:24px 0">
+              <div style="width:52px;height:52px;background:rgba(255,59,59,0.12);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;border:1px solid rgba(255,59,59,0.3)">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ff3b3b" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:8px">¡Mensaje enviado! ✓</div>
+              <div style="font-size:13px;color:#9ca3af;margin-bottom:16px">Recibirás una confirmación en tu correo en breve.</div>
+              <div id="support-ticket-badge" style="display:inline-block;background:rgba(255,59,59,0.1);border:1px solid rgba(255,59,59,0.25);border-radius:8px;padding:6px 16px;font-size:12px;font-weight:600;color:#ff6b6b;letter-spacing:1px"></div>
+              <br><br>
+              <button onclick="resetSupportForm()" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#9ca3af;border-radius:8px;padding:8px 20px;cursor:pointer;font-size:13px">Enviar otro mensaje</button>
+            </div>
+            <!-- Estado: Error -->
+            <div id="support-error" style="display:none;margin-top:12px;padding:12px;background:rgba(255,59,59,0.08);border:1px solid rgba(255,59,59,0.2);border-radius:8px;font-size:13px;color:#ff6b6b;text-align:center"></div>
           </div>
         </div>
       </div>
@@ -2163,5 +2177,43 @@ function toggleEditObjective() {
   </div>
 </div>
 
+
 </body>
+<script>
+/* == Soporte: Formulario -> api/contact.php == */
+async function handleSupportSubmit(e) {
+  e.preventDefault();
+  const btn     = document.getElementById('support-btn');
+  const btnText = document.getElementById('support-btn-text');
+  const errDiv  = document.getElementById('support-error');
+  errDiv.style.display = 'none';
+  const payload = {
+    name:     document.getElementById('sup-name').value.trim(),
+    email:    document.getElementById('sup-email').value.trim(),
+    message:  document.getElementById('sup-message').value.trim(),
+    subject:  'Soporte Cliente FitPaisa',
+    _website: document.getElementById('sup-website').value,
+  };
+  btn.disabled = true; btnText.textContent = 'Enviando...'; btn.style.opacity = '0.7';
+  try {
+    const res  = await fetch('/api/contact.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al enviar el mensaje.');
+    document.getElementById('support-form').style.display    = 'none';
+    document.getElementById('support-success').style.display = 'block';
+    if (data.ticketId) document.getElementById('support-ticket-badge').textContent = 'Ticket: ' + data.ticketId;
+  } catch (err) {
+    errDiv.textContent = err.message || 'Error de conexion. Intentalo de nuevo.';
+    errDiv.style.display = 'block';
+  } finally {
+    btn.disabled = false; btnText.textContent = 'Enviar mensaje'; btn.style.opacity = '1';
+  }
+}
+function resetSupportForm() {
+  document.getElementById('support-form').reset();
+  document.getElementById('support-form').style.display    = 'block';
+  document.getElementById('support-success').style.display = 'none';
+}
+</script>
 </html>
+
