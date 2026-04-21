@@ -29,7 +29,7 @@ use PHPMailer\PHPMailer\SMTP;
  * @param string $code    Código (para la versión en texto plano).
  * @return bool           True si se envió correctamente (202 Accepted), False si falló.
  */
-function fp_mail(string $to, string $subject, string $html, string $code): bool
+function fp_mail(string $to, string $subject, string $html, string $code = ''): bool
 {
     // Credenciales (Prioridad: Variables de Entorno)
     $senderUser = getenv('GMAIL_USER')     ?: 'fit.paisa.app@gmail.com';
