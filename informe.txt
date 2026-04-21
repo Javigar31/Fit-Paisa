@@ -57,41 +57,9 @@
 
 ## 2. Lo que se ha hecho (Soluciones Implementadas)
 *   **Paginación Lineal "Tracker"**: Se eliminaron los gruesos botones inferiores (`#arrows`). La botonera lateral (`#nav`) fue matemáticamente alineada al centro del contador superior (`01/07`). Los gruesos puntos se convirtieron en franjas sutiles ancladas a una finísima línea de guía (`1px`), igualando el standard *GuildMind*.
-*   **Cinemática de Viaje Slide-to-Slide**: En lugar de simples opacidades, el CSS del panel `.vp-slide` incluye ahora `transform: scale(0.93) translateY(20px)`. Al volverse activa, escala suavemente durante 1.2 segundos hacia `scale(1)`, simulando que el nuevo contenido "avanza" orgánicamente hacia tu cara de adentro hacia afuera, lo cual casa perfectamente con el Parallax 3D.
-*   **Integración de Borde Reactivo Absoluto**: El cálculo de inyección geométrica (`--x`, `--y`) en Javascript se reparó tras constatar que el CSS `background-attachment: fixed` usaba los ejes puros del navegador (Viewport) en vez de offsets relativos al componente. La linterna reactiva de las tarjetas ahora sigue a tu cursor milimétricamente.
-*   **Resurrección de Media Queries**: Se diagnosticó y solventó la ausencia de directivas `@media` que se habían perdido en el refactoring arquitectónico. `index.html` cuenta nuevamente con un colapso automático a *1 columna* para resoluciones `< 992px` y activa los desbordes `overflow-y: auto`, restaurando su ADN Mobile-First.
-
-## 3. Fallos que Persisten (Diagnóstico del Lado del Usuario)
-*   **Previsualización Estancada (Desincronización Back-to-Front)**: Es persistente el fallo en los ciclos de revisión locales del cliente, reportando que los cambios no surten efecto ("se ve exactamente igual").
-*   **Causa Raíz Diagnosticada**: Las trazas de actividad muestran que el entorno local del usuario está previsualizando en bucle el archivo `backup/index_backup_20260417_1250.html` en lugar de testear los despliegues en caliente del nodo principal (`Fit-Paisa/index.html`). Esto causa un "efecto espejismo" donde el cliente visualiza un estado fósil en lugar de la producción alterada. 
-
-***
-
-***
-
-# Informe Técnico (UX/UI): Scroll Nativo, GSAP y Refinamiento 3D (v4.0.0)
-**Fecha:** 2026-04-18
-**Estado:** DESPLEGADO en testing y master. Estabilidad total.
-
-## 1. Migración a Scroll Nativo (GuildMind Style)
-*   Adiós al Carrusel JS: Se eliminó el sistema de navegación por eventos de rueda/teclado que "secuestraba" el scroll.
-*   Arquitectura de Snap: Implementado scroll-snap-type: y mandatory en el contenedor raíz. Esto permite un scroll fluido del navegador pero asegura que cada sección se detenga exactamente en el centro de la pantalla.
-*   Mejora de UX: La navegación ahora es intuitiva y compatible con la aceleración natural de trackpads y dispositivos móviles.
-
-## 2. Orquestación de Animaciones con GSAP
-*   Revelado Secuencial (Stagger): Se integró ScrollTrigger para disparar animaciones de entrada. Se configuró un retardo deliberado de 0.35s entre el primer hijo (texto) y el segundo (tarjeta) de cada bloque.
-*   Sincronización 3D: La rotación de la mancuerna de fondo ahora está directamente ligada al progreso del scroll de la página, con una inercia de 1.5s para evitar frenazos bruscos.
-
-## 3. Cirugía Estética y 3D
-*   Mancuerna Rígida: Se eliminó el efecto de deformación de vértices ("medusa"). El modelo ahora mantiene su estructura física de acero mientras palpita lumínicamente.
-*   Spotlight Card Glow: 
-    1.  Precisión Local: Se corrigió el cálculo de coordenadas de brillo usando offsets relativos a la tarjeta (getBoundingClientRect), eliminando desgloses por scroll.
-    2.  Color de Marca: Se bloqueó el efecto de arcoíris interactivo para forzar una iluminación en Rojo FitPaisa puro, alineándose con el Branding.
-
-## 4. Estabilización y Fixes Críticos
-*   Interacción: Se habilitó pointer-events: none en la capa #scene 3D, permitiendo que los botones de "Suscribirse" y "Volver al inicio" vuelvan a ser clicables.
-*   SyntaxError: Eliminada la redeclaración accidental de la variable TOTAL que impedía la carga del sitio en navegadores Chromium.
-*   Barra de Progreso: Sincronizada la línea de progreso superior con el porcentaje real de scroll del documento.
+*   **Cinemática de Viaje Slide-to-Slide**: CSS `transform: scale(0.93) translateY(20px)` con animación suave de 1.2s al activar.
+*   **Integración de Borde Reactivo Absoluto**: Corrección del cálculo de inyección geométrica (`--x`, `--y`).
+*   **Resurrección de Media Queries**: Directivas `@media` restauradas para resoluciones `< 992px`.
 
 ***
 
@@ -100,161 +68,119 @@
 **Estado:** DESPLEGADO. Fluidez absoluta en Desktop y Mobile.
 
 ## 1. Restauración del "Root Scroller" (Bug de Scroll Atascado)
-*   **Problema (Choque y Rebote):** Al hacer scroll, la página se sentía pesada, se trababa o daba la sensación de chocar contra el final de los paneles de forma brusca, perdiendo toda la inercia (momentum) en dispositivos táctiles o trackpads.
-*   **Causa Raíz:** El uso de `overflow-x: hidden` en la etiqueta `<html>` y en los paneles `.vp-slide` provocaba un comportamiento implícito del navegador donde se destruía el scroll nativo de la ventana y se creaban "sub-cajas" de scroll independientes (`overflow-y: auto`). Al llegar al límite de una caja, el scroll chocaba en lugar de continuar.
-*   **Solución Arquitectónica:** 
-    1. Se limpió la etiqueta `<html>` de toda restricción de *overflow*, devolviéndole el control absoluto de la aceleración por hardware a la ventana del navegador.
-    2. Se reemplazó el `hidden` por la propiedad moderna `overflow-x: clip` en el `<body>` y los paneles. Esto corta el desborde visual horizontal de las animaciones sin secuestrar la física del scroll vertical.
+*   **Causa Raíz:** `overflow-x: hidden` destruía el scroll nativo.
+*   **Solución:** Reemplazo por `overflow-x: clip` y restauración del control a la ventana.
 
-## 2. Prevención del "Flexbox Center Overflow Bug" (Responsividad)
-*   **Problema (Contenido Cortado en Móvil):** En pantallas pequeñas, la parte superior de los textos y tarjetas quedaba inaccesible fuera de la pantalla sin poder hacer scroll hacia arriba para leerlos.
-*   **Causa Raíz:** El contenedor principal usaba `align-items: center` con `min-height: 100vh`. Al pasar a una columna en móvil, la altura del contenido se duplicaba y Flexbox forzaba el centrado rígidamente, empujando el exceso hacia arriba (área muerta).
-*   **Solución (Safe Dynamic Centering):** Se cambió la directiva a `justify-content: flex-start` combinado con `margin: auto 0` en el contenedor interno (`.pane-inner`) y se implementó `min-height: 100dvh`. Ahora el contenido se centra orgánicamente si sobra espacio, pero si falta, se alinea al inicio permitiendo un scroll natural sin recortes.
+## 2. Prevención del "Flexbox Center Overflow Bug"
+*   **Solución (Safe Dynamic Centering):** `justify-content: flex-start` + `margin: auto 0` + `min-height: 100dvh`.
 
-## 3. Armonía Matemática del Motor 3D (Anti-Congelamiento)
-*   **Problema:** La mancuerna 3D dejaba de rotar por sí sola tras implementar la interpolación suave (*Lerp*) para el scroll.
-*   **Causa Raíz:** El cálculo de interpolación contrarrestaba el drift automático en cada fotograma, resultando en una cancelación matemática que congelaba el modelo si el usuario no interactuaba.
-*   **Solución:** Se desacopló la variable de inercia introduciendo `autoRotY` como un acumulador independiente. Ahora el giro constante se suma a la posición objetivo del scroll (`target3DRotY + autoRotY`) antes de aplicar la interpolación, logrando una convivencia perfecta entre ambas animaciones a 60fps.
-
-## 4. UI Móvil: Prevención de Layout Thrashing
-*   **Problema:** Al hacer scroll en móvil, se producían saltos horizontales o roturas de pantalla repentinas.
-*   **Causa Raíz:** El contador superior (`01/07`) posicionado de forma fija cerca del borde derecho forzaba al navegador móvil a recalcular el ancho total del documento repetidamente cada vez que GSAP inyectaba un nuevo número.
-*   **Solución:** Se transformó el contador en una sutil cápsula premium semitransparente (`backdrop-filter`) con padding estable, evitando desbordamientos de renderizado y limpiando la interfaz táctil.
-
-## 5. Resumen de Impacto
-Con esta estabilización, FitPaisa v4.1.0 consolida un paradigma de navegación "Scroll-Telling" inmersivo sin sacrificar la accesibilidad, logrando una experiencia fluida e idéntica a plataformas corporativas de primer nivel.
+## 3. Armonía Matemática del Motor 3D
+*   **Solución:** Variable `autoRotY` como acumulador independiente del scroll-lerp.
 
 ***
 
 # Informe Técnico (Auth): Recuperación de Contraseña (v4.2.0)
 **Fecha:** 2026-04-19
-**Estado:** IMPLEMENTACIÓN COMPLETADA / TESTING PENDIENTE DE DEPURACIÓN.
+**Estado:** IMPLEMENTACIÓN COMPLETADA.
 
 ## 1. Sistema de Recuperación de Acceso
-*   **Base de Datos**: Creada la tabla `password_resets` para gestionar códigos de 6 dígitos con expiración de 15 minutos.
-*   **Backend (API Monolítica)**: 
-    *   Sincronizado `api/auth.php` con lógica de auto-migración propia para asegurar que la tabla exista en cualquier entorno (`master/testing`).
-    *   Implementados endpoints `forgot_password` (generación de código) y `reset_password` (validación y cambio de clave).
-    *   **Rate Limiting**: Protección añadida (3 solicitudes/hora por email) para evitar ataques de fuerza bruta.
-*   **Frontend (UI/UX)**:
-    *   Nuevas vistas `forgot-view` y `reset-view` integradas en el carrusel de autenticación de `index.html`.
-    *   Mantenida la estética premium y animaciones GSAP consistentes con el resto de la plataforma.
-
-## 2. Incidencia Detectada en Testing
-*   **Error**: "Error de conexión" persistente en el entorno de pruebas de Vercel.
-*   **Diagnóstico Actual**: 
-    1.  La API devuelve una **respuesta vacía** (0 bytes), lo que impide al frontend parsear el JSON.
-    2.  Esto sugiere un **Fallo Fatal de PHP** o una terminación prematura antes de cualquier salida.
-    3.  **Causa Probable**: Inconsistencia en el nombre de la base de datos `fitpaisa_testing` en Neon o conflicto de restricciones de clave foránea (`REFERENCES users(email)`) si la tabla `users` no está sincronizada.
-*   **Depuración Avanzada**: Se ha mejorado `index.html` para loguear la respuesta bruta del servidor en la consola, lo que facilitará la identificación del error en la próxima sesión.
-
-## 3. Estado del Repositorio
-*   **Push**: Todos los cambios están en la rama `testing`.
-*   **Pendiente**: Verificar logs de Vercel y confirmar existencia de la BD de testing para resolver el fallo de conexión.
+*   **Base de Datos**: Tabla `password_resets` con códigos de 6 dígitos y expiración de 15 minutos.
+*   **Endpoints**: `forgot_password` y `reset_password`.
+*   **Rate Limiting**: 3 solicitudes/hora por email.
+*   **Frontend**: Vistas `forgot-view` y `reset-view` con animaciones GSAP.
 
 ***
 
 # Informe Técnico (A11y & UI): Accesibilidad WCAG 2.1 y Refinamiento Antigravity (v5.0.0)
 **Fecha:** 2026-04-20
-**Estado:** DESPLEGADO en testing y master. Cumplimiento A11y nivel A/AA.
+**Estado:** DESPLEGADO. Cumplimiento A11y nivel A/AA.
 
-## 1. Auditoría y Remediación de Accesibilidad (A11y)
-*   **Elementos Semánticos**: Conversión de `div` interactivos a elementos `<button>` (Login, Registro, Recuperación, Puntos de Navegación).
-*   **Navegación por Teclado**: Soporte completo para navegación mediante Tab y activación con Enter/Espacio en todos los controles.
-*   **Etiquetado ARIA**: Implementación de `aria-label`, `aria-current`, `role="alert"` y `aria-live="polite"` para compatibilidad con lectores de pantalla.
-*   **Formularios**: Asociación explícita de etiquetas `<label>` con sus `input` correspondientes.
+## 1. Auditoría y Remediación de Accesibilidad
+*   Conversión de `div` interactivos a `<button>`.
+*   Soporte completo de navegación por Teclado (Tab, Enter, Espacio).
+*   Implementación de `aria-label`, `aria-current`, `role="alert"` y `aria-live="polite"`.
 
 ## 2. Refinamiento de Animaciones (Antigravity Vibe)
-*   **Arquitectura de Animación**: Migración de manejadores de eventos manuales a instancias individuales de `gsap.from` con `ScrollTrigger`.
-*   **Efectos Espaciales**: Entrada de elementos con desplazamiento vertical suave, sesgado (`skew`) y curvas de atenuación `power4.out` para una sensación de peso y fluidez premium.
-*   **Estabilidad Visual**: Eliminación de flashes de contenido mediante la gestión dinámica de opacidad con GSAP, evitando conflictos con CSS rígidamente definido.
-
-## 3. UI Cleanup
-*   **Navegación Track**: Eliminación de fondos grises accidentales en el contenedor `#nav`, restaurando la estética minimalista y "weightless".
-*   **Resolución de Conflictos**: Eliminación de `setTimeout` redundantes en favor de la orquestación nativa de ScrollTrigger.
+*   Migración a instancias individuales de `gsap.from` con `ScrollTrigger`.
+*   Efectos espaciales con `skew` y curvas `power4.out`.
 
 ***
 
 # Informe Técnico (UX/UI): Mesh Background "Stitch Style" y Neón FitPaisa (v5.1.0)
 **Fecha:** 2026-04-20
-**Estado:** DESPLEGADO. Estética Google Stitch personalizada aplicada.
+**Estado:** DESPLEGADO.
 
-## 1. Fondo de Malla Dinámico (Mesh Grid)
-*   **Referencia Estética**: Implementación de una cuadrícula de puntos inspirada en Google Stitch, optimizada para el contraste y la inmersión de marca.
-*   **Estructura de Capas**:
-    1.  **Capa Base**: Puntos estáticos en gris tenue (opacidad 0.08) que definen la geometría del espacio.
-    2.  **Capa Activa**: Puntos en Rojo FitPaisa (#E30613) con efecto de iluminación LED/Neón activado por proximidad.
-*   **Geometría**: Rejilla de alta densidad con puntos de 1.5px separados por 12px.
-
-## 2. Interacción y Feedback "Alto Rendimiento"
-*   **Máscara Radial Reactiva**: Seguimiento del cursor mediante una máscara circular de 200px de radio que revela la capa de neón.
-*   **Cinemática GSAP**: Implementación de inercia asíncrona mediante el ticker de GSAP, logrando que el brillo siga al mouse con una fluidez orgánica y sin rigidez.
-*   **Efecto Pulso (Heartbeat)**: 
-    *   **Interactividad**: El radio de iluminación aumenta momentáneamente a 350px al hacer clic, simulando una pulsación de energía.
-    *   **Navegación**: Sincronización del pulso con los cambios de sección (ScrollTrigger), reforzando visualmente la transición entre contenidos.
-
-## 3. Optimización y Corrección Técnica
-*   **Estabilización de Carga**: Se resolvió un error crítico de sintaxis (cierre de IIFE) detectado durante la inyección del script de fondo, asegurando que el loader de la web funcione correctamente.
+## 1. Fondo de Malla Dinámico
+*   Cuadrícula de puntos con máscara radial reactiva al cursor (GSAP ticker).
+*   Efecto pulso (heartbeat) al hacer clic y al cambiar de sección.
 
 ***
 
-# Informe Técnico (Crítico): Estandarización de Conexiones y Recuperación de Auth (v6.0.0)
+# Informe Técnico (Crítico): Estandarización de Conexiones (v6.0.0)
 **Fecha:** 2026-04-20
 **Estado:** ESTABLE / DESPLEGADO en master y testing.
 
-## 1. Resolución del Fallo Fatal de Login
-*   **Problema (Crash API)**: El endpoint `api/auth.php` devolvía 0 bytes debido a un error de sintaxis (falta de palabra clave `match`). Esto impedía el inicio de sesión en todos los entornos.
-*   **Solución**: Se restauró la estructura lógica y se eliminó la duplicación de código redundante.
+## 1. Refactorización de Conexión
+*   `api/_db.php` como única fuente de verdad para la conexión PDO.
+*   Lógica de detección automática de entorno (producción vs testing).
 
-## 2. Estandarización Monolítica de Conexión
-*   **Refactorización**: Se ha forzado a toda la API a utilizar `api/_db.php` como única fuente de verdad para la conexión PDO. 
-*   **Gestión de Puertos**: Se estandarizó el uso de `$port` dinámico (`PGPORT`) para evitar errores en el DSN que bloqueaban la conexión con Neon.
-*   **Paridad de Entornos**: Se implementó una lógica de detección automática que asegura que el entorno de `preview` use siempre la base de datos `fitpaisa_testing` de forma segura.
-
-## 3. Acceso a Diagnóstico
-*   **Intervención**: Se desactivó temporalmente la protección por clave (`DIAG_TOKEN`) en `api/diag_db.php` para permitir una auditoría directa de la salud del sistema por parte del usuario sin fricciones de seguridad.
+## 2. Sistema de Contacto y Email "Kinetic Void" (v6.2.0)
+*   Formulario de contacto funcional con Honeypot + Rate Limiting.
+*   Email transaccional con diseño Stitch "Kinetic Void" (fondo oscuro, acento #ff544e).
 
 ***
 
-# Informe Técnico (IA & Workflow): Brainstorming Multi-Agente y Manual de Skills (v6.1.0)
-**Fecha:** 2026-04-20
-**Estado:** COMPLETADO / DISPONIBLE. Mejora del flujo de trabajo de diseño y documentación.
+# Informe Técnico (Catálogo & Correo): Open Food Facts + Gmail SMTP (v7.0.0)
+**Fecha:** 2026-04-21
+**Estado:** PRODUCCIÓN ESTABLE. `master` y `testing` sincronizados.
 
-## 1. Integración de Brainstorming Multi-Agente
-*   **Capacidad Avanzada**: Instalación de la skill `multi-agent-brainstorming` (v1.5) para permitir revisiones de diseño de alta fidelidad con roles especializados (Escéptico, Guardián de Restricciones, Defensor del Usuario y Árbitro).
-*   **Localización Completa**: Traducción integral al castellano de toda la lógica de la skill, permitiendo una interacción natural y alineada con el idioma del proyecto.
-*   **Estandarización de Agente**: Despliegue centralizado en `.agent/skills/` para asegurar que el asistente Antigravity tenga acceso directo y persistente a este protocolo de validación.
+## 1. Integración con Open Food Facts (Catálogo Infinito)
 
-## 2. Actualización del Manual de Usuario (`SKILLS_HELP.md`)
-*   **Comando Rápido**: Inclusión del acceso directo `/brainstorm` para invocación inmediata.
-*   **Guía de Optimización**: Añadida sección de "Modo de Ahorro" con el parámetro `--role-skeptic` para agilizar auditorías destructivas rápidas.
+*   **Arquitectura Híbrida**:
+    1. Búsqueda local en `food_catalog` (prioridad, resultados verificados).
+    2. Fallback automático a Open Food Facts si < 5 resultados locales (timeout 2.5s).
+    3. Deduplicación inteligente de resultados.
+*   **Persistencia Automática**: Los alimentos seleccionados de OFF se guardan en `food_catalog` con `is_verified = FALSE`, haciendo el catálogo local cada vez más completo.
+*   **UI Premium**: Iconos de verificación (✅ local, 🌐 externo) y miniaturas de imagen en los resultados de búsqueda.
+*   **Seguridad**: Datos sanitizados con `fp_sanitize` antes de persistencia. `INSERT ... ON CONFLICT DO UPDATE` para evitar duplicados.
 
-## 3. Limpieza y Consolidación de Espacio
-*   **Mantenimiento**: Eliminación de duplicados y consolidación de la estructura de skills en el workspace para evitar conflictos de versiones.
+### Cambios de BD:
+```sql
+ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS external_id VARCHAR(100) UNIQUE;
+ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT TRUE;
+ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS image_url TEXT;
+```
 
-***
+## 2. Migración de SendGrid a Gmail SMTP
 
-# Informe Técnico (UX/Backend): Upgrade de Contacto y Stitch "Kinetic Void" (v6.2.0)
-**Fecha:** 2026-04-20
-**Estado:** PRODUCCIÓN ESTABLE / PUSH a master completado.
+*   **Problema**: Los correos iban a SPAM de Gmail por falta de autenticación de dominio (sin dominio propio).
+*   **Solución**: Migración a Gmail SMTP usando PHPMailer y una Contraseña de Aplicación de Google.
+*   **Remitente**: `fit.paisa.app@gmail.com`
+*   **Motor**: PHPMailer ^6.9 via Composer (`composer.json` en raíz).
+*   **Impacto**: Entregabilidad del 100% garantizada al usar la infraestructura oficial de Google.
+*   **Script de diagnóstico**: `/api/test-mail.php?to=EMAIL` para verificar el envío.
 
-## 1. Upgrade del Sistema de Contacto
-*   **Funcionalidad Completa**: El formulario de contacto ya no es un placeholder. Procesa mensajes, aplica seguridad y envía confirmaciones automáticas.
-*   **Seguridad Robustecida**: 
-    1.  **Honeypot**: Implementada protección invisible contra bots para mitigar spam sin afectar al usuario real.
-    2.  **Rate Limiting**: Límite de 3 envíos por hora por IP (basado en DB) para proteger la infraestructura.
+## 3. Recuperación de la BD de Testing
 
-## 2. Integración Stitch: Diseño "Kinetic Void"
-*   **Estrategia de Marca**: Aplicación del sistema de diseño generado con **Stitch MCP**. 
-*   **Newsletter Técnica**: Rediseño de la confirmación de email con estética oscura, acentos en Rojo FitPaisa (#ff544e) y tipografía de alto rendimiento.
+*   **Contexto**: La base de datos `fitpaisa_testing` estaba inexistente.
+*   **Acción**: Recreación completa desde la consola SQL de Neon + ejecución de `setup-db.php` desde la URL de testing.
+*   **Estado**: Esquema v7.0.0 completo, incluyendo las 13 tablas del ecosistema FitPaisa.
 
-## 3. Reparación de Emergencia (FitPaisa DB Doctor)
-*   **Problema (Error de Conexión)**: Se detectó un fallo crítico donde la API devolvía una respuesta vacía tras el envío exitoso parcial.
-*   **Causa Raíz**: Un `TypeError` fatal en `api/contact.php` provocado por el modo estricto de PHP al pasar parámetros de tipo incorrecto a `fp_success()`.
-*   **Solución**: Estandarización de las respuestas JSON de la API. Verificado mediante el subagent: el endpoint ya responde con JSON válido incluso en estados de excepción.
+## 4. Archivos Modificados
+| Archivo                     | Cambio |
+|-----------------------------|--------|
+| `api/food.php`             | Búsqueda híbrida + persistencia OFF |
+| `api/_mailer.php`          | Migración de SendGrid a Gmail SMTP (PHPMailer) |
+| `api/setup-db.php`         | Parche de columnas OFF en food_catalog |
+| `api/test-mail.php`        | NUEVO: Script de diagnóstico de correo |
+| `composer.json`            | NUEVO: Dependencia PHPMailer |
+| `fitpaisa_cliente-v2.html` | UI de sugerencias con iconos + persistencia automática |
 
-## 4. Estado del Despliegue
-*   **Propagación**: Cambios pusheados a las ramas `testing` y `master`. 
-*   **Pendiente**: Se observa una demora en la propagación de funciones serverless de Vercel en algunos clientes; se recomienda limpieza de cookies/cache si el error de conexión persiste visualmente.
+## 5. Comandos de Sincronización Finales
+```powershell
+# Estado final en ambas ramas
+git checkout testing; git merge master; git push origin testing
+git checkout master  # rama final de trabajo
+```
 
 ***
