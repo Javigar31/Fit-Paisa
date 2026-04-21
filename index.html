@@ -137,10 +137,10 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
 /* ── Vertical Responsiveness: Optimization for short screens ── */ @media (max-height: 820px) { .vp-slide { padding: 40px 0; } .slide-title { font-size: clamp(38px, 5vw, 68px); } .slide-body { font-size: 13px; margin-bottom: 12px; padding: 10px 18px; } .ui-card { padding: 18px; gap: 0.5rem; } .macro-bar-wrap { margin-bottom: 8px; } .wo-item { padding: 6px 0; } .premium-card { padding: 14px; margin-bottom: 8px; } .price-big { font-size: 38px; } .bubble { padding: 6px 10px; font-size: 12px; margin-bottom: 4px; } .contact-form { gap: 8px; } .contact-form input, .contact-form textarea { padding: 8px 12px; font-size: 13px; } .contact-submit { padding: 10px 20px; } .contact-info { gap: 10px; margin-top: 4px; } .contact-info-icon { width: 32px; height: 32px; } }
 @media (max-height: 700px) { .vp-slide { padding: 25px 0; } .slide-label { margin-bottom: 8px; } .slide-title { font-size: 42px; } .ui-card { transform: scale(0.85) !important; } .pane-inner { gap: 15px; } }
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); z-index: 20000; display: none; align-items: center; justify-content: center; opacity: 0; }
-  .success-modal { background: #080a0f; border: 1px solid var(--accent); border-radius: 16px; padding: 40px; width: 90%; max-width: 400px; text-align: center; position: relative; box-shadow: 0 0 50px rgba(255,59,59,0.2); transform: scale(0.9); }
+  .success-modal { background: #080a0f; border: 1px solid var(--accent); border-radius: 16px; padding: 40px; padding-bottom: 44px; width: 90%; max-width: 400px; text-align: center; position: relative; box-shadow: 0 0 50px rgba(255,59,59,0.2); transform: scale(0.9); overflow: hidden; }
   .modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--muted); cursor: pointer; padding: 4px; transition: color 0.2s; }
   .modal-close:hover { color: var(--accent); }
-  .modal-progress { position: absolute; bottom: 0; left: 0; height: 3px; background: var(--accent); width: 100%; transform-origin: left; }
+  .modal-progress { position: absolute; bottom: 0; left: 0; height: 4px; background: var(--accent); width: 100%; transform-origin: left; border-radius: 0 0 16px 16px; }
   /* Fix overlapping */
   .form-view:not(.is-active) { display: none !important; }
   
