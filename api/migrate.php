@@ -36,7 +36,7 @@ $errors  = [];
 
 // Paso 0: Crear tablas base (necesario en BD nueva)
 try {
-    fp_ensure_schema();
+    fp_ensure_schema($db);
     $results[] = ['status' => 'OK', 'sql' => 'fp_ensure_schema(): tablas base creadas...'];
 } catch (Throwable $e) {
     $errors[] = ['status' => 'ERROR', 'sql' => 'fp_ensure_schema()', 'error' => $e->getMessage()];

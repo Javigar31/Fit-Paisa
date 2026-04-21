@@ -1344,17 +1344,37 @@ async function fetchFood(q) {
 
 function renderSuggestions(list) {
   const box = document.getElementById('food-suggestions');
-  box.innerHTML = list.map(f => `
-    <div class="suggestion-item" onclick='selectFood(${JSON.stringify(f).replace(/'/g, "&apos;")})'>
-      <div class="s-name">${f.name}</div>
-      <div class="sugg-info">100g: <strong>${Math.round(f.calories_100g)} kcal</strong> | <span class="macro-p">P</span>:${f.protein_100g} <span class="macro-c">C</span>:${f.carbs_100g} <span class="macro-g">G</span>:${f.fat_100g}</div>
-    </div>
-  `).join('');
+  box.innerHTML = list.map(f => {
+    const isExternal = f.source === 'external' || f.is_verified === false;
+    const sourceIcon = isExternal ? '🌐' : '✅';
+    const imgHtml = f.image_url ? `<img src="${f.image_url}" style="width:24px;height:24px;border-radius:4px;object-fit:cover;margin-right:10px">` : '';
+    
+    return `
+      <div class="suggestion-item" onclick='selectFood(${JSON.stringify(f).replace(/'/g, "&apos;")})' style="display:flex;align-items:center">
+        ${imgHtml}
+        <div style="flex:1">
+          <div class="s-name">${f.name} <span style="font-size:10px;opacity:0.6">${sourceIcon}</span></div>
+          <div class="sugg-info">100g: <strong>${Math.round(f.calories_100g)} kcal</strong> | <span class="macro-p">P</span>:${f.protein_100g} <span class="macro-c">C</span>:${f.carbs_100g} <span class="macro-g">G</span>:${f.fat_100g}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
   box.style.display = 'block';
 }
 
-function selectFood(f) {
+async function selectFood(f) {
   selectedFood = f;
+  
+  // Si el alimento es externo (Open Food Facts), lo guardamos localmente en segundo plano
+  if (f.source === 'external') {
+    const token = localStorage.getItem('fp_token');
+    fetch('/api/food.php?action=save_external', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify(f)
+    }).catch(e => console.error("Error saving external food:", e));
+  }
+
   const searchInput = document.getElementById('mSearch');
   searchInput.value = f.name;
   searchInput.readOnly = true;

@@ -229,6 +229,9 @@ run_step($db, 'TABLE: food_catalog', "
         weight_medium DECIMAL(5,2),
         weight_large  DECIMAL(5,2),
         is_liquid     BOOLEAN         NOT NULL DEFAULT FALSE,
+        external_id   VARCHAR(100)    UNIQUE,
+        is_verified   BOOLEAN         NOT NULL DEFAULT TRUE,
+        image_url     TEXT,
         created_at    TIMESTAMPTZ     NOT NULL DEFAULT NOW()
     );
 ");
@@ -241,7 +244,13 @@ try {
     $db->exec("ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS weight_medium DECIMAL(5,2)");
     $db->exec("ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS weight_large DECIMAL(5,2)");
     $db->exec("ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS is_liquid BOOLEAN DEFAULT FALSE");
+    $db->exec("ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS external_id VARCHAR(100)");
+    $db->exec("ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT TRUE");
+    $db->exec("ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS image_url TEXT");
     $db->exec("ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()");
+    
+    // Asegurar unicidad de external_id si no existe
+    $db->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_food_external_id ON food_catalog(external_id) WHERE external_id IS NOT NULL");
 } catch (PDOException $e) { /* ignore */ }
 
 // Seeder para food_catalog
