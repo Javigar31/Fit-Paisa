@@ -15,3 +15,15 @@ body:hover #cursor, body:hover #cur { opacity: 1; }
 .contact-info { display: flex; flex-direction: column; gap: 16px; margin-top: 8px; }
 .contact-info-item { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--muted); }
 .contact-info-icon { width: 40px; height: 40px; border-radius: 10px; background: rgba(255,59,59,.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+/* ── Accessibility: Focus Rings ── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* Ensure main landmark doesn't break layout */
+main#carousel {
+  display: block;
+}

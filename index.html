@@ -19,55 +19,53 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollToPlugin.min.js"></script>
   <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { background: var(--dark); /* IMPORTANTE: NINGÚN overflow aquí para no secuestrar el Root Scroller nativo */ }
-body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font-smoothing: antialiased; /* cursor: none; -- Removed for accessibility (WCAG 2.1) */ position: relative; overflow-x: hidden; /* Contenemos el desborde horizontal de las animaciones solo en el body */ }
+html { background: var(--dark); }
+body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font-smoothing: antialiased; position: relative; overflow-x: hidden; }
 /* Restore cursor on mobile/touch devices */ @media (pointer: coarse) { html, body { cursor: auto !important; } #cursor, #cursor-ring { display: none !important; } button, a, .slide-cta, .nav-dot, .arrow-btn, .role-card, .btn-hover-opacity, .btn-hover-scale { cursor: auto !important; } }
-/* ── Custom cursor ── */ /* ── 3D Scene ── */ #scene {position: fixed;inset: 0;z-index: 2;pointer-events: none;}
-#global-bg { position: fixed; inset: 0; z-index: 0; background: #000000; /* Negro Puro */ overflow: hidden; }
+#scene {position: fixed;inset: 0;z-index: 2;pointer-events: none;}
+#global-bg { position: fixed; inset: 0; z-index: 0; background: #000000; overflow: hidden; }
 .mesh-grid { position: absolute; inset: 0; pointer-events: none; will-change: transform; }
-/* Estructura de la Malla (The Grid) */ .mesh-grid--base { background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1.5px, transparent 0); background-size: 12px 12px; opacity: 1; }
-.mesh-grid--active { --mouse-x: 50%; --mouse-y: 50%; --mask-radius: 200px; background-image: radial-gradient(#E30613 1.5px, transparent 0); background-size: 12px 12px; /* Capa Activa: Neon Effect & Masking */ filter: drop-shadow(0 0 3px #E30613) saturate(1.5); -webkit-mask-image: radial-gradient(circle var(--mask-radius) at var(--mouse-x) var(--mouse-y), black 0%, transparent 100%); mask-image: radial-gradient(circle var(--mask-radius) at var(--mouse-x) var(--mouse-y), black 0%, transparent 100%); }
-/* ── Carousel: Scroll natural ── */ #carousel { position: relative; width: 100%; }
-/* ── Slide panels (Scroll Snap en Y) ── */ .vp-slide { position: relative; width: 100%; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 0; z-index: 1; overflow-x: clip; /* Corta a los lados sin crear caja de scroll interna */ overflow-y: visible; /* Asegura que el scroll vertical pase de largo al body */ }
-/* Each slide gets its Z position set by JS */ /* ── Noise overlay ── */ .slide::before { content: ''; position: absolute; inset: 0; z-index: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E"); pointer-events: none; opacity: .4; }
-/* BG background is now handled by the #global-bg element via JS */ /* ── Slide content ── */ .pane-inner { position: relative; z-index: 2; width: 100%; max-width: 1100px; margin: auto; padding: clamp(60px, 10vh, 120px) 40px; display: grid; grid-template-columns: 1fr 1fr; gap: clamp(20px, 5vh, 40px); align-items: center; }
-/* Initial hidden state is managed by GSAP to avoid CSS specificity clashes */ .pane-inner > * { will-change: transform, opacity; }
+.mesh-grid--base { background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1.5px, transparent 0); background-size: 12px 12px; opacity: 1; }
+.mesh-grid--active { --mouse-x: 50%; --mouse-y: 50%; --mask-radius: 200px; background-image: radial-gradient(#E30613 1.5px, transparent 0); background-size: 12px 12px; filter: drop-shadow(0 0 3px #E30613) saturate(1.5); -webkit-mask-image: radial-gradient(circle var(--mask-radius) at var(--mouse-x) var(--mouse-y), black 0%, transparent 100%); mask-image: radial-gradient(circle var(--mask-radius) at var(--mouse-x) var(--mouse-y), black 0%, transparent 100%); }
+#carousel { position: relative; width: 100%; }
+.vp-slide { position: relative; width: 100%; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 0; z-index: 1; overflow-x: clip; overflow-y: visible; }
+.slide::before { content: ''; position: absolute; inset: 0; z-index: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E"); pointer-events: none; opacity: .4; }
+.pane-inner { position: relative; z-index: 2; width: 100%; max-width: 1100px; margin: auto; padding: clamp(60px, 10vh, 120px) 40px; display: grid; grid-template-columns: 1fr 1fr; gap: clamp(20px, 5vh, 40px); align-items: center; }
+.pane-inner > * { will-change: transform, opacity; }
 .slide-label { font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; font-weight: 700; }
-.slide-title { font-family: var(--font-d); font-size: clamp(42px, 6vw, 86px); /* Un poco más pequeño para dar aire */ line-height: .95; color: var(--text); margin-bottom: clamp(10px, 2vh, 20px); }
+.slide-title { font-family: var(--font-d); font-size: clamp(42px, 6vw, 86px); line-height: .95; color: var(--text); margin-bottom: clamp(10px, 2vh, 20px); }
 .slide-title em { color: var(--accent); font-style: normal; }
-.slide-body { font-size: 14px; line-height: 1.6; margin-bottom: 20px; /* Reducido de 32px */ font-weight: 400; color: #fff; background: rgba(0, 0, 0, 0.5); padding: 14px 24px; border-radius: 16px; backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); max-width: 580px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4); }
-.slide-cta { display: inline-flex; align-items: center; gap: 10px; background: var(--accent); color: var(--dark); padding: 14px 28px; border: none; /* Reset button default */ border-radius: 4px; font-weight: 800; font-family: inherit; font-size: 14px; letter-spacing: .05em; cursor: pointer; transition: transform .2s, box-shadow .2s; text-transform: uppercase; }
+.slide-body { font-size: 14px; line-height: 1.6; margin-bottom: 20px; font-weight: 400; color: #fff; background: rgba(0, 0, 0, 0.5); padding: 14px 24px; border-radius: 16px; backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); max-width: 580px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4); }
+.slide-cta { display: inline-flex; align-items: center; gap: 10px; background: var(--accent); color: var(--dark); padding: 14px 28px; border: none; border-radius: 4px; font-weight: 800; font-family: inherit; font-size: 14px; letter-spacing: .05em; cursor: pointer; transition: transform .2s, box-shadow .2s; text-transform: uppercase; }
 .slide-cta:focus-visible { outline: 2px solid var(--text); outline-offset: 4px; }
 .slide-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(255, 107, 107, .3); }
 .btn-switch { text-align: center; font-size: 13px; color: var(--muted); cursor: none; padding: 12px; border-radius: 8px; margin-top: 8px; transition: all 0.2s; border: 1px solid transparent; }
 .btn-switch:hover { background: rgba(255, 255, 255, 0.03); border-color: var(--border); color: var(--text); }
 .btn-switch span { color: var(--accent); font-weight: 800; text-decoration: underline; text-underline-offset: 4px; }
-/* ── UI Cards (right side) + Spotlight Glow Border (STRICT Brand Implementation) ── */ .ui-card { /* Refined variables to match Brand Darkness + Prompt Effect */ --base: 0; /* Red hue for FitPaisa */ --spread: 0; /* Fijo en rojo (sin cambio interactivo en el eje X) */ --radius: 14; --border: 3; --backdrop: rgba(8, 10, 15, 0.88); /* Deep Dark Brand Tonality */ --backup-border: rgba(255, 255, 255, 0.08); --size: 200; --outer: 1; --border-size: calc(var(--border, 2) * 1px); --spotlight-size: calc(var(--size, 150) * 1px); --hue: var(--base); /* Fijo bloqueado al rojo */ --saturation: 100; --lightness: 65; --bg-spot-opacity: 0.12; --border-spot-opacity: 1; --border-light-opacity: 1; position: relative !important; touch-action: none; background-color: var(--backdrop); background-image: radial-gradient(var(--spotlight-size) var(--spotlight-size) at calc(var(--x, 1) * 1px) calc(var(--y, 1) * 1px), hsl(var(--hue, 210) calc(var(--saturation, 100) * 1%) calc(var(--lightness, 70) * 1%) / var(--bg-spot-opacity, 0.12)), transparent); background-size: calc(100% + (2 * var(--border-size))) calc(100% + (2 * var(--border-size))); background-position: 50% 50%; border: var(--border-size) solid var(--backup-border); border-radius: calc(var(--radius) * 1px); padding: 24px; /* Reducido de 28px */ backdrop-filter: blur(20px); transition: box-shadow .6s ease; box-shadow: 0 40px 80px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .08); display: grid; grid-template-rows: 1fr auto; gap: 1rem; isolation: isolate; }
-.ui-card::before, .ui-card::after { pointer-events: none; content: ""; position: absolute; inset: calc(var(--border-size) * -1); border: var(--border-size) solid transparent; border-radius: calc(var(--radius) * 1px); background-size: calc(100% + (2 * var(--border-size))) calc(100% + (2 * var(--border-size))); background-repeat: no-repeat; background-position: 50% 50%; mask: linear-gradient(transparent, transparent), linear-gradient(white, white); mask-clip: padding-box, border-box; mask-composite: intersect; -webkit-mask: linear-gradient(transparent, transparent), linear-gradient(white, white); -webkit-mask-clip: padding-box, border-box; -webkit-mask-composite: source-in; /* Essential for Webkit border-only glow */ }
-.ui-card::before { background-image: radial-gradient(calc(var(--spotlight-size) * 0.75) calc(var(--spotlight-size) * 0.75) at calc(var(--x, 0) * 1px) calc(var(--y, 0) * 1px), hsl(var(--hue, 210) calc(var(--saturation, 100) * 1%) calc(var(--lightness, 50) * 1%) / var(--border-spot-opacity, 1)), transparent 100%); filter: brightness(2); }
-.ui-card::after { background-image: radial-gradient(calc(var(--spotlight-size) * 0.5) calc(var(--spotlight-size) * 0.5) at calc(var(--x, 0) * 1px) calc(var(--y, 0) * 1px), hsl(0 100% 100% / var(--border-light-opacity, 1)), transparent 100%); }
+.ui-card { --base: 0; --spread: 0; --radius: 14; --border: 3; --backdrop: rgba(8, 10, 15, 0.88); --backup-border: rgba(255, 255, 255, 0.08); --size: 200; --outer: 1; --border-size: calc(var(--border, 2) * 1px); --spotlight-size: calc(var(--size, 150) * 1px); --hue: var(--base); --saturation: 100; --lightness: 65; --bg-spot-opacity: 0.12; --border-spot-opacity: 1; --border-light-opacity: 1; position: relative !important; touch-action: none; background-color: var(--backdrop); background-image: radial-gradient(var(--spotlight-size) var(--spotlight-size) at calc(var(--x, 1) * 1px) calc(var(--y, 1) * 1px), hsl(var(--hue, 210) calc(var(--saturation, 100) * 1%) calc(var(--lightness, 70) * 1%) / var(--bg-spot-opacity, 0.12)), transparent); background-size: calc(100% + (2 * var(--border-size))) calc(100% + (2 * var(--border-size))); background-position: 50% 50%; border: var(--border-size) solid var(--backup-border); border-radius: calc(var(--radius) * 1px); padding: 24px; backdrop-filter: blur(20px); transition: box-shadow .6s ease; box-shadow: 0 40px 80px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .08); display: grid; grid-template-rows: 1fr auto; gap: 1rem; isolation: isolate; }
+.ui-card::before, .ui-card::after { pointer-events: none; content: ""; position: absolute; inset: calc(var(--border-size) * -1); border: var(--border-size) solid transparent; border-radius: calc(var(--radius) * 1px); background-size: calc(100% + (2 * var(--border-size))) calc(100% + (2 * var(--border-size))); background-repeat: no-repeat; background-position: 50% 50%; mask: linear-gradient(transparent, transparent), linear-gradient(white, white); mask-clip: padding-box, border-box; mask-composite: intersect; -webkit-mask: linear-gradient(transparent, transparent), linear-gradient(white, white); -webkit-mask-clip: padding-box, border-box; -webkit-mask-composite: source-in; }
 .ui-card::before { background-image: radial-gradient(calc(var(--spotlight-size) * 0.75) calc(var(--spotlight-size) * 0.75) at calc(var(--x, 0) * 1px) calc(var(--y, 0) * 1px), hsl(var(--hue, 210) calc(var(--saturation, 100) * 1%) calc(var(--lightness, 50) * 1%) / var(--border-spot-opacity, 1)), transparent 100%); filter: brightness(2); }
 .ui-card::after { background-image: radial-gradient(calc(var(--spotlight-size) * 0.5) calc(var(--spotlight-size) * 0.5) at calc(var(--x, 0) * 1px) calc(var(--y, 0) * 1px), hsl(0 100% 100% / var(--border-light-opacity, 1)), transparent 100%); }
 .ui-card>[data-glow] { position: absolute; inset: 0; will-change: filter; opacity: var(--outer, 1); border-radius: calc(var(--radius) * 1px); filter: blur(calc(var(--border-size) * 10)); background: none; pointer-events: none; }
 .slide:hover .ui-card { transform: translateY(-4px); }
-/* ── Macro bars ── */ .macro-bar-wrap { margin-bottom: 14px; }
+.macro-bar-wrap { margin-bottom: 14px; }
 .macro-bar-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; color: var(--muted); }
 .macro-bar-label strong { color: var(--text); }
 .macro-bar { height: 6px; background: rgba(255, 255, 255, .08); border-radius: 99px; overflow: hidden; }
 .macro-bar-fill { height: 100%; border-radius: 99px; }
-/* ── Workout list ── */ .wo-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.wo-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .wo-item:last-child { border-bottom: none; }
 .wo-num { width: 28px; height: 28px; border-radius: 6px; background: rgba(255, 59, 59, .1); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; }
 .wo-name { flex: 1; font-size: 13px; font-weight: 600; }
 .wo-tag { font-size: 11px; color: var(--muted); }
-/* ── Chat bubbles ── */ .bubble { padding: 10px 14px; border-radius: 14px; font-size: 13px; margin-bottom: 8px; max-width: 80%; line-height: 1.5; }
+.bubble { padding: 10px 14px; border-radius: 14px; font-size: 13px; margin-bottom: 8px; max-width: 80%; line-height: 1.5; }
 .bubble.in { background: rgba(255, 255, 255, .07); border-radius: 4px 14px 14px 14px; color: var(--muted); }
 .bubble.out { background: var(--accent); color: var(--dark); border-radius: 14px 14px 4px 14px; margin-left: auto; font-weight: 600; }
-/* ── Stats grid ── */ .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .stat-box { background: rgba(255, 255, 255, .04); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
 .stat-val { font-family: var(--font-d); font-size: 32px; color: var(--accent); }
 .stat-lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-top: 2px; }
-/* ── Plan steps ── */ .plan-step { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; margin-bottom: 8px; }
+.plan-step { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; margin-bottom: 8px; }
 .plan-step.done { background: rgba(255, 59, 59, .08); }
 .plan-step.active { background: rgba(255, 59, 59, .15); border: 1px solid rgba(255, 59, 59, .2); }
 .plan-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -75,41 +73,40 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
 .plan-dot.active { background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: pulse 1.5s infinite; }
 .plan-dot.pending { background: var(--muted); }
 @keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: .4 } }
-/* ── Premium card ── */ .premium-card { background: linear-gradient(135deg, rgba(255, 59, 59, .15), rgba(255, 59, 59, .03)); border: 1px solid rgba(255, 59, 59, .3); border-radius: 16px; padding: 20px; margin-bottom: 12px; }
+.premium-card { background: linear-gradient(135deg, rgba(255, 59, 59, .15), rgba(255, 59, 59, .03)); border: 1px solid rgba(255, 59, 59, .3); border-radius: 16px; padding: 20px; margin-bottom: 12px; }
 .price-big { font-family: var(--font-d); font-size: 48px; color: var(--accent); line-height: 1; }
 .feature-list { margin-top: 12px; }
 .feature-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); padding: 5px 0; }
 .feature-item::before { content: '✓'; color: var(--lime); font-weight: 800; flex-shrink: 0; }
-/* ── Nav (GuildMind Premium UI) ── */ #nav { position: fixed; right: 52px; /* Mathematically aligned with the center of the counter text above */ top: 50%; transform: translateY(-50%); z-index: 100; display: flex; flex-direction: column; align-items: center; gap: 0px; /* No gap ensures the track flows seamlessly */ background: transparent !important; border: none; padding: 0; pointer-events: auto; box-shadow: none !important; /* Ensure no default shadow or background */ }
-/* Subtle vertical guide track */ #nav::before { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; transform: translateX(-50%); width: 1px; background: rgba(255, 255, 255, 0.05); z-index: 0; }
-.nav-dot { width: 24px; height: 24px; /* Fixed height slot */ cursor: pointer; position: relative; z-index: 1; background: none; /* Removed grey background for A11y button */ border: none; padding: 0; display: block; }
-.nav-dot::before { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); /* Crucial for absolute centering */ width: 2px; height: 6px; /* Elegant dashes instead of circles */ border-radius: 4px; background: rgba(255, 255, 255, 0.15); transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1); }
+#nav { position: fixed; right: 52px; top: 50%; transform: translateY(-50%); z-index: 100; display: flex; flex-direction: column; align-items: center; gap: 0px; background: transparent !important; border: none; padding: 0; pointer-events: auto; box-shadow: none !important; }
+#nav::before { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; transform: translateX(-50%); width: 1px; background: rgba(255, 255, 255, 0.05); z-index: 0; }
+.nav-dot { width: 24px; height: 24px; cursor: pointer; position: relative; z-index: 1; background: none; border: none; padding: 0; display: block; }
+.nav-dot::before { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 2px; height: 6px; border-radius: 4px; background: rgba(255, 255, 255, 0.15); transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1); }
 .nav-dot:hover::before { background: rgba(255, 255, 255, 0.5); }
-.nav-dot.active::before { background: var(--accent); width: 3px; height: 24px; /* Stretches the full slot height */ border-radius: 4px; box-shadow: 0 0 14px rgba(255, 59, 59, 0.8), 0 0 4px rgba(255, 59, 59, 0.4); }
-/* ── Slide counter ── */ #counter { position: fixed; top: 32px; right: 40px; z-index: 100; font-family: var(--font-d); font-size: 14px; color: var(--muted); letter-spacing: .1em; pointer-events: none; }
+.nav-dot.active::before { background: var(--accent); width: 3px; height: 24px; border-radius: 4px; box-shadow: 0 0 14px rgba(255, 59, 59, 0.8), 0 0 4px rgba(255, 59, 59, 0.4); }
+#counter { position: fixed; top: 32px; right: 40px; z-index: 100; font-family: var(--font-d); font-size: 14px; color: var(--muted); letter-spacing: .1em; pointer-events: none; }
 #counter span { color: var(--accent); }
-/* ── Logo ── */ #logo { position: fixed; top: 32px; left: 40px; z-index: 100; font-family: var(--font-d); font-size: 28px; color: var(--accent); letter-spacing: .05em; transition: opacity .4s ease, transform .4s ease; pointer-events: none; }
+#logo { position: fixed; top: 32px; left: 40px; z-index: 100; font-family: var(--font-d); font-size: 28px; color: var(--accent); letter-spacing: .05em; transition: opacity .4s ease, transform .4s ease; pointer-events: none; }
 #logo.is-hidden { opacity: 0; pointer-events: none; transform: translateY(-10px); }
-/* ── Arrow hints (Hidden for GuildMind Clean UI) ── */ #arrows { display: none; left: 50%; transform: translateX(-50%); z-index: 100; display: flex; flex-direction: row; gap: 16px; }
+#arrows { display: none; left: 50%; transform: translateX(-50%); z-index: 100; display: flex; flex-direction: row; gap: 16px; }
 .arrow-btn { width: 44px; height: 44px; border-radius: 50%; background: rgba(15, 18, 25, .8); border: 1px solid var(--border); color: var(--muted); display: flex; align-items: center; justify-content: center; cursor: none; transition: all .3s, opacity .4s, visibility .4s; font-size: 18px; backdrop-filter: blur(10px); }
 .arrow-btn:hover { background: var(--accent); color: var(--dark); border-color: var(--accent); transform: scale(1.1); }
 .arrow-btn.pulse { animation: arrowPulse 2s infinite; border-color: var(--accent); color: var(--accent); }
 .arrow-btn.pulse-once { animation: arrowPulse 2s ease-out; border-color: var(--accent); color: var(--accent); }
 @keyframes arrowPulse { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 59, 59, 0.4); } 70% { transform: scale(1.1); box-shadow: 0 0 0 15px rgba(255, 59, 59, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 59, 59, 0); } }
-.arrow-btn:hover { background: var(--accent); color: var(--dark); border-color: var(--accent); }
 .arrow-btn.is-disabled { opacity: 0.1 !important; pointer-events: none !important; }
-/* ── Progress line ── */ #progress-line { position: fixed; top: 0; left: 0; height: 2px; background: var(--accent); z-index: 200; transition: width .9s cubic-bezier(.77, 0, .18, 1); }
-/* ── Decorative floating elements ── */ .deco { position: absolute; border-radius: 50%; pointer-events: none; z-index: 1; animation: float 6s ease-in-out infinite; }
+#progress-line { position: fixed; top: 0; left: 0; height: 2px; background: var(--accent); z-index: 200; transition: width .9s cubic-bezier(.77, 0, .18, 1); }
+.deco { position: absolute; border-radius: 50%; pointer-events: none; z-index: 1; animation: float 6s ease-in-out infinite; }
 @keyframes float { 0%, 100% { transform: translateY(0) rotate(0) } 50% { transform: translateY(-20px) rotate(180deg) } }
-/* ── Slide-in animations ──────────────────── */ /* ── Swipe hint ── */ #hint { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); font-size: 12px; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; opacity: 0; pointer-events: none; z-index: 1000; animation: fadeHint 3.5s ease 0.5s forwards; }
+#hint { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); font-size: 12px; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; opacity: 0; pointer-events: none; z-index: 1000; animation: fadeHint 3.5s ease 0.5s forwards; }
 #hint::before { content: "Haz scroll para navegar"; }
 @keyframes fadeHint { 0% { opacity: 0 } 12% { opacity: 1 } 88% { opacity: 1 } 100% { opacity: 0 } }
 @keyframes borderPulse { 0%, 100% { border-color: var(--accent); box-shadow: 0 0 8px var(--accent); } 50% { border-color: #fff; box-shadow: 0 0 15px rgba(255, 255, 255, 0.4); } }
-/* ── Tablet & Mobile Styles (Common for ≤ 1023px) ── */ @media (max-width: 1023px) { /* Ya no aplicamos snap al body aquí, se hereda del html.snaps-enabled */ .pane-inner { grid-template-columns: 1fr; gap: 20px; padding: 60px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; /* Evita que el contenido se corte por arriba si es muy largo */ } .slide-title { font-size: clamp(34px, 8vw, 48px); margin-bottom: 12px; } .slide-body { margin: 0 auto 20px; font-size: 13px; padding: 10px 16px; } .ui-card { transform: scale(0.9) !important; margin: 0 auto; width: 100%; max-width: 420px; } #logo { font-size: 18px; top: 15px; left: 15px; } #counter { /* Contador Responsivo tipo Cápsula Premium */ top: 15px; right: 15px; font-size: 11px; background: rgba(15, 18, 25, 0.7); backdrop-filter: blur(8px); padding: 6px 12px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.05); } #nav { right: auto; left: 50%; bottom: 24px; top: auto; transform: translateX(-50%); flex-direction: row; height: auto; width: auto; } #nav::before { width: 100%; height: 1px; top: 50%; left: 0; transform: translateY(-50%); } .nav-dot { width: 28px; height: 28px; } .nav-dot::before { width: 6px; height: 2px; } .nav-dot.active::before { width: 24px; height: 3px; } #hint { display: none !important; /* Cleanup old hint if not needed */ } }
-/* ── Tablet Specific (600px - 1023px) ── */ @media (min-width: 600px) and (max-width: 1023px) { .pane-inner { padding: 80px 48px; gap: 30px; } .ui-card { transform: scale(0.92) !important; max-width: 480px; } }
-/* ── Mobile Specific (≤ 599px) ── */ @media (max-width: 599px) { .pane-inner { padding: 70px 16px 100px; gap: 16px; } .slide-title { font-size: clamp(28px, 11vw, 38px); } .ui-card { transform: scale(0.85) !important; padding: 20px 14px; } .stat-grid { grid-template-columns: 1fr; } .slide-body { font-size: 13px; padding: 12px 16px; } .slide-cta { width: 100%; justify-content: center; } /* Stack form grids in mobile */ #register-view div[style*="grid-template-columns: 1fr 1fr"], #register-view div[style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; gap: 12px !important; } #register-view div[style*="grid-template-columns:repeat(3,1fr)"] { grid-template-columns: 1fr !important; } .input { font-size: 14px !important; padding: 12px !important; } }
-/* ── Interactive role cards ── */ .role-card:hover { background: rgba(255, 59, 59, 0.08) !important; border-color: var(--accent) !important; transform: translateY(-3px); box-shadow: 0 10px 25px rgba(255, 59, 59, 0.15); }
-/* ── Form View States ── */ .form-view { display: none; flex-direction: column; gap: 12px; }
+@media (max-width: 1023px) { .pane-inner { grid-template-columns: 1fr; gap: 20px; padding: 60px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; } .slide-title { font-size: clamp(34px, 8vw, 48px); margin-bottom: 12px; } .slide-body { margin: 0 auto 20px; font-size: 13px; padding: 10px 16px; } .ui-card { transform: scale(0.9) !important; margin: 0 auto; width: 100%; max-width: 420px; } #logo { font-size: 18px; top: 15px; left: 15px; } #counter { top: 15px; right: 15px; font-size: 11px; background: rgba(15, 18, 25, 0.7); backdrop-filter: blur(8px); padding: 6px 12px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.05); } #nav { right: auto; left: 50%; bottom: 24px; top: auto; transform: translateX(-50%); flex-direction: row; height: auto; width: auto; } #nav::before { width: 100%; height: 1px; top: 50%; left: 0; transform: translateY(-50%); } .nav-dot { width: 28px; height: 28px; } .nav-dot::before { width: 6px; height: 2px; } .nav-dot.active::before { width: 24px; height: 3px; } #hint { display: none !important; } }
+@media (min-width: 600px) and (max-width: 1023px) { .pane-inner { padding: 80px 48px; gap: 30px; } .ui-card { transform: scale(0.92) !important; max-width: 480px; } }
+@media (max-width: 599px) { .pane-inner { padding: 70px 16px 100px; gap: 16px; } .slide-title { font-size: clamp(28px, 11vw, 38px); } .ui-card { transform: scale(0.85) !important; padding: 20px 14px; } .stat-grid { grid-template-columns: 1fr; } .slide-body { font-size: 13px; padding: 12px 16px; } .slide-cta { width: 100%; justify-content: center; } #register-view div[style*="grid-template-columns: 1fr 1fr"], #register-view div[style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; gap: 12px !important; } #register-view div[style*="grid-template-columns:repeat(3,1fr)"] { grid-template-columns: 1fr !important; } .input { font-size: 14px !important; padding: 12px !important; } }
+.role-card:hover { background: rgba(255, 59, 59, 0.08) !important; border-color: var(--accent) !important; transform: translateY(-3px); box-shadow: 0 10px 25px rgba(255, 59, 59, 0.15); }
+.form-view { display: none; flex-direction: column; gap: 12px; }
 .form-view.is-active { display: flex; animation: fadeIn .3s ease forwards; }
 .register-step { display: none; flex-direction: column; gap: 12px; }
 .register-step.is-active { display: flex; animation: slideInNext .4s ease forwards; }
@@ -132,30 +129,17 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
 .pass-wrapper .input { padding-right: 40px; }
 .eye-toggle { position: absolute; right: 12px; padding: 4px; cursor: none; color: var(--muted); display: flex; align-items: center; justify-content: center; transition: color 0.2s; z-index: 5; }
 .eye-toggle:hover { color: var(--accent); }
-/* ── Environment Badge ── */ #env-badge { display: none; position: fixed; top: 15px; right: 15px; background: #ff5252; color: white; padding: 6px 14px; border-radius: 99px; font-size: 11px; font-weight: 800; letter-spacing: .08em; z-index: 9999; box-shadow: 0 4px 15px rgba(255, 82, 82, 0.4); border: 1px solid rgba(255, 255, 255, 0.3); pointer-events: none; text-transform: uppercase; animation: envPulse 2s infinite; }
+#env-badge { display: none; position: fixed; top: 15px; right: 15px; background: #ff5252; color: white; padding: 6px 14px; border-radius: 99px; font-size: 11px; font-weight: 800; letter-spacing: .08em; z-index: 9999; box-shadow: 0 4px 15px rgba(255, 82, 82, 0.4); border: 1px solid rgba(255, 255, 255, 0.3); pointer-events: none; text-transform: uppercase; animation: envPulse 2s infinite; }
 @keyframes envPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.05); opacity: 0.9; } }
-/* ── Vertical Responsiveness: Optimization for short screens ── */ @media (max-height: 820px) { .vp-slide { padding: 40px 0; } .slide-title { font-size: clamp(38px, 5vw, 68px); } .slide-body { font-size: 13px; margin-bottom: 12px; padding: 10px 18px; } .ui-card { padding: 18px; gap: 0.5rem; } .macro-bar-wrap { margin-bottom: 8px; } .wo-item { padding: 6px 0; } .premium-card { padding: 14px; margin-bottom: 8px; } .price-big { font-size: 38px; } .bubble { padding: 6px 10px; font-size: 12px; margin-bottom: 4px; } .contact-form { gap: 8px; } .contact-form input, .contact-form textarea { padding: 8px 12px; font-size: 13px; } .contact-submit { padding: 10px 20px; } .contact-info { gap: 10px; margin-top: 4px; } .contact-info-icon { width: 32px; height: 32px; } }
+@media (max-height: 820px) { .vp-slide { padding: 40px 0; } .slide-title { font-size: clamp(38px, 5vw, 68px); } .slide-body { font-size: 13px; margin-bottom: 12px; padding: 10px 18px; } .ui-card { padding: 18px; gap: 0.5rem; } .macro-bar-wrap { margin-bottom: 8px; } .wo-item { padding: 6px 0; } .premium-card { padding: 14px; margin-bottom: 8px; } .price-big { font-size: 38px; } .bubble { padding: 6px 10px; font-size: 12px; margin-bottom: 4px; } .contact-form { gap: 8px; } .contact-form input, .contact-form textarea { padding: 8px 12px; font-size: 13px; } .contact-submit { padding: 10px 20px; } .contact-info { gap: 10px; margin-top: 4px; } .contact-info-icon { width: 32px; height: 32px; } }
 @media (max-height: 700px) { .vp-slide { padding: 25px 0; } .slide-label { margin-bottom: 8px; } .slide-title { font-size: 42px; } .ui-card { transform: scale(0.85) !important; } .pane-inner { gap: 15px; } }
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); z-index: 20000; display: none; align-items: center; justify-content: center; opacity: 0; }
   .success-modal { background: #080a0f; border: 1px solid var(--accent); border-radius: 16px; padding: 40px; padding-bottom: 44px; width: 90%; max-width: 400px; text-align: center; position: relative; box-shadow: 0 0 50px rgba(255,59,59,0.2); transform: scale(0.9); overflow: hidden; }
   .modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--muted); cursor: pointer; padding: 4px; transition: color 0.2s; }
   .modal-close:hover { color: var(--accent); }
   .modal-progress { position: absolute; bottom: 0; left: 0; height: 4px; background: var(--accent); width: 100%; transform-origin: left; border-radius: 0 0 16px 16px; }
-  /* Fix overlapping */
   .form-view:not(.is-active) { display: none !important; }
-  
-  /* Utils A11y */
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border-width: 0;
-  }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0; }
 </style>
 </head>
 
@@ -167,7 +151,6 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
   </div>
   <div id="canvas-3d" style="position:fixed;inset:0;z-index:1;pointer-events:none;opacity:1"></div>
 
-  <!-- Loader / Splash Screen -->
   <div id="loader"
     style="position:fixed;inset:0;z-index:10000;background:#080a0f;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 1s ease,visibility 1s;">
     <div style="text-align:center;position:relative;">
@@ -188,39 +171,50 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
   <div id="cursor"></div>
   <div id="cursor-ring"></div>
   <div id="progress-line"></div>
-  <div id="logo">FITPAISA</div>
-  <div id="counter"><span id="slide-cur">01</span> / <span id="tot">07</span></div>
+  <header>
+    <div id="logo">FITPAISA</div>
+    <div id="counter" aria-label="Progreso de secciones"><span id="slide-cur">01</span> / <span id="tot">07</span></div>
+  </header>
   <div id="hint"></div>
   <div id="env-badge">ENTORNO DE PRUEBAS</div>
 
-  <div id="arrows">
-    <div class="arrow-btn" onclick="go(-1)">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-        stroke-linecap="round" stroke-linejoin="round">
-        <path d="M18 15l-6-6-6 6" />
-      </svg>
-    </div>
-    <div class="arrow-btn" onclick="go(1)">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-        stroke-linecap="round" stroke-linejoin="round">
-        <path d="M6 9l6 6 6-6" />
-      </svg>
-    </div>
-  </div>
+  <main id="carousel" role="main">
+    <nav id="nav" class="nav-container" aria-label="Navegación entre secciones">
+      <button type="button" class="nav-dot active" onclick="goTo(0)" aria-label="Ir al inicio" aria-current="true"></button>
+      <button type="button" class="nav-dot" onclick="goTo(1)" aria-label="Ir a Dashboard"></button>
+      <button type="button" class="nav-dot" onclick="goTo(2)" aria-label="Ir a Entrenamiento"></button>
+      <button type="button" class="nav-dot" onclick="goTo(3)" aria-label="Ir a Nutrición"></button>
+      <button type="button" class="nav-dot" onclick="goTo(4)" aria-label="Ir a Mensajería"></button>
+      <button type="button" class="nav-dot" onclick="goTo(5)" aria-label="Ir a Premium"></button>
+      <button type="button" class="nav-dot" onclick="goTo(6)" aria-label="Ir a Contacto"></button>
+    </nav>
 
-  <div id="scene"></div>
+    <div id="arrows">
+      <button class="arrow-btn" onclick="go(-1)" aria-label="Sección anterior">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 15l-6-6-6 6" />
+        </svg>
+      </button>
+      <button class="arrow-btn" onclick="go(1)" aria-label="Siguiente sección">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+    </div>
 
-  <div id="carousel">
+    <div id="scene"></div>
 
     <!-- SLIDE 0 · Intro / Login -->
-    <div class="vp-slide vp-slide-0 is-active" data-index="0">
+    <section class="vp-slide vp-slide-0 is-active" data-index="0" aria-labelledby="slide0-title">
       <div class="deco"
         style="width:300px;height:300px;background:radial-gradient(circle,rgba(255,107,107,.06),transparent);top:-100px;right:-100px;animation-delay:0s">
       </div>
       <div class="pane-inner">
         <div>
           <div class="slide-label">Bienvenido/a al <strong>Inicio</strong> de FitPaisa</div>
-          <div class="slide-title">ENTRENA.<br><em>COME.</em><br>EVOLUCIONA.</div>
+          <h1 id="slide0-title" class="slide-title">ENTRENA.<br><em>COME.</em><br>EVOLUCIONA.</h1>
           <p class="slide-body">Plataforma web de entrenamiento y nutrición personalizada. Tu entrenador/a, tus planes
             y tu progreso, en un solo lugar.</p>
           <button class="slide-cta" onclick="go(1)">Descubre más <svg width="14" height="14" viewBox="0 0 24 24"
@@ -260,7 +254,6 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
             </div>
           </div>
 
-          <!-- Forgot Password View -->
           <div id="forgot-view" class="form-view">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
               <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);font-weight:800">
@@ -279,7 +272,6 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
               class="btn-hover-scale" onclick="requestReset()">ENVIAR CÓDIGO</button>
           </div>
 
-          <!-- Reset Password View -->
           <div id="reset-view" class="form-view">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
               <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);font-weight:800">
@@ -316,7 +308,6 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
                 Volver</button>
             </div>
 
-            <!-- Step 1: Account & Identity -->
             <div class="register-step is-active" id="step-1">
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
                 <div class="field">
@@ -410,7 +401,6 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
               </div>
             </div>
 
-            <!-- Step 2: Plan & Payment -->
             <div class="register-step" id="step-2">
               <div class="field" style="gap:10px;margin-bottom:16px">
                 <span class="label">Selecciona tu Plan</span>
@@ -437,9 +427,6 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
               </div>
 
               <div id="payment-section" style="display:none">
-
-
-
                 <div class="field" style="gap:10px;margin-bottom:12px">
                   <span class="label">Método de Pago</span>
                   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px" role="radiogroup" aria-label="Método de pago">
@@ -461,7 +448,6 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
                   </div>
                 </div>
 
-                <!-- Card View -->
                 <div id="view-card">
                   <div class="field">
                     <label for="pay-name" class="label">Titular de la tarjeta</label>
@@ -487,7 +473,6 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
                   </div>
                 </div>
 
-                <!-- Bizum View -->
                 <div id="view-bizum" style="display:none">
                   <div class="field">
                     <label for="pay-bizum-phone" class="label">Teléfono Bizum</label>
@@ -498,7 +483,6 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
                     notificación en tu app bancaria para confirmar.</div>
                 </div>
 
-                <!-- PayPal View -->
                 <div id="view-paypal"
                   style="display:none;padding:20px;text-align:center;background:rgba(255,255,255,0.03);border-radius:12px">
                   <div style="font-size:12px;color:var(--text);margin-bottom:10px">Serás redirigido a la plataforma
@@ -506,7 +490,7 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
                   <div style="font-size:10px;color:var(--muted)">Haz clic en "Activar" para continuar.</div>
                 </div>
 
-              </div> <!-- End payment-section -->
+              </div>
 
               <div class="error-msg" id="err-step2" style="text-align:center">Verifica los datos.</div>
               <div style="text-align:center;margin-top:16px">
@@ -517,7 +501,6 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
               </div>
             </div>
 
-            <!-- Progress dots -->
             <div style="display:flex;gap:6px;margin-top:20px;justify-content:center" id="reg-indicator">
               <div style="height:4px;flex:1;background:var(--accent);border-radius:99px" class="reg-dot"></div>
               <div style="height:4px;flex:1;background:rgba(255,255,255,.1);border-radius:99px" class="reg-dot"></div>
@@ -527,17 +510,17 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
 
         <div id="demo-selector-wrap" style="display:none"></div>
       </div>
-    </div>
+    </section>
 
     <!-- SLIDE 1 · Dashboard -->
-    <div class="vp-slide vp-slide-1" data-index="1">
+    <section class="vp-slide vp-slide-1" data-index="1" aria-labelledby="slide1-title">
       <div class="deco"
         style="width:400px;height:400px;background:radial-gradient(circle,rgba(255,138,138,.05),transparent);bottom:-150px;left:-100px;animation-delay:1s">
       </div>
       <div class="pane-inner">
         <div>
           <div class="slide-label">Dashboard personal</div>
-          <div class="slide-title">TU DÍA,<br>DE UN<br><em>VISTAZO.</em></div>
+          <h2 id="slide1-title" class="slide-title">TU DÍA,<br>DE UN<br><em>VISTAZO.</em></h2>
           <p class="slide-body">Macros del día, actividad semanal, último mensaje de tu entrenador/a y acceso directo a
             cada sección. Todo sin salir de la pantalla.</p>
           <button class="slide-cta" onclick="go(1)">Ver nutrición →</button>
@@ -564,7 +547,6 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
               <div class="stat-lbl">Grasa</div>
             </div>
           </div>
-          <!-- Week bars -->
           <div
             style="font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.08em">
             Actividad semanal</div>
@@ -588,17 +570,17 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
     <!-- SLIDE 2 · Nutrición -->
-    <div class="vp-slide vp-slide-2" data-index="2">
+    <section class="vp-slide vp-slide-2" data-index="2" aria-labelledby="slide2-title">
       <div class="deco"
         style="width:350px;height:350px;background:radial-gradient(circle,rgba(255,179,71,.04),transparent);top:50px;right:50px;animation-delay:2s">
       </div>
       <div class="pane-inner">
         <div>
           <div class="slide-label">Control nutricional</div>
-          <div class="slide-title">COME<br>CON<br><em>DATOS.</em></div>
+          <h2 id="slide2-title" class="slide-title">COME<br>CON<br><em>DATOS.</em></h2>
           <p class="slide-body">Registra cada ingesta y calcula proteínas, carbos y grasas automáticamente con la
             fórmula de Mifflin-St Jeor. Sin apps extra.</p>
           <button class="slide-cta" onclick="go(1)">Ver entrenamientos →</button>
@@ -640,17 +622,17 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
     <!-- SLIDE 3 · Entrenamientos -->
-    <div class="vp-slide vp-slide-3" data-index="3">
+    <section class="vp-slide vp-slide-3" data-index="3" aria-labelledby="slide3-title">
       <div class="deco"
         style="width:320px;height:320px;background:radial-gradient(circle,rgba(255,107,107,.05),transparent);bottom:-80px;right:80px;animation-delay:.5s">
       </div>
       <div class="pane-inner">
         <div>
           <div class="slide-label">Entrenamiento</div>
-          <div class="slide-title">ROMPE<br>TUS<br><em>LÍMITES.</em></div>
+          <h2 id="slide3-title" class="slide-title">ROMPE<br>TUS<br><em>LÍMITES.</em></h2>
           <p class="slide-body">Series, repeticiones y cargas en tiempo real. Marca cada ejercicio como completado y
             supera tus récords personales cada semana.</p>
           <button class="slide-cta" onclick="go(1)">Ver mensajes →</button>
@@ -707,17 +689,17 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
     <!-- SLIDE 4 · Mensajería -->
-    <div class="vp-slide vp-slide-4" data-index="4">
+    <section class="vp-slide vp-slide-4" data-index="4" aria-labelledby="slide4-title">
       <div class="deco"
         style="width:280px;height:280px;background:radial-gradient(circle,rgba(192,132,252,.05),transparent);top:100px;left:100px;animation-delay:1.5s">
       </div>
       <div class="pane-inner">
         <div>
           <div class="slide-label">Comunicación directa</div>
-          <div class="slide-title">TU<br>ENTRE<br><em>NADOR/A.</em></div>
+          <h2 id="slide4-title" class="slide-title">TU<br>ENTRE<br><em>NADOR/A.</em></h2>
           <p class="slide-body">Mensajería interna bidireccional. Ajusta rutinas, resuelve dudas y recibe feedback de tu
             entrenador/a sin salir de la plataforma.</p>
           <button class="slide-cta" onclick="go(1)">Ver Premium →</button>
@@ -753,17 +735,17 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
     <!-- SLIDE 5 · Premium -->
-    <div class="vp-slide vp-slide-5" data-index="5">
+    <section class="vp-slide vp-slide-5" data-index="5" aria-labelledby="slide5-title">
       <div class="deco"
         style="width:500px;height:500px;background:radial-gradient(circle,rgba(255,107,107,.04),transparent);top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:3s">
       </div>
       <div class="pane-inner">
         <div>
           <div class="slide-label">Suscripción Premium</div>
-          <div class="slide-title">EL NIVEL<br>PRO,<br><em>SIN LÍMITES.</em></div>
+          <h2 id="slide5-title" class="slide-title">EL NIVEL<br>PRO,<br><em>SIN LÍMITES.</em></h2>
           <p class="slide-body">Entrenador/a personal, planes a medida, estadísticas avanzadas y mensajería directa.
             Pago seguro con Stripe y PayPal — PCI-DSS.</p>
           <button class="slide-cta" onclick="go(1)">Contactar →</button>
@@ -811,17 +793,17 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
     <!-- SLIDE 6 · Contacto -->
-    <div class="vp-slide vp-slide-6" data-index="6">
+    <section class="vp-slide vp-slide-6" data-index="6" aria-labelledby="slide6-title">
       <div class="deco"
         style="width:400px;height:400px;background:radial-gradient(circle,rgba(255,107,107,.05),transparent);bottom:-100px;left:-100px;animation-delay:1s">
       </div>
       <div class="pane-inner">
         <div>
           <div class="slide-label">Contacto</div>
-          <div class="slide-title">¿TIENES<br>PREGUNTAS?<br><em>ESCRÍBENOS.</em></div>
+          <h2 id="slide6-title" class="slide-title">¿TIENES<br>PREGUNTAS?<br><em>ESCRÍBENOS.</em></h2>
           <p class="slide-body">¿Dudas sobre la plataforma, planes o precios? Rellena el formulario y te responderemos
             en menos de 24 horas.</p>
           <div class="contact-info">
@@ -849,7 +831,7 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
             style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);font-weight:700;margin-bottom:16px">
             Formulario de contacto</div>
           <form id="contact-form" class="contact-form" onsubmit="handleContact(event)">
-            <input type="text" name="_website" class="sr-only" tabindex="-1" autocomplete="off">
+            <input type="text" name="_website" class="sr-only" tabindex="-1" autocomplete="off" aria-label="No rellenar este campo">
             
             <div class="field">
               <label for="contact-name" class="sr-only">Tu nombre</label>
@@ -961,9 +943,10 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
       slides.forEach((s, i) => {
         const isActive = i === current;
         s.classList.toggle('is-active', isActive);
+        s.setAttribute('aria-hidden', !isActive);
+        s.style.visibility = isActive ? 'visible' : 'hidden'; // Axe fix: hide focusable elements in hidden slides
         s.style.removeProperty('transform');
         s.style.removeProperty('opacity');
-        s.style.removeProperty('visibility');
         s.style.removeProperty('pointerEvents');
         s.style.removeProperty('zIndex');
       });
@@ -983,9 +966,7 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
       dots.forEach((d, i) => {
         const isActive = (i === current);
         d.classList.toggle('active', isActive);
-        if (d.tagName === 'BUTTON') {
-          d.setAttribute('aria-current', isActive ? 'true' : 'false');
-        }
+        d.setAttribute('aria-current', isActive ? 'step' : 'false');
       });
       curEl.textContent = String(current + 1).padStart(2, '0');
 
@@ -1044,8 +1025,14 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
             if (self.isActive) {
               current = i;
               updateUI();
-              slides.forEach(s => s.classList.remove('is-active'));
+              slides.forEach(s => {
+                s.classList.remove('is-active');
+                s.setAttribute('aria-hidden', 'true');
+                s.style.visibility = 'hidden';
+              });
               slide.classList.add('is-active');
+              slide.setAttribute('aria-hidden', 'false');
+              slide.style.visibility = 'visible';
               // Pulse Mesh on section change
               if (window.pulseMeshBackground) window.pulseMeshBackground();
             }
@@ -1623,11 +1610,37 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
 
     function selectGender(el, val) {
       const genderCards = document.querySelectorAll('#step-1 .goal-card');
-      genderCards.forEach(c => c.classList.remove('on'));
+      genderCards.forEach(c => {
+        c.classList.remove('on');
+        c.setAttribute('aria-checked', 'false');
+      });
       el.classList.add('on');
+      el.setAttribute('aria-checked', 'true');
       userGender = val;
-      // Remove red border error
       document.querySelectorAll('#step-1 .goal-card').forEach(c => c.style.borderColor = 'var(--border)');
+    }
+
+    function selectPlan(id) {
+      selectedPlan = id;
+      const plans = document.querySelectorAll('#step-2 .goal-card');
+      plans.forEach(p => {
+        p.classList.remove('on');
+        p.setAttribute('aria-checked', 'false');
+      });
+      const selected = Array.from(plans).find(p => p.getAttribute('onclick')?.includes(id));
+      if (selected) {
+        selected.classList.add('on');
+        selected.setAttribute('aria-checked', 'true');
+      }
+      
+      const paymentSection = document.getElementById('payment-section');
+      if (id === 'premium') {
+        paymentSection.style.display = 'block';
+        gsap.fromTo(paymentSection, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.4 });
+      } else {
+        paymentSection.style.display = 'none';
+      }
+      document.querySelectorAll('#step-2 .goal-card').forEach(c => c.style.borderColor = 'var(--border)');
     }
 
     /* ── CONTACT LOGIC ─────────────────── */
@@ -2077,7 +2090,11 @@ body { width: 100%; color: var(--text); font-family: var(--font-b); -webkit-font
 
       const tick = setInterval(() => {
         progress = Math.min(progress + Math.random() * 4 + 1, 100);
-        if (percentEl) percentEl.textContent = Math.floor(progress).toString().padStart(2, '0');
+        const pStr = Math.floor(progress).toString();
+        if (percentEl) {
+          percentEl.textContent = pStr.padStart(2, '0');
+          percentEl.setAttribute('aria-valuenow', pStr);
+        }
         if (barEl) barEl.style.width = progress + '%';
         if (progress > (msgIndex + 1) * 20 && msgIndex < messages.length - 1) {
           msgIndex++;
