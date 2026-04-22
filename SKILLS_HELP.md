@@ -27,6 +27,16 @@ Este archivo contiene los comandos rápidos y las instrucciones de uso para todo
 | **Design Expert** | `/design` | "Estilo Antigravity: profundidad y GSAP." |
 | **Viral Growth** | `/growth` | "Diseña programa de referidos/afiliados." |
 | **Brainstorming** | `/brainstorm` | "Revisión multi-agente para diseño de [X]." |
+| **Elite GSAP** | `/elite-gsap` | "Animaciones GSAP, ScrollTrigger y SplitText." |
+| **Elite A11y** | `/elite-a11y` | "Accesibilidad en movimiento y WCAG 2.1." |
+| **Elite Perf** | `/elite-perf` | "Optimización 60fps y Core Web Vitals." |
+| **Elite Layouts** | `/elite-layouts` | "Bento grids, scroll horizontal y sticky." |
+| **Elite Brand** | `/elite-brand` | "Estrategia de marca y sistemas visuales." |
+| **Elite Core** | `/elite-design` | "Fundamentos de diseño y jerarquía visual." |
+| **Elite CSS** | `/elite-css` | "Animaciones nativas y View Transitions." |
+| **Elite UX** | `/elite-ux` | "Estrategia de conversión (CRO) y psicología." |
+| **Elite Inspo** | `/elite-inspo` | "Referencias de Awwwards/FWA y patrones." |
+| **Elite Audit** | `/elite-audit` | "Auditoría completa UI/UX (~190 reglas)." |
 
 
 ---
@@ -48,6 +58,17 @@ Este archivo contiene los comandos rápidos y las instrucciones de uso para todo
 *   **Design Expert:** Dashboards de alta gama con GSAP, glassmorphism y profundidad 3D.
 *   **Viral Growth:** Estrategias de referidos y cálculo de LTV/CAC para crecimiento.
 *   **Brainstorming:** Revisión extrema estructurada con Escéptico, Guardián y Árbitro.
+*   **Elite Web Design Suite:** Conjunto de 10 skills para alcanzar el nivel de Awwwards/FWA:
+    *   **GSAP:** El estándar de oro para animaciones premium (ScrollTrigger, Flip, SplitText).
+    *   **Accessibility:** Animaciones inclusivas que respetan `prefers-reduced-motion`.
+    *   **Performance:** Velocidad extrema para que las animaciones nunca pierdan fluidez (60fps).
+    *   **Layouts:** Maquetación moderna y editorial (Bento, Parallax, Sticky, Horizontal).
+    *   **Brand Design:** Traduce la personalidad de marca en decisiones de diseño coherentes.
+    *   **Design Core:** Cimientos para que un sitio parezca diseñado por un estudio de primer nivel.
+    *   **CSS Animations:** Animaciones nativas ligeras (Scroll-Driven, View Transitions).
+    *   **UX Strategy:** Asegura que el diseño no solo sea bonito, sino que también convierta.
+    *   **Inspiration:** Biblioteca de patrones y casos de éxito de sitios premiados.
+    *   **Audit:** El guardián final de la calidad UI/UX (~190 reglas de oro).
 
 ---
 
