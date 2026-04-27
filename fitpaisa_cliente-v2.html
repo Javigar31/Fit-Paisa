@@ -972,15 +972,14 @@ window.addEventListener('load', async () => {
     if (!data.success) {
       // Si el perfil no existe aún, usamos datos básicos del localStorage
       populateUI(null, null, user);
-      return;
+    } else {
+      appState.profile = data.profile;
+      appState.macros  = data.macro_targets;
+      populateUI(appState.profile, appState.macros, user);
+      
+      // Sincronizar zona horaria si es necesario
+      detectAndSyncTimezone();
     }
-
-    appState.profile = data.profile;
-    appState.macros  = data.macro_targets;
-    populateUI(appState.profile, appState.macros, user);
-    
-    // Sincronizar zona horaria si es necesario
-    detectAndSyncTimezone();
 
   } catch (e) {
     populateUI(null, null, user);
@@ -1868,6 +1867,9 @@ window.addEventListener('load', () => {
 
     loadLastMessage();
     fetchInbox();
+    
+    // Progreso
+    loadProgressData();
   }, 500);
 });
 
@@ -2077,10 +2079,10 @@ async function loadAvailableCoaches() {
     if(data.success && data.coaches.length > 0) {
       const html = data.coaches.map(c => `
         <div style="background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:16px; flex:0 0 280px; text-align:center; transition:transform 0.3s ease, border-color 0.3s ease;" class="coach-card" onmouseover="this.style.borderColor='var(--lime)'; this.style.transform='translateY(-4px)'" onmouseout="this.style.borderColor='rgba(255,255,255,.08)'; this.style.transform='translateY(0)'">
-          <div style="width:64px;height:64px;border-radius:50%;background:var(--limedim);color:var(--lime);display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 12px auto;font-weight:700">${c.name.charAt(0)}</div>
-          <div style="font-size:16px; font-weight:700; margin-bottom:4px;">${c.name}</div>
+          <div style="width:64px;height:64px;border-radius:50%;background:var(--limedim);color:var(--lime);display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 12px auto;font-weight:700">${c.full_name.charAt(0)}</div>
+          <div style="font-size:16px; font-weight:700; margin-bottom:4px;">${c.full_name}</div>
           <div style="font-size:12px; color:var(--muted); margin-bottom:16px; min-height:36px;">Especialista en recomposición corporal.</div>
-          <button class="btn-lime" style="width:100%" onclick="selectCoach(${c.user_id}, '${c.name}')">Seleccionar Entrenador</button>
+          <button class="btn-lime" style="width:100%" onclick="selectCoach(${c.user_id}, '${c.full_name}')">Seleccionar Entrenador</button>
         </div>
       `).join('');
       document.getElementById('coaches-list').innerHTML = html;
@@ -2089,8 +2091,8 @@ async function loadAvailableCoaches() {
       // Update assigned coach info if any
       const assigned = data.coaches.find(c => c.user_id === appState.profile?.preferred_coach_id);
       if (assigned) {
-        document.getElementById('current-coach-name').textContent = assigned.name;
-        document.getElementById('current-coach-avatar').textContent = assigned.name.charAt(0);
+        document.getElementById('current-coach-name').textContent = assigned.full_name;
+        document.getElementById('current-coach-avatar').textContent = assigned.full_name.charAt(0);
       }
     }
   } catch(e){}
@@ -2153,7 +2155,21 @@ async function sendMsg() {
 }
 renderChat();
 
-// ── Weight chart ──────────────────────
+// ── Weight chart (REAL DATA) ───────────
+async function loadProgressData() {
+  const token = localStorage.getItem('fp_token');
+  try {
+    const res = await fetch('/api/profile.php?action=history&days=30', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (data.success && data.history) {
+      appState.history = data.history;
+      if (active === 'progress') drawChart();
+    }
+  } catch(e) {}
+}
+
 function drawChart() {
   const canvas = document.getElementById('weightChart');
   if(!canvas) return;
@@ -2162,12 +2178,31 @@ function drawChart() {
   canvas.height = 120 * devicePixelRatio;
   ctx.scale(devicePixelRatio,devicePixelRatio);
   const W=canvas.offsetWidth, H=120;
-  const data=[75.0,74.8,74.6,74.9,74.5,74.3,74.2];
-  const lbls=['L','M','X','J','V','S','D'];
+  
+  let data = [];
+  let lbls = [];
+  
+  if (appState.history && appState.history.length > 0) {
+    // Tomar los últimos 7 registros (o menos)
+    const recent = appState.history.slice(-7);
+    data = recent.map(r => parseFloat(r.weight));
+    lbls = recent.map(r => {
+      const d = new Date(r.log_date + 'T00:00:00');
+      return d.toLocaleDateString('es-ES', { weekday: 'narrow' }).toUpperCase();
+    });
+  }
+  
+  if (data.length === 0) {
+    // Datos de ejemplo si no hay historial
+    data=[75.0,74.8,74.6,74.9,74.5,74.3,74.2];
+    lbls=['L','M','X','J','V','S','D'];
+  }
+  
   const pad={t:8,r:8,b:24,l:36};
   const mn=Math.min(...data)*.998, mx=Math.max(...data)*1.002;
   const sx=i=>pad.l+i*(W-pad.l-pad.r)/(data.length-1);
   const sy=v=>pad.t+(1-(v-mn)/(mx-mn))*(H-pad.t-pad.b);
+  
   ctx.strokeStyle='rgba(255,255,255,.05)'; ctx.lineWidth=1;
   for(let i=0;i<4;i++){const y=pad.t+i*(H-pad.t-pad.b)/3;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();}
   const g=ctx.createLinearGradient(0,pad.t,0,H-pad.b);
@@ -2175,11 +2210,13 @@ function drawChart() {
   ctx.beginPath(); data.forEach((v,i)=>i===0?ctx.moveTo(sx(i),sy(v)):ctx.lineTo(sx(i),sy(v)));
   ctx.lineTo(sx(data.length-1),H-pad.b); ctx.lineTo(sx(0),H-pad.b); ctx.closePath();
   ctx.fillStyle=g; ctx.fill();
-  ctx.beginPath(); ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--lime').trim(); ctx.lineWidth=2.5; ctx.lineJoin='round';
+  
+  ctx.beginPath(); ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--lime').trim() || '#ff6b6b'; ctx.lineWidth=2.5; ctx.lineJoin='round';
   data.forEach((v,i)=>i===0?ctx.moveTo(sx(i),sy(v)):ctx.lineTo(sx(i),sy(v))); ctx.stroke();
+  
   lbls.forEach((l,i)=>{
     ctx.beginPath(); ctx.arc(sx(i),sy(data[i]),3.5,0,Math.PI*2);
-    ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--lime').trim(); ctx.fill();
+    ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--lime').trim() || '#ff6b6b'; ctx.fill();
     ctx.strokeStyle='#080a0f'; ctx.lineWidth=2; ctx.stroke();
     ctx.fillStyle='#6b7588'; ctx.font=`10px Cabinet Grotesk,sans-serif`;
     ctx.textAlign='center'; ctx.fillText(l,sx(i),H-6);
@@ -2272,7 +2309,7 @@ function toggleEditObjective() {
     <div class="modal-head"><h2>REGISTRAR MEDIDAS</h2><button class="modal-close" onclick="closeModal(this)">✕</button></div>
     <div class="modal-body">
       <div class="grid2" style="gap:12px">
-        <div class="field"><label class="label">Peso (kg)</label><input class="input" placeholder="74.2" type="number"></div>
+        <div class="field"><label class="label">Peso (kg)</label><input class="input" id="measure-weight" placeholder="74.2" type="number"></div>
         <div class="field"><label class="label">% Grasa</label><input class="input" placeholder="18.4" type="number"></div>
         <div class="field"><label class="label">Cintura (cm)</label><input class="input" placeholder="82.0" type="number"></div>
         <div class="field"><label class="label">Cadera (cm)</label><input class="input" placeholder="95.0" type="number"></div>
@@ -2282,10 +2319,42 @@ function toggleEditObjective() {
     </div>
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeModal(this)">Cancelar</button>
-      <button class="btn-lime" onclick="closeModal(this)">Guardar medidas</button>
+      <button class="btn-lime" id="btn-save-measures" onclick="saveMeasures(this)">Guardar medidas</button>
     </div>
   </div>
 </div>
+
+<script>
+async function saveMeasures(btn) {
+  const weight = parseFloat(document.getElementById('measure-weight').value);
+  if (!weight || weight <= 0) {
+    alert("Por favor, ingresa un peso válido.");
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+  const token = localStorage.getItem('fp_token');
+  try {
+    const res = await fetch('/api/profile.php?action=log_body', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ weight: weight })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert("Medidas guardadas con éxito.");
+      closeModal(btn);
+      await loadProgressData();
+    } else {
+      alert(data.message || 'Error al guardar medidas.');
+    }
+  } catch(e) {
+    alert('Error de conexión.');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Guardar medidas';
+}
+</script>
 
 <!-- Ver suscripción -->
 <div class="modal-overlay" id="modal-subscription">
