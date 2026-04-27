@@ -751,26 +751,41 @@ body.ready .sidebar, body.ready .main{opacity:1}
         <div class="slide-tag">Evolución física</div>
         <div class="slide-title">TU<br>MEJOR<br><em>VERSIÓN.</em></div>
         <div class="slide-desc">Estadísticas de entrenamiento, nutrición y medidas corporales. Sigue tu evolución semana a semana.</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:280px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:320px">
           <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px">
-            <div style="font-family:var(--fd);font-size:28px;color:var(--lime)" id="prog-weight">74.2</div>
-            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Peso (kg)</div>
-            <div style="font-size:11px;color:var(--success);margin-top:4px" id="prog-weight-diff">▼ 0.0 kg</div>
+            <div style="font-family:var(--fd);font-size:28px;color:var(--lime)" id="prog-weight">—</div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Peso actual (kg)</div>
+            <div style="font-size:11px;color:var(--success);margin-top:4px" id="prog-weight-diff">—</div>
           </div>
           <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px">
-            <div style="font-family:var(--fd);font-size:28px;color:var(--lime)" id="prog-fat">18.4%</div>
-            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">% Grasa</div>
-            <div style="font-size:11px;color:var(--success);margin-top:4px">Estimado</div>
+            <div style="font-family:var(--fd);font-size:28px;color:var(--lime)" id="prog-target">—</div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Peso objetivo (kg)</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px" id="prog-target-diff">—</div>
           </div>
-          <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px">
-            <div style="font-family:var(--fd);font-size:28px;color:var(--lime)" id="prog-waist">82.0</div>
-            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Cintura (cm)</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:4px">—</div>
+          <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px;grid-column:1/-1">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">⚡ Balance calórico hoy</div>
+            <div style="display:flex;align-items:baseline;gap:6px">
+              <span style="font-family:var(--fd);font-size:24px;color:var(--lime)" id="prog-net-kcal">—</span>
+              <span style="font-size:11px;color:var(--muted)">kcal netas</span>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:6px;font-size:11px;color:var(--muted)">
+              <span>🍽 <span id="prog-eaten">—</span> ingeridas</span>
+              <span>🔥 <span id="prog-burned">—</span> quemadas</span>
+            </div>
+            <div style="margin-top:8px;height:4px;background:rgba(255,255,255,.07);border-radius:99px;overflow:hidden">
+              <div id="prog-kcal-bar" style="height:100%;background:var(--lime);border-radius:99px;transition:width .6s ease;width:0%"></div>
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px" id="prog-goal-label">Meta: — kcal</div>
           </div>
           <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px">
             <div style="font-family:var(--fd);font-size:28px;color:var(--lime)" id="prog-streak">0</div>
             <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Racha (días)</div>
-            <div style="font-size:11px;color:var(--warn);margin-top:4px">🔥 ¡Empieza hoy!</div>
+            <div style="font-size:11px;color:var(--warn);margin-top:4px">🔥 Consistencia</div>
+          </div>
+          <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px">
+            <div style="font-family:var(--fd);font-size:28px;color:var(--lime)" id="prog-fat">—</div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">% Grasa</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">Estimado</div>
           </div>
         </div>
       </div>
@@ -2239,6 +2254,8 @@ async function loadProgressData() {
     const data = await res.json();
     if (data.success && data.history) {
       appState.history = data.history;
+      // Asegurar que el balance esté cargado antes de actualizar widgets
+      if (!appState.burnedCalories) await loadDailySummary();
       updateProgressWidgets();
       if (active === 'progress') drawChart();
     }
@@ -2248,10 +2265,9 @@ async function loadProgressData() {
 function updateProgressWidgets() {
   const p = appState.profile;
   const h = appState.history || [];
-  
+
   if (!p || parseFloat(p.weight) <= 1) {
-    // Si no hay datos físicos reales, mostrar guiones
-    ['prog-weight', 'prog-fat', 'prog-waist', 'prog-streak'].forEach(id => {
+    ['prog-weight','prog-target','prog-fat','prog-streak'].forEach(id => {
       const el = document.getElementById(id);
       if(el) el.textContent = '—';
     });
@@ -2264,7 +2280,7 @@ function updateProgressWidgets() {
   const weightEl = document.getElementById('prog-weight');
   if (weightEl) weightEl.textContent = parseFloat(p.weight).toFixed(1);
 
-  // 2. Diferencia de peso (Tendencia semanal aprox)
+  // 2. Diferencia de peso (tendencia del historial)
   const diffEl = document.getElementById('prog-weight-diff');
   if (diffEl) {
     if (h.length > 1) {
@@ -2273,27 +2289,64 @@ function updateProgressWidgets() {
       const diff = last - first;
       const sign = diff > 0 ? '▲' : (diff < 0 ? '▼' : '—');
       const color = diff > 0 ? 'var(--warn)' : (diff < 0 ? 'var(--success)' : 'var(--muted)');
-      diffEl.textContent = `${sign} ${Math.abs(diff).toFixed(1)} kg`;
+      diffEl.textContent = `${sign} ${Math.abs(diff).toFixed(1)} kg vs inicio`;
       diffEl.style.color = color;
     } else {
-      diffEl.textContent = '—';
+      diffEl.textContent = 'Primer registro';
       diffEl.style.color = 'var(--muted)';
     }
   }
 
-  // 3. Grasa Corporal
+  // 3. Peso Objetivo
+  const targetEl = document.getElementById('prog-target');
+  const targetDiffEl = document.getElementById('prog-target-diff');
+  if (targetEl) {
+    if (p.target_weight) {
+      targetEl.textContent = parseFloat(p.target_weight).toFixed(1);
+      if (targetDiffEl) {
+        const remaining = parseFloat(p.weight) - parseFloat(p.target_weight);
+        const obj = p.objective || '';
+        const label = obj === 'GAIN_MUSCLE' ? `+${Math.abs(remaining).toFixed(1)} kg por ganar` : `${Math.abs(remaining).toFixed(1)} kg por perder`;
+        targetDiffEl.textContent = Math.abs(remaining) < 0.5 ? '¡Meta alcanzada! 🎯' : label;
+        targetDiffEl.style.color = 'var(--lime)';
+      }
+    } else {
+      targetEl.textContent = '—';
+      if (targetDiffEl) targetDiffEl.textContent = 'No configurado';
+    }
+  }
+
+  // 4. Balance calórico (usar datos del appState)
+  const netKcalEl = document.getElementById('prog-net-kcal');
+  const eatenEl = document.getElementById('prog-eaten');
+  const burnedEl = document.getElementById('prog-burned');
+  const barEl = document.getElementById('prog-kcal-bar');
+  const goalLabelEl = document.getElementById('prog-goal-label');
+  const burned = appState.burnedCalories || 0;
+  if (netKcalEl && appState.macros) {
+    // Re-fetch today's eaten calories from appState if available
+    const targetKcal = appState.macros.calories || 0;
+    // We store ingested separately — estimate from v2-kcal widget which shows net already
+    const netEl = document.getElementById('v2-kcal');
+    const netVal = netEl ? parseInt(netEl.textContent) || 0 : 0;
+    const ingested = netVal + burned;
+    const net = Math.max(0, ingested - burned);
+    netKcalEl.textContent = net;
+    if (eatenEl) eatenEl.textContent = ingested + ' kcal';
+    if (burnedEl) burnedEl.textContent = burned + ' kcal';
+    if (barEl && targetKcal > 0) barEl.style.width = Math.min((net / targetKcal) * 100, 100) + '%';
+    if (goalLabelEl) goalLabelEl.textContent = `Meta: ${targetKcal} kcal`;
+  }
+
+  // 5. Grasa Corporal
   const fatEl = document.getElementById('prog-fat');
-  if (fatEl) fatEl.textContent = p.body_fat ? `${parseFloat(p.body_fat).toFixed(1)}%` : "—";
+  if (fatEl) fatEl.textContent = p.body_fat ? `${parseFloat(p.body_fat).toFixed(1)}%` : '—';
 
-  // 4. Cintura
-  const waistEl = document.getElementById('prog-waist');
-  if (waistEl) waistEl.textContent = p.waist ? parseFloat(p.waist).toFixed(1) : "—";
-
-  // 5. Racha de registros (Body Logs)
+  // 6. Racha
   const streakEl = document.getElementById('prog-streak');
   if (streakEl) streakEl.textContent = h.length > 0 ? h.length : '0';
 
-  // 5. Medidas corporales laterales (REAL DATA)
+  // 7. Medidas corporales
   const measuresList = document.getElementById('body-measures-list');
   if (measuresList) {
     const chest = p.chest ? `${parseFloat(p.chest).toFixed(1)} cm` : '—';
@@ -2318,51 +2371,86 @@ function drawChart() {
   canvas.height = 120 * devicePixelRatio;
   ctx.scale(devicePixelRatio,devicePixelRatio);
   const W=canvas.offsetWidth, H=120;
-  
+
   let data = [];
   let lbls = [];
-  
+  let dates = [];
+
   if (appState.history && appState.history.length > 0) {
-    // Tomar los últimos 7 registros (o menos)
     const recent = appState.history.slice(-7);
     data = recent.map(r => parseFloat(r.weight));
+    dates = recent.map(r => r.log_date);
     lbls = recent.map(r => {
       const d = new Date(r.log_date + 'T00:00:00');
       return d.toLocaleDateString('es-ES', { weekday: 'narrow' }).toUpperCase();
     });
   }
-  
+
   if (data.length === 0) {
-    // Si no hay datos, mostrar canvas vacío o con mensaje
     ctx.clearRect(0,0,W,H);
     ctx.fillStyle='#6b7588';
-    ctx.font=`12px Cabinet Grotesk,sans-serif`;
+    ctx.font='12px Cabinet Grotesk,sans-serif';
     ctx.textAlign='center';
     ctx.fillText('Registra tu peso para ver la gráfica', W/2, H/2);
     return;
   }
-  
+
+  // Calcular línea de objetivo teórico
+  const p = appState.profile;
+  let targetData = [];
+  if (p && p.target_weight && p.weight && p.created_at) {
+    const startW = parseFloat(appState.history[0]?.weight || p.weight);
+    const endW = parseFloat(p.target_weight);
+    const weeks = parseFloat(p.target_time_weeks) || 12;
+    const startDate = new Date(appState.history[0]?.log_date + 'T00:00:00' || p.created_at);
+    const totalDays = weeks * 7;
+    targetData = dates.map(dateStr => {
+      const d = new Date(dateStr + 'T00:00:00');
+      const elapsedDays = Math.max(0, (d - startDate) / 86400000);
+      const progress = Math.min(elapsedDays / totalDays, 1);
+      return startW + (endW - startW) * progress;
+    });
+  }
+
+  const allVals = [...data, ...targetData].filter(v => !isNaN(v));
   const pad={t:8,r:8,b:24,l:36};
-  const mn=Math.min(...data)*.998, mx=Math.max(...data)*1.002;
-  const sx=i=>pad.l+i*(W-pad.l-pad.r)/(data.length-1);
+  const mn=Math.min(...allVals)*.997, mx=Math.max(...allVals)*1.003;
+  const sx=i=>pad.l+i*(W-pad.l-pad.r)/Math.max(data.length-1,1);
   const sy=v=>pad.t+(1-(v-mn)/(mx-mn))*(H-pad.t-pad.b);
-  
+
   ctx.strokeStyle='rgba(255,255,255,.05)'; ctx.lineWidth=1;
   for(let i=0;i<4;i++){const y=pad.t+i*(H-pad.t-pad.b)/3;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();}
+
+  // Área bajo curva real
+  const accentColor = '#ff6b6b';
+  const limeColor = getComputedStyle(document.documentElement).getPropertyValue('--lime').trim() || accentColor;
   const g=ctx.createLinearGradient(0,pad.t,0,H-pad.b);
-  g.addColorStop(0,'rgba(255,107,107,.25)'); g.addColorStop(1,'rgba(255,107,107,0)');
+  g.addColorStop(0,'rgba(255,107,107,.2)'); g.addColorStop(1,'rgba(255,107,107,0)');
   ctx.beginPath(); data.forEach((v,i)=>i===0?ctx.moveTo(sx(i),sy(v)):ctx.lineTo(sx(i),sy(v)));
   ctx.lineTo(sx(data.length-1),H-pad.b); ctx.lineTo(sx(0),H-pad.b); ctx.closePath();
   ctx.fillStyle=g; ctx.fill();
-  
-  ctx.beginPath(); ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--lime').trim() || '#ff6b6b'; ctx.lineWidth=2.5; ctx.lineJoin='round';
+
+  // Línea de objetivo (punteada, color suave)
+  if (targetData.length > 1) {
+    ctx.save();
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    targetData.forEach((v,i)=>i===0?ctx.moveTo(sx(i),sy(v)):ctx.lineTo(sx(i),sy(v)));
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Línea real
+  ctx.beginPath(); ctx.strokeStyle=limeColor; ctx.lineWidth=2.5; ctx.lineJoin='round';
   data.forEach((v,i)=>i===0?ctx.moveTo(sx(i),sy(v)):ctx.lineTo(sx(i),sy(v))); ctx.stroke();
-  
+
   lbls.forEach((l,i)=>{
     ctx.beginPath(); ctx.arc(sx(i),sy(data[i]),3.5,0,Math.PI*2);
-    ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--lime').trim() || '#ff6b6b'; ctx.fill();
+    ctx.fillStyle=limeColor; ctx.fill();
     ctx.strokeStyle='#080a0f'; ctx.lineWidth=2; ctx.stroke();
-    ctx.fillStyle='#6b7588'; ctx.font=`10px Cabinet Grotesk,sans-serif`;
+    ctx.fillStyle='#6b7588'; ctx.font='10px Cabinet Grotesk,sans-serif';
     ctx.textAlign='center'; ctx.fillText(l,sx(i),H-6);
   });
 }
