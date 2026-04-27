@@ -751,24 +751,24 @@ body.ready .sidebar, body.ready .main{opacity:1}
         <div class="slide-desc">Estadísticas de entrenamiento, nutrición y medidas corporales. Sigue tu evolución semana a semana.</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:280px">
           <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px">
-            <div style="font-family:var(--fd);font-size:28px;color:var(--lime)">74.2</div>
+            <div style="font-family:var(--fd);font-size:28px;color:var(--lime)" id="prog-weight">74.2</div>
             <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Peso (kg)</div>
-            <div style="font-size:11px;color:var(--success);margin-top:4px">▼ 0.8 kg/sem</div>
+            <div style="font-size:11px;color:var(--success);margin-top:4px" id="prog-weight-diff">▼ 0.0 kg</div>
           </div>
           <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px">
-            <div style="font-family:var(--fd);font-size:28px;color:var(--lime)">18.4%</div>
+            <div style="font-family:var(--fd);font-size:28px;color:var(--lime)" id="prog-fat">18.4%</div>
             <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">% Grasa</div>
-            <div style="font-size:11px;color:var(--success);margin-top:4px">▼ 0.3%</div>
+            <div style="font-size:11px;color:var(--success);margin-top:4px">Estimado</div>
           </div>
           <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px">
-            <div style="font-family:var(--fd);font-size:28px;color:var(--lime)">38.1</div>
+            <div style="font-family:var(--fd);font-size:28px;color:var(--lime)" id="prog-waist">82.0</div>
             <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Cintura (cm)</div>
-            <div style="font-size:11px;color:var(--success);margin-top:4px">▼ 0.5 cm</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">—</div>
           </div>
           <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px">
-            <div style="font-family:var(--fd);font-size:28px;color:var(--lime)">12</div>
+            <div style="font-family:var(--fd);font-size:28px;color:var(--lime)" id="prog-streak">0</div>
             <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Racha (días)</div>
-            <div style="font-size:11px;color:var(--warn);margin-top:4px">🔥 Sigue así</div>
+            <div style="font-size:11px;color:var(--warn);margin-top:4px">🔥 ¡Empieza hoy!</div>
           </div>
         </div>
       </div>
@@ -1124,6 +1124,11 @@ function populateUI(profile, macros, user) {
   if (!hasPhysical) {
     document.getElementById('diet-content').style.display = 'none';
     document.getElementById('diet-setup').style.display = 'grid';
+    // Dashboard macros en blanco
+    ['v2-kcal','v2-prot','v2-carb','v2-fat'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.textContent = '—';
+    });
   } else {
     document.getElementById('diet-setup').style.display = 'none';
     document.getElementById('diet-content').style.display = 'grid';
@@ -1875,6 +1880,12 @@ window.addEventListener('load', () => {
 
 async function loadLastMessage() {
   const token = localStorage.getItem('fp_token');
+  const avatar = document.getElementById('dash-msg-avatar');
+  const trainer = document.getElementById('dash-msg-trainer');
+  const text = document.getElementById('dash-msg-text');
+  
+  if (!avatar || !trainer || !text) return;
+
   try {
     const res = await fetch('/api/messages.php?action=inbox', {
       headers: { 'Authorization': `Bearer ${token}` }
@@ -1882,11 +1893,17 @@ async function loadLastMessage() {
     const data = await res.json();
     if (data.success && data.threads && data.threads.length > 0) {
       const last = data.threads[0];
-      document.getElementById('dash-msg-avatar').textContent = last.other_name.charAt(0).toUpperCase();
-      document.getElementById('dash-msg-trainer').textContent = `${last.other_name} · en línea`;
-      document.getElementById('dash-msg-text').textContent = last.last_content;
+      avatar.textContent = last.other_name.charAt(0).toUpperCase();
+      trainer.textContent = `${last.other_name} · último mensaje`;
+      text.textContent = last.last_content;
+    } else {
+      avatar.textContent = '?';
+      trainer.textContent = 'Sin mensajes previos';
+      text.textContent = 'Tu entrenador/a te escribirá pronto.';
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error("Error loading last message:", e);
+  }
 }
 
 async function fetchInbox() {
@@ -2165,9 +2182,58 @@ async function loadProgressData() {
     const data = await res.json();
     if (data.success && data.history) {
       appState.history = data.history;
+      updateProgressWidgets();
       if (active === 'progress') drawChart();
     }
   } catch(e) {}
+}
+
+function updateProgressWidgets() {
+  const p = appState.profile;
+  const h = appState.history || [];
+  
+  if (!p || parseFloat(p.weight) <= 1) {
+    // Si no hay datos físicos reales, mostrar guiones
+    ['prog-weight', 'prog-fat', 'prog-waist', 'prog-streak'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.textContent = '—';
+    });
+    const diffEl = document.getElementById('prog-weight-diff');
+    if(diffEl) diffEl.textContent = 'Sin datos';
+    return;
+  }
+
+  // 1. Peso Actual
+  const weightEl = document.getElementById('prog-weight');
+  if (weightEl) weightEl.textContent = parseFloat(p.weight).toFixed(1);
+
+  // 2. Diferencia de peso (Tendencia semanal aprox)
+  const diffEl = document.getElementById('prog-weight-diff');
+  if (diffEl) {
+    if (h.length > 1) {
+      const first = parseFloat(h[0].weight);
+      const last = parseFloat(h[h.length - 1].weight);
+      const diff = last - first;
+      const sign = diff > 0 ? '▲' : (diff < 0 ? '▼' : '—');
+      const color = diff > 0 ? 'var(--warn)' : (diff < 0 ? 'var(--success)' : 'var(--muted)');
+      diffEl.textContent = `${sign} ${Math.abs(diff).toFixed(1)} kg`;
+      diffEl.style.color = color;
+    } else {
+      diffEl.textContent = '—';
+      diffEl.style.color = 'var(--muted)';
+    }
+  }
+
+  // 3. Placeholders realistas (Basados en el perfil si existen)
+  const fatEl = document.getElementById('prog-fat');
+  if (fatEl) fatEl.textContent = "—"; // No tenemos este dato aún en la BD
+
+  const waistEl = document.getElementById('prog-waist');
+  if (waistEl) waistEl.textContent = p.waist ? parseFloat(p.waist).toFixed(1) : "—";
+
+  // 4. Racha (Simulada por ahora con el historial de body_logs)
+  const streakEl = document.getElementById('prog-streak');
+  if (streakEl) streakEl.textContent = h.length > 0 ? h.length : '0';
 }
 
 function drawChart() {
@@ -2193,9 +2259,13 @@ function drawChart() {
   }
   
   if (data.length === 0) {
-    // Datos de ejemplo si no hay historial
-    data=[75.0,74.8,74.6,74.9,74.5,74.3,74.2];
-    lbls=['L','M','X','J','V','S','D'];
+    // Si no hay datos, mostrar canvas vacío o con mensaje
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#6b7588';
+    ctx.font=`12px Cabinet Grotesk,sans-serif`;
+    ctx.textAlign='center';
+    ctx.fillText('Registra tu peso para ver la gráfica', W/2, H/2);
+    return;
   }
   
   const pad={t:8,r:8,b:24,l:36};
