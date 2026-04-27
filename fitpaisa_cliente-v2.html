@@ -496,40 +496,58 @@ body.ready .sidebar, body.ready .main{opacity:1}
       <div class="user-tag"><div class="avatar">—</div>...</div>
     </div>
     <div class="slide-body-wrap">
-      <div class="paywall-overlay">
+      <div class="paywall-overlay" id="pw-training">
         <div class="pw-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--lime)"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
         <div class="pw-title">EXCLUSIVO PREMIUM</div>
         <div class="pw-text">Desbloquea rutinas personalizadas, registro de marcas y todo lo que necesitas para romper tus límites.</div>
         <button class="btn-lime" onclick="openModal('modal-subscription')">Actualizar a Premium</button>
       </div>
+
+      <!-- Coach Selection Overlay (only for Premium users without a coach) -->
+      <div class="paywall-overlay" id="coach-overlay" style="z-index: 105; background:rgba(8,10,15,.85); backdrop-filter:blur(15px);">
+        <div class="pw-icon" style="animation: pulse 2s infinite;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--lime)"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <div class="pw-title" style="font-size:42px; margin-bottom: 8px;">ELIGE TU<br><em>ENTRENADOR.</em></div>
+        <div class="pw-text" style="max-width:380px;">Como usuario Premium, tienes derecho a seguimiento personalizado. Elige al entrenador que guiará tus rutinas.</div>
+        
+        <div id="coaches-list" style="display:flex; gap:16px; margin-top:20px; overflow-x:auto; max-width:90vw; padding-bottom:10px; scrollbar-width:none;">
+          <div style="color:var(--muted); font-size:13px; font-style:italic">Cargando entrenadores...</div>
+        </div>
+      </div>
       <div class="slide-hero">
-        <div class="slide-tag">Plan activo · Volumen</div>
-        <div class="slide-title">ROMPE<br>TUS<br><em>LÍMITES.</em></div>
-        <div class="slide-desc">Plan diseñado y aprobado por Laura Vidal. Marca cada ejercicio completado y registra tus nuevos récords personales.</div>
+        <div class="slide-tag" id="workout-date-label" style="color:var(--lime); font-weight:700">Entrenamiento · Hoy</div>
+        <div id="workout-date-picker" class="diet-picker r r1"></div>
+        <div class="slide-title" id="workout-hero-title">ROMPE<br>TUS<br><em>LÍMITES.</em></div>
+        <div class="slide-desc" id="workout-hero-desc">Plan diseñado por tu entrenador personal. Marca cada ejercicio completado.</div>
         <div style="margin-top:8px">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Progreso de hoy</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Progreso de la sesión</div>
           <div style="height:6px;background:rgba(255,255,255,.07);border-radius:99px;overflow:hidden;max-width:300px">
-            <div id="woProgress" style="height:100%;background:var(--lime);border-radius:99px;transition:width .5s ease;width:50%"></div>
+            <div id="woProgress" style="height:100%;background:var(--lime);border-radius:99px;transition:width .5s cubic-bezier(0.4, 0, 0.2, 1);width:0%"></div>
           </div>
-          <div id="woLabel" style="font-size:12px;color:var(--muted);margin-top:6px">Cargando...</div>
+          <div id="woLabel" style="font-size:12px;color:var(--muted);margin-top:6px">Cargando rutinas...</div>
         </div>
       </div>
       <div class="slide-panel">
         <div class="card">
-          <div class="card-title">Ejercicios de hoy</div>
+          <div class="card-title">Ejercicios Asignados</div>
           <div id="exList"></div>
         </div>
-        <div class="card">
-          <div class="card-title">Añadir ejercicio</div>
-          <div style="display:flex;flex-direction:column;gap:10px">
-            <div class="field"><label class="label">Ejercicio</label><input class="input" id="exName" placeholder="Ej: Press banca"></div>
-            <div class="grid2">
-              <div class="field"><label class="label">Series</label><input class="input" id="exSets" type="number" placeholder="4"></div>
-              <div class="field"><label class="label">Reps</label><input class="input" id="exReps" type="number" placeholder="10"></div>
-            </div>
-            <div class="field"><label class="label">Carga (kg)</label><input class="input" id="exKg" type="number" placeholder="80"></div>
-            <button class="btn-lime" onclick="addEx()">+ Registrar</button>
+        <div class="card" id="coach-info-card">
+          <div class="card-title">Tu Entrenador</div>
+          <div style="display:flex;align-items:center;gap:12px">
+             <div class="avatar" id="current-coach-avatar" style="width:40px;height:40px;font-size:14px;background:var(--limedim);color:var(--lime);">—</div>
+             <div style="flex:1">
+               <div id="current-coach-name" style="font-size:14px;font-weight:700">Sin asignar</div>
+               <div style="font-size:11px;color:var(--muted);margin-top:2px">Asignación Premium</div>
+             </div>
+             <button class="btn-ghost" style="padding:6px 12px; font-size:11px" onclick="openModal('modal-coaches')">Cambiar</button>
           </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Resumen Semanal</div>
+          <div style="display:flex; align-items:flex-end; gap:8px; height:80px; margin-top:10px" id="workout-weekly-bars">
+             <div style="color:var(--muted); font-size:12px; align-self:center; width:100%; text-align:center;">Cargando...</div>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-top:8px" id="workout-weekly-labels"></div>
         </div>
         <div class="card">
           <div class="card-title">Récords personales</div>
@@ -1042,9 +1060,19 @@ function populateUI(profile, macros, user) {
 
   // ── Paywall (solo para FREE)
   if (!isPremium) {
-    document.getElementById('sec-training').querySelector('.paywall-overlay').classList.add('on');
+    document.getElementById('pw-training').classList.add('on');
     document.getElementById('sec-messages').querySelector('.paywall-overlay').classList.add('on');
     document.getElementById('sec-progress').querySelector('.paywall-overlay').classList.add('on');
+  } else {
+    // Si es Premium, revisar si tiene entrenador asignado
+    if (!profile?.preferred_coach_id) {
+      document.getElementById('coach-overlay').classList.add('on');
+    } else {
+      document.getElementById('coach-overlay').classList.remove('on');
+      // Set simple info, coach name is fetched via workouts
+      document.getElementById('current-coach-name').textContent = 'Tu entrenador';
+      document.getElementById('current-coach-avatar').textContent = '💪';
+    }
   }
 
   // ── Modal de perfil
@@ -1832,9 +1860,15 @@ window.addEventListener('load', () => {
   setTimeout(() => {
     renderDietDatePicker();
     loadDailySummary();
-  loadLastMessage();
-  fetchInbox();
-}, 500);
+    
+    // Entrenamientos
+    renderWorkoutDatePicker();
+    loadDailyWorkouts();
+    loadAvailableCoaches();
+
+    loadLastMessage();
+    fetchInbox();
+  }, 500);
 });
 
 async function loadLastMessage() {
@@ -1919,33 +1953,173 @@ function renderWeeklyChart(trend) {
   }).join('');
 }
 
-// ── Exercise list ─────────────────────
-let exercises = [
-  {name:'Press banca',  sets:4,reps:10,kg:80,  done:true},
-  {name:'Sentadilla',   sets:4,reps:8, kg:100, done:true},
-  {name:'Peso muerto',  sets:3,reps:6, kg:120, done:false},
-  {name:'Dominadas',    sets:3,reps:12,kg:0,   done:false},
-];
-function renderEx() {
-  const done = exercises.filter(e=>e.done).length;
-  document.getElementById('woProgress').style.width = (done/exercises.length*100)+'%';
-  document.getElementById('woLabel').textContent = `${done} de ${exercises.length} completados`;
-  document.getElementById('exList').innerHTML = exercises.map((e,i)=>`
-    <div class="ex-item">
-      <div class="ex-n">${String(i+1).padStart(2,'0')}</div>
-      <div><div class="ex-name">${e.name}</div><div class="ex-meta">${e.sets}×${e.reps}${e.kg?' · '+e.kg+' kg':' · PC'}</div></div>
-      <div class="check-btn ${e.done?'done':''}" onclick="toggleEx(${i})">${e.done?'✓':''}</div>
+// ── Exercise list (REAL DATA) ───────────
+let workoutSelectedDate = getLocalDateString();
+
+function renderWorkoutDatePicker() {
+  const picker = document.getElementById('workout-date-picker');
+  if (!picker) return;
+  const dates = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    dates.push(getLocalDateString(d));
+  }
+  picker.innerHTML = dates.map(date => {
+    const dObj = new Date(date + 'T00:00:00');
+    const dayName = dObj.toLocaleDateString('es-ES', { weekday: 'short' }).replace('.', '');
+    const dayNum = dObj.getDate();
+    const isToday = date === getLocalDateString();
+    const active = date === workoutSelectedDate ? 'active' : '';
+    return `<div class="diet-day ${active}" onclick="setWorkoutDate('${date}')"><span class="d-w">${isToday ? 'Hoy' : dayName}</span><span class="d-n">${dayNum}</span></div>`;
+  }).join('');
+  const label = document.getElementById('workout-date-label');
+  const dObj = new Date(workoutSelectedDate + 'T00:00:00');
+  const fmt = dObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+  label.textContent = `Entrenamiento · ${workoutSelectedDate === getLocalDateString() ? 'Hoy' : fmt}`;
+}
+
+function setWorkoutDate(date) {
+  workoutSelectedDate = date;
+  renderWorkoutDatePicker();
+  loadDailyWorkouts();
+}
+
+async function loadDailyWorkouts() {
+  const token = localStorage.getItem('fp_token');
+  const el = document.getElementById('exList');
+  el.innerHTML = '<div style="color:var(--muted); font-size:13px; text-align:center; padding: 20px;">Cargando rutinas...</div>';
+  try {
+    const res = await fetch(`/api/workouts.php?action=my_exercises&date=${workoutSelectedDate}`, { headers: { 'Authorization': `Bearer ${token}` } });
+    const data = await res.json();
+    if (data.success) {
+      renderExList(data.exercises || []);
+    } else {
+      el.innerHTML = `<div style="color:var(--danger); font-size:13px; text-align:center; padding: 20px;">${data.message || 'Error al cargar'}</div>`;
+    }
+    
+    // Also load the weekly summary whenever we load daily workouts
+    loadWorkoutSummary();
+  } catch (e) {
+      el.innerHTML = `<div style="color:var(--danger); font-size:13px; text-align:center; padding: 20px;">Error de conexión.</div>`;
+  }
+}
+
+async function loadWorkoutSummary() {
+  const token = localStorage.getItem('fp_token');
+  try {
+    const res = await fetch('/api/workouts.php?action=workout_calendar', { headers: { 'Authorization': `Bearer ${token}` } });
+    const data = await res.json();
+    if(data.success) renderWorkoutSummary(data.calendar || []);
+  } catch(e){}
+}
+
+function renderWorkoutSummary(calendar) {
+  const container = document.getElementById('workout-weekly-bars');
+  const labelsContainer = document.getElementById('workout-weekly-labels');
+  if (!container || !labelsContainer) return;
+
+  container.innerHTML = calendar.map(day => {
+    let pct = day.total > 0 ? (day.completed / day.total) * 100 : 0;
+    let color = pct === 100 ? 'var(--lime)' : (pct > 0 ? 'var(--warn)' : 'rgba(255,255,255,0.05)');
+    let height = pct > 0 ? Math.max(pct, 10) : 10;
+    return `<div style="flex:1; background:${color}; height:${height}%; border-radius:4px; transition:height 0.4s ease, background 0.4s ease;" title="${day.date}: ${day.completed}/${day.total}"></div>`;
+  }).join('');
+
+  labelsContainer.innerHTML = calendar.map(day => {
+    const dObj = new Date(day.date + 'T00:00:00');
+    const label = dObj.toLocaleDateString('es-ES', { weekday: 'narrow' }).toUpperCase();
+    return `<div style="flex:1; text-align:center; font-size:10px; color:var(--muted);">${label}</div>`;
+  }).join('');
+}
+
+function renderExList(exercises) {
+  const doneCount = exercises.filter(e => e.is_done).length;
+  const total = exercises.length;
+  document.getElementById('woProgress').style.width = total > 0 ? ((doneCount / total) * 100) + '%' : '0%';
+  document.getElementById('woLabel').textContent = total > 0 ? `${doneCount} de ${total} completados` : 'Día de descanso';
+  
+  if (total === 0) {
+    document.getElementById('exList').innerHTML = `<div style="text-align:center;padding:30px 20px;color:var(--muted);font-size:14px;background:rgba(255,255,255,.02);border-radius:12px">No hay ejercicios asignados para este día.</div>`;
+    return;
+  }
+  
+  document.getElementById('exList').innerHTML = exercises.map((e, i) => `
+    <div class="ex-item ${e.is_done ? 'done-item' : ''}" style="transition: all 0.3s ease;">
+      <div class="ex-n">${String(i + 1).padStart(2, '0')}</div>
+      <div style="flex:1">
+        <div class="ex-name" style="${e.is_done ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${e.exercise_name}</div>
+        <div class="ex-meta">${e.sets}×${e.reps} · ${e.weight_kg > 0 ? e.weight_kg + ' kg' : 'Peso Corporal'}</div>
+      </div>
+      <div class="check-btn ${e.is_done ? 'done' : ''}" onclick="toggleEx(${e.exercise_id}, ${e.is_done ? 'false' : 'true'})">${e.is_done ? '✓' : ''}</div>
     </div>`).join('');
 }
-function toggleEx(i) { exercises[i].done=!exercises[i].done; renderEx(); }
-function addEx() {
-  const n=document.getElementById('exName').value.trim();
-  if(!n) return;
-  exercises.push({name:n,sets:+document.getElementById('exSets').value||3,reps:+document.getElementById('exReps').value||10,kg:+document.getElementById('exKg').value||0,done:false});
-  ['exName','exSets','exReps','exKg'].forEach(id=>document.getElementById(id).value='');
-  renderEx();
+
+async function toggleEx(exerciseId, markDone) {
+  const token = localStorage.getItem('fp_token');
+  try {
+    const res = await fetch('/api/workouts.php?action=mark_done', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ exercise_id: exerciseId, date: workoutSelectedDate, done: markDone })
+    });
+    if (res.ok) {
+      loadDailyWorkouts();
+    }
+  } catch(e){}
 }
-renderEx();
+
+// ── Coach Management ──────────────────────
+async function loadAvailableCoaches() {
+  const token = localStorage.getItem('fp_token');
+  try {
+    const res = await fetch('/api/workouts.php?action=available_coaches', { headers: { 'Authorization': `Bearer ${token}` } });
+    const data = await res.json();
+    if(data.success && data.coaches.length > 0) {
+      const html = data.coaches.map(c => `
+        <div style="background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:16px; flex:0 0 280px; text-align:center; transition:transform 0.3s ease, border-color 0.3s ease;" class="coach-card" onmouseover="this.style.borderColor='var(--lime)'; this.style.transform='translateY(-4px)'" onmouseout="this.style.borderColor='rgba(255,255,255,.08)'; this.style.transform='translateY(0)'">
+          <div style="width:64px;height:64px;border-radius:50%;background:var(--limedim);color:var(--lime);display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 12px auto;font-weight:700">${c.name.charAt(0)}</div>
+          <div style="font-size:16px; font-weight:700; margin-bottom:4px;">${c.name}</div>
+          <div style="font-size:12px; color:var(--muted); margin-bottom:16px; min-height:36px;">Especialista en recomposición corporal.</div>
+          <button class="btn-lime" style="width:100%" onclick="selectCoach(${c.user_id}, '${c.name}')">Seleccionar Entrenador</button>
+        </div>
+      `).join('');
+      document.getElementById('coaches-list').innerHTML = html;
+      document.getElementById('coaches-list-modal').innerHTML = html.replace(/flex:0 0 280px;/g, 'flex:1;'); // Modal styles
+      
+      // Update assigned coach info if any
+      const assigned = data.coaches.find(c => c.user_id === appState.profile?.preferred_coach_id);
+      if (assigned) {
+        document.getElementById('current-coach-name').textContent = assigned.name;
+        document.getElementById('current-coach-avatar').textContent = assigned.name.charAt(0);
+      }
+    }
+  } catch(e){}
+}
+
+async function selectCoach(coachId, coachName) {
+  const token = localStorage.getItem('fp_token');
+  try {
+    const res = await fetch('/api/workouts.php?action=select_coach', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ coach_id: coachId })
+    });
+    const data = await res.json();
+    if(data.success) {
+      if (appState.profile) appState.profile.preferred_coach_id = coachId;
+      document.getElementById('coach-overlay').classList.remove('on');
+      document.querySelector('#modal-coaches').classList.remove('open');
+      
+      document.getElementById('current-coach-name').textContent = coachName;
+      document.getElementById('current-coach-avatar').textContent = coachName.charAt(0);
+      
+      loadDailyWorkouts();
+      fetchInbox(); // Start chat
+    } else {
+        alert(data.message || 'Error al asignar entrenador.');
+    }
+  } catch(e){}
+}
 
 
 
@@ -2075,6 +2249,22 @@ function toggleEditObjective() {
 
 
 <!-- ═══ MODALS ═══ -->
+
+<!-- Seleccionar Entrenador (Reasignación en Perfil) -->
+<div class="modal-overlay" id="modal-coaches">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-head"><h2>SELECCIONAR ENTRENADOR</h2><button class="modal-close" onclick="closeModal(this)">✕</button></div>
+    <div class="modal-body">
+      <div style="margin-bottom: 16px; font-size:13px; color:var(--muted)">Explora los perfiles de nuestros entrenadores profesionales y elige quién guiará tu proceso.</div>
+      <div id="coaches-list-modal" style="display:flex; flex-direction:column; gap:12px; max-height:50vh; overflow-y:auto; padding-right:6px">
+         <div style="text-align:center; padding: 20px; color:var(--muted); font-size:12px">Cargando...</div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal(this)">Cerrar</button>
+    </div>
+  </div>
+</div>
 
 <!-- Registrar medidas -->
 <div class="modal-overlay" id="modal-measures">
