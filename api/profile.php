@@ -252,6 +252,17 @@ function handle_setup_macros(array $payload): never
         [':uid'=>$payload['user_id'], ':w'=>$w, ':h'=>$h, ':a'=>$a, ':g'=>$gender, ':al'=>$activity, ':o'=>$obj, ':tw'=>$tw, ':ttw'=>$weeks]
     );
 
+    // Sincronizar con historial de medidas (body_logs)
+    $pid = fp_query('SELECT profile_id FROM profiles WHERE user_id = :uid', [':uid' => $payload['user_id']])->fetchColumn();
+    if ($pid) {
+        fp_query(
+            "INSERT INTO body_logs (profile_id, weight, log_date) 
+             VALUES (:pid, :w, CURRENT_DATE)
+             ON CONFLICT (profile_id, log_date) DO UPDATE SET weight = EXCLUDED.weight",
+            [':pid' => $pid, ':w' => $w]
+        );
+    }
+
     $gender = fp_query('SELECT gender FROM profiles WHERE user_id=:uid',[':uid'=>$payload['user_id']])->fetchColumn() ?: 'OTHER';
     $activity = fp_query('SELECT activity_level FROM profiles WHERE user_id=:uid',[':uid'=>$payload['user_id']])->fetchColumn() ?: 'MODERATE';
 
