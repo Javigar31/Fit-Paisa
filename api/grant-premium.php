@@ -53,6 +53,12 @@ $db->prepare(
      WHERE user_id = :uid AND status = 'ACTIVE'"
 )->execute([':uid' => $userId]);
 
+/* ── Ensure columns exist (Patch for legacy DBs) ───────────────────────── */
+try {
+    $db->exec("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()");
+    $db->exec("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()");
+} catch (PDOException $e) {}
+
 /* ── Insertar nueva suscripción PREMIUM ───────────────────────────────── */
 $startDate = date('Y-m-d');
 $endDate   = date('Y-m-d', strtotime("+{$months} months"));
