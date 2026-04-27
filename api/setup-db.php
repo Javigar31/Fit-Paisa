@@ -496,7 +496,35 @@ run_step($db, 'TABLE: notifications', "
     );
 ");
 
+/* ══════════════════════════════════════════════════════════════════════
+   TABLA: exercise_logs — Registro de ejercicios completados por el cliente
+   Permite marcar un ejercicio como "hecho" en un día concreto.
+   ══════════════════════════════════════════════════════════════════════ */
+run_step($db, 'TABLE: exercise_logs', "
+    CREATE TABLE IF NOT EXISTS exercise_logs (
+        log_id      SERIAL PRIMARY KEY,
+        exercise_id INTEGER         NOT NULL REFERENCES exercises(exercise_id) ON DELETE CASCADE,
+        user_id     INTEGER         NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+        log_date    DATE            NOT NULL DEFAULT CURRENT_DATE,
+        done        BOOLEAN         NOT NULL DEFAULT TRUE,
+        created_at  TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+        UNIQUE (exercise_id, user_id, log_date)
+    );
+");
+
+run_step($db, 'INDEX: exercise_logs_user_date', "
+    CREATE INDEX IF NOT EXISTS idx_exercise_logs_user_date
+    ON exercise_logs(user_id, log_date DESC);
+");
+
+// Patch profiles — añadir preferred_coach_id para selección de entrenador
+try {
+    $db->exec("ALTER TABLE profiles ADD COLUMN IF NOT EXISTS preferred_coach_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL");
+    $results[] = "✓ PATCH: profiles → preferred_coach_id";
+} catch (PDOException $e) { /* ignore if exists */ }
+
 /* ── Respuesta final ──────────────────────────────────────────────────── */
+
 $status = empty($errors) ? 'ok' : 'partial';
 http_response_code(empty($errors) ? 200 : 207);
 

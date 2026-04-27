@@ -148,14 +148,19 @@ $payload = jwt_require();
 $action  = fp_sanitize($_GET['action'] ?? 'my_plans', 32, 'slug');
 
 match ($action) {
-    'my_plans'     => handle_my_plans($payload),
-    'coach_plans'  => handle_coach_plans($payload),
-    'plan'         => handle_get_plan($payload),
-    'create_plan'  => handle_create_plan($payload),
-    'add_exercise' => handle_add_exercise($payload),
-    'approve'      => handle_approve_plan($payload),
-    'records'      => handle_personal_records($payload),
-    default        => fp_error(400, "Action '{$action}' error."),
+    'my_plans'          => handle_my_plans($payload),
+    'coach_plans'       => handle_coach_plans($payload),
+    'plan'              => handle_get_plan($payload),
+    'create_plan'       => handle_create_plan($payload),
+    'add_exercise'      => handle_add_exercise($payload),
+    'approve'           => handle_approve_plan($payload),
+    'records'           => handle_personal_records($payload),
+    'my_exercises'      => handle_my_exercises($payload),
+    'mark_done'         => handle_mark_done($payload),
+    'workout_calendar'  => handle_workout_calendar($payload),
+    'available_coaches' => handle_available_coaches($payload),
+    'select_coach'      => handle_select_coach($payload),
+    default             => fp_error(400, "Action '{$action}' error."),
 };
 
 function handle_my_plans(array $payload): never
@@ -255,4 +260,190 @@ function handle_personal_records(array $payload): never
         [':uid' => $payload['user_id']]
     )->fetchAll();
     fp_success(['records' => $rows]);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   MY EXERCISES — Ejercicios del día del usuario (mapeados por day_of_week)
+   ══════════════════════════════════════════════════════════════════════ */
+function handle_my_exercises(array $payload): never
+{
+    $uid  = (int) $payload['user_id'];
+    $date = fp_sanitize($_GET['date'] ?? date('Y-m-d'), 10);
+    // Validar formato de fecha
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) $date = date('Y-m-d');
+
+    // Mapear fecha a día de semana (enum PostgreSQL)
+    $dowMap = [0=>'SUN',1=>'MON',2=>'TUE',3=>'WED',4=>'THU',5=>'FRI',6=>'SAT'];
+    $dow    = $dowMap[(int)date('w', strtotime($date))];
+
+    $exercises = fp_query(
+        "SELECT e.exercise_id, e.name, e.sets, e.reps, e.load_kg, e.rest_seconds, e.day_of_week, e.notes,
+                wp.plan_id, wp.name AS plan_name,
+                CASE WHEN el.log_id IS NOT NULL THEN TRUE ELSE FALSE END AS done
+         FROM exercises e
+         JOIN workout_plans wp ON wp.plan_id = e.plan_id
+         LEFT JOIN exercise_logs el
+               ON el.exercise_id = e.exercise_id
+              AND el.user_id = :uid
+              AND el.log_date = :date
+         WHERE wp.user_id = :uid2
+           AND wp.status = 'ACTIVE'
+           AND e.day_of_week = :dow
+         ORDER BY e.exercise_id",
+        [':uid' => $uid, ':uid2' => $uid, ':date' => $date, ':dow' => $dow]
+    )->fetchAll();
+
+    fp_success(['exercises' => $exercises, 'date' => $date, 'day_of_week' => $dow]);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   MARK DONE — Marcar un ejercicio como completado (toggle)
+   ══════════════════════════════════════════════════════════════════════ */
+function handle_mark_done(array $payload): never
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') fp_error(405, 'Método no permitido.');
+    $uid  = (int) $payload['user_id'];
+    $body = fp_json_body();
+    $eid  = (int) ($body['exercise_id'] ?? 0);
+    $date = fp_sanitize($body['date'] ?? date('Y-m-d'), 10);
+    $done = (bool) ($body['done'] ?? true);
+
+    if ($eid <= 0) fp_error(400, 'exercise_id requerido.');
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) $date = date('Y-m-d');
+
+    // Verificar que el ejercicio pertenezca al usuario
+    $check = fp_query(
+        "SELECT e.exercise_id FROM exercises e
+         JOIN workout_plans wp ON wp.plan_id = e.plan_id
+         WHERE e.exercise_id = :eid AND wp.user_id = :uid AND wp.status = 'ACTIVE'",
+        [':eid' => $eid, ':uid' => $uid]
+    )->fetch();
+    if (!$check) fp_error(403, 'Este ejercicio no te pertenece.');
+
+    if ($done) {
+        // INSERT OR IGNORE (UNIQUE constraint)
+        fp_query(
+            "INSERT INTO exercise_logs (exercise_id, user_id, log_date, done)
+             VALUES (:eid, :uid, :date, TRUE)
+             ON CONFLICT (exercise_id, user_id, log_date) DO UPDATE SET done = TRUE",
+            [':eid' => $eid, ':uid' => $uid, ':date' => $date]
+        );
+    } else {
+        // Desmarcar
+        fp_query(
+            "DELETE FROM exercise_logs WHERE exercise_id = :eid AND user_id = :uid AND log_date = :date",
+            [':eid' => $eid, ':uid' => $uid, ':date' => $date]
+        );
+    }
+    fp_success(['message' => $done ? 'Ejercicio completado.' : 'Ejercicio desmarcado.', 'done' => $done]);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   WORKOUT CALENDAR — Historial semanal de entrenamientos completados
+   ══════════════════════════════════════════════════════════════════════ */
+function handle_workout_calendar(array $payload): never
+{
+    $uid       = (int) $payload['user_id'];
+    $weekStart = fp_sanitize($_GET['week_start'] ?? date('Y-m-d', strtotime('monday this week')), 10);
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $weekStart)) {
+        $weekStart = date('Y-m-d', strtotime('monday this week'));
+    }
+    $weekEnd = date('Y-m-d', strtotime($weekStart . ' +6 days'));
+
+    // Días con al menos 1 ejercicio completado
+    $logs = fp_query(
+        "SELECT el.log_date,
+                COUNT(el.log_id) AS done_count,
+                COUNT(DISTINCT e.exercise_id) AS total_assigned
+         FROM exercise_logs el
+         JOIN exercises e ON e.exercise_id = el.exercise_id
+         JOIN workout_plans wp ON wp.plan_id = e.plan_id
+         WHERE el.user_id = :uid
+           AND el.log_date BETWEEN :start AND :end
+         GROUP BY el.log_date
+         ORDER BY el.log_date",
+        [':uid' => $uid, ':start' => $weekStart, ':end' => $weekEnd]
+    )->fetchAll();
+
+    // Total de ejercicios asignados por día de semana en planes activos
+    $assigned = fp_query(
+        "SELECT e.day_of_week, COUNT(e.exercise_id) AS total
+         FROM exercises e
+         JOIN workout_plans wp ON wp.plan_id = e.plan_id
+         WHERE wp.user_id = :uid AND wp.status = 'ACTIVE'
+         GROUP BY e.day_of_week",
+        [':uid' => $uid]
+    )->fetchAll();
+
+    fp_success([
+        'week_start'     => $weekStart,
+        'week_end'       => $weekEnd,
+        'completed_days' => $logs,
+        'assigned_days'  => $assigned,
+    ]);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   AVAILABLE COACHES — Lista de coaches disponibles (solo usuarios premium)
+   ══════════════════════════════════════════════════════════════════════ */
+function handle_available_coaches(array $payload): never
+{
+    // Verificar suscripción activa
+    $sub = fp_query(
+        "SELECT 1 FROM subscriptions
+         WHERE user_id = :uid AND status = 'ACTIVE' AND end_date >= CURRENT_DATE",
+        [':uid' => $payload['user_id']]
+    )->fetch();
+    if (!$sub) fp_error(403, 'Función exclusiva para usuarios Premium.');
+
+    $coaches = fp_query(
+        "SELECT u.user_id, u.full_name, u.email,
+                (SELECT COUNT(*) FROM workout_plans wp WHERE wp.coach_id = u.user_id AND wp.status = 'ACTIVE') AS active_clients
+         FROM users u
+         WHERE u.role = 'COACH' AND u.is_active = TRUE
+         ORDER BY active_clients ASC, u.full_name ASC"
+    )->fetchAll();
+
+    // Obtener coach seleccionado actualmente
+    $current = fp_query(
+        "SELECT p.preferred_coach_id, u.full_name AS coach_name
+         FROM profiles p LEFT JOIN users u ON u.user_id = p.preferred_coach_id
+         WHERE p.user_id = :uid",
+        [':uid' => $payload['user_id']]
+    )->fetch();
+
+    fp_success(['coaches' => $coaches, 'current_coach' => $current]);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SELECT COACH — El usuario elige su entrenador preferido
+   ══════════════════════════════════════════════════════════════════════ */
+function handle_select_coach(array $payload): never
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') fp_error(405, 'Método no permitido.');
+
+    // Verificar suscripción activa
+    $sub = fp_query(
+        "SELECT 1 FROM subscriptions
+         WHERE user_id = :uid AND status = 'ACTIVE' AND end_date >= CURRENT_DATE",
+        [':uid' => $payload['user_id']]
+    )->fetch();
+    if (!$sub) fp_error(403, 'Función exclusiva para usuarios Premium.');
+
+    $coachId = (int) (fp_json_body()['coach_id'] ?? 0);
+    if ($coachId <= 0) fp_error(400, 'coach_id requerido.');
+
+    // Verificar que el coach exista y sea COACH activo
+    $coach = fp_query(
+        "SELECT user_id, full_name FROM users WHERE user_id = :cid AND role = 'COACH' AND is_active = TRUE",
+        [':cid' => $coachId]
+    )->fetch();
+    if (!$coach) fp_error(404, 'Entrenador no encontrado.');
+
+    fp_query(
+        "UPDATE profiles SET preferred_coach_id = :cid WHERE user_id = :uid",
+        [':cid' => $coachId, ':uid' => $payload['user_id']]
+    );
+
+    fp_success(['message' => 'Entrenador seleccionado: ' . $coach['full_name'], 'coach' => $coach]);
 }
