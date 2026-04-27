@@ -1070,9 +1070,19 @@ function populateUI(profile, macros, user) {
       document.getElementById('coach-overlay').classList.add('on');
     } else {
       document.getElementById('coach-overlay').classList.remove('on');
-      // Set simple info, coach name is fetched via workouts
-      document.getElementById('current-coach-name').textContent = 'Tu entrenador';
-      document.getElementById('current-coach-avatar').textContent = '💪';
+      // Sync names in all sections
+      const coachName = profile.coach_name || 'Tu entrenador';
+      const coachAvatar = (profile.coach_name || 'C').charAt(0).toUpperCase();
+      
+      document.getElementById('current-coach-name').textContent = coachName;
+      document.getElementById('current-coach-avatar').textContent = coachAvatar;
+      
+      const msgCoachName = document.getElementById('msg-coach-name');
+      if (msgCoachName && (msgCoachName.textContent === 'Sin asignar' || msgCoachName.textContent === '...')) {
+         msgCoachName.textContent = coachName;
+         const msgCoachAvatar = document.getElementById('msg-coach-avatar');
+         if (msgCoachAvatar) msgCoachAvatar.textContent = coachAvatar;
+      }
     }
   }
 
@@ -1933,6 +1943,9 @@ async function fetchInbox() {
     // Por ahora, cargamos el chat del último entrenador de forma automática.
     if (data.success && data.threads && data.threads.length > 0) {
       openChat(data.threads[0].other_id, data.threads[0].other_name);
+    } else if (appState.profile?.preferred_coach_id) {
+      // Si no hay hilos pero hay coach preferido, abrir placeholder de chat
+      openChat(appState.profile.preferred_coach_id, appState.profile.coach_name || 'Tu entrenador');
     }
   } catch (e) {}
 }
@@ -2170,8 +2183,14 @@ async function selectCoach(coachId, coachName) {
       document.getElementById('current-coach-name').textContent = coachName;
       document.getElementById('current-coach-avatar').textContent = coachName.charAt(0);
       
+      // Update Message Hero immediately
+      const msgCoachName = document.getElementById('msg-coach-name');
+      const msgCoachAvatar = document.getElementById('msg-coach-avatar');
+      if (msgCoachName) msgCoachName.textContent = coachName;
+      if (msgCoachAvatar) msgCoachAvatar.textContent = coachName.charAt(0).toUpperCase();
+      
       loadDailyWorkouts();
-      fetchInbox(); // Start chat
+      openChat(coachId, coachName); // Force open even without threads
     } else {
         alert(data.message || 'Error al asignar entrenador.');
     }

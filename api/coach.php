@@ -121,23 +121,17 @@ function handle_clients(int $coachId): never
 {
     /* Un "cliente" es cualquier usuario con al menos un plan de este coach */
     $clients = fp_query(
-        "SELECT DISTINCT ON (u.user_id)
-                u.user_id,
-                u.full_name,
-                u.email,
-                u.is_active,
-                p.weight,
-                p.height,
-                p.objective,
-                wp.name        AS current_plan_name,
-                wp.status      AS current_plan_status,
-                wp.plan_id     AS current_plan_id,
-                wp.created_at  AS plan_created_at
-         FROM workout_plans wp
-         JOIN users u    ON u.user_id = wp.user_id
-         LEFT JOIN profiles p ON p.user_id = u.user_id
-         WHERE wp.coach_id = :cid
-         ORDER BY u.user_id, wp.created_at DESC",
+        "SELECT DISTINCT ON (user_id) *
+         FROM (
+             SELECT u.user_id, u.full_name, u.email, u.is_active, p.weight, p.height, p.objective,
+                    wp.name AS current_plan_name, wp.status AS current_plan_status, wp.plan_id AS current_plan_id,
+                    wp.created_at AS plan_created_at
+             FROM users u
+             JOIN profiles p ON p.user_id = u.user_id
+             LEFT JOIN workout_plans wp ON wp.user_id = u.user_id AND wp.coach_id = :cid
+             WHERE p.preferred_coach_id = :cid OR wp.coach_id = :cid
+         ) sub
+         ORDER BY user_id, plan_created_at DESC",
         [':cid' => $coachId]
     )->fetchAll();
 

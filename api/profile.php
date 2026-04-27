@@ -220,6 +220,19 @@ function handle_update_profile(array $payload): never
         [':uid'=>$userId, ':w'=>$weight, ':h'=>$height, ':a'=>$age, ':g'=>$gender, ':o'=>$objective, ':al'=>$activity, ':tw'=>$targetWeight, ':ttw'=>$weeks, ':tz'=>$timezone]
     );
 
+    // Sincronizar peso con historial (body_logs)
+    if ($weight > 0) {
+        $pid = fp_query('SELECT profile_id FROM profiles WHERE user_id = :uid', [':uid' => $userId])->fetchColumn();
+        if ($pid) {
+            fp_query(
+                "INSERT INTO body_logs (profile_id, weight, log_date) 
+                 VALUES (:pid, :w, CURRENT_DATE)
+                 ON CONFLICT (profile_id, log_date) DO UPDATE SET weight = EXCLUDED.weight",
+                [':pid' => $pid, ':w' => $weight]
+            );
+        }
+    }
+
     $macros = calculate_macros($weight, $height, $age, $gender, $objective, $activity, $targetWeight, $weeks);
     $profile = fp_query('SELECT * FROM profiles WHERE user_id = :uid', [':uid' => $userId])->fetch();
 
