@@ -1018,7 +1018,7 @@ function populateUI(profile, macros, user) {
   const name = profile?.full_name || user?.name || localUser?.name || localUser?.full_name || 'Invitado';
   const firstName = (name.split(' ')[0].replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, '') || '...').toUpperCase();
   const email = profile?.email || user?.email || '';
-  const plan = profile?.subscription_plan || user?.subscription_plan || 'FREE';
+  const plan = profile?.subscription_plan || user?.plan || user?.subscription_plan || 'FREE';
   const isPremium = plan !== 'FREE';
 
   console.log("Determined Name:", name);

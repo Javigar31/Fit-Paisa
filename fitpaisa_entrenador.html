@@ -590,7 +590,12 @@ async function renderPlans() {
         <td><span style="font-size:12px;background:rgba(255,255,255,.05);padding:3px 10px;border-radius:99px;color:var(--muted)">${p.name}</span></td>
         <td><span class="badge ${stMap[p.status]||'b-gray'}">${p.status}</span></td>
         <td style="color:var(--muted)">${fecha}</td>
-        <td><button class="btn-ghost" style="font-size:12px;padding:6px 12px" onclick="${isApprove ? `approvePlan(${p.plan_id})` : `openModal('modal-edit-plan')`}">${isApprove ? '✓ Aprobar' : 'Editar'}</button></td>
+        <td>
+          <div style="display:flex; gap:6px;">
+            <button class="btn-ghost" style="font-size:12px;padding:6px 12px" onclick="openManageExercises(${p.plan_id}, '${p.name.replace(/'/g, '\\\'')}')">Rutina</button>
+            <button class="btn-ghost" style="font-size:12px;padding:6px 12px" onclick="${isApprove ? `approvePlan(${p.plan_id})` : `openModal('modal-edit-plan')`}">${isApprove ? '✓ Aprobar' : 'Editar'}</button>
+          </div>
+        </td>
       </tr>`;
     }).join('');
 
@@ -628,6 +633,83 @@ async function savePlan() {
   const r = await apiPost(`${API}/workouts.php?action=create_plan`, { user_id: parseInt(userId), name });
   if (r.success) { toggleNewPlan(); openModal('modal-save-draft'); renderPlans(); }
   else alert(r.message || 'Error al guardar');
+}
+
+// ════════════════════════════════════════
+// GESTIÓN DE EJERCICIOS
+// ════════════════════════════════════════
+let currentPlanId = null;
+
+async function openManageExercises(planId, planName) {
+  currentPlanId = planId;
+  document.getElementById('manage-plan-title').textContent = 'Rutina: ' + planName;
+  openModal('modal-manage-exercises');
+  await loadPlanExercises();
+}
+
+async function loadPlanExercises() {
+  const list = document.getElementById('exercise-list');
+  list.innerHTML = '<div style="color:var(--muted); font-size:12px; text-align:center;">Cargando ejercicios...</div>';
+  try {
+    const res = await apiFetch(`${API}/workouts.php?action=plan&id=${currentPlanId}`);
+    if (res.success && res.exercises) {
+      if (res.exercises.length === 0) {
+        list.innerHTML = '<div style="color:var(--muted); font-size:12px; text-align:center; padding: 20px;">No hay ejercicios.<br>Añade el primero.</div>';
+      } else {
+        const dMap = { SUN:'Dom', MON:'Lun', TUE:'Mar', WED:'Mié', THU:'Jue', FRI:'Vie', SAT:'Sáb' };
+        list.innerHTML = res.exercises.map(e => `
+          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,.03); padding:8px 12px; border-radius:8px; border:1px solid var(--border); margin-bottom:6px;">
+            <div>
+              <div style="font-size:13px; font-weight:700;">${e.name}</div>
+              <div style="font-size:11px; color:var(--muted);">${e.sets}x${e.reps} · ${e.load_kg > 0 ? e.load_kg + ' kg' : 'PC'}</div>
+            </div>
+            <div style="font-size:11px; background:var(--limedim); color:var(--lime); padding:3px 8px; border-radius:99px; font-weight:700;">${dMap[e.day_of_week] || e.day_of_week}</div>
+          </div>
+        `).join('');
+      }
+    }
+  } catch(e) {
+    list.innerHTML = '<div style="color:var(--danger); font-size:12px; text-align:center;">Error al cargar.</div>';
+  }
+}
+
+async function addExercise() {
+  const name = document.getElementById('exName').value.trim();
+  const sets = parseInt(document.getElementById('exSets').value) || 3;
+  const reps = parseInt(document.getElementById('exReps').value) || 10;
+  const load = parseFloat(document.getElementById('exLoad').value) || 0;
+  const day = document.getElementById('exDay').value;
+  
+  if (!name) return alert('Escribe un nombre de ejercicio.');
+  
+  const btn = event.target;
+  const oldText = btn.textContent;
+  btn.textContent = 'Guardando...';
+  btn.disabled = true;
+
+  try {
+    const r = await apiPost(`${API}/workouts.php?action=add_exercise`, {
+      plan_id: currentPlanId,
+      name: name,
+      sets: sets,
+      reps: reps,
+      load_kg: load,
+      day_of_week: day
+    });
+    
+    if (r.success) {
+      document.getElementById('exName').value = '';
+      document.getElementById('exLoad').value = '';
+      await loadPlanExercises();
+    } else {
+      alert(r.message || 'Error al añadir ejercicio.');
+    }
+  } catch(e) {
+      alert('Error de conexión.');
+  }
+  
+  btn.textContent = oldText;
+  btn.disabled = false;
 }
 
 // ════════════════════════════════════════
@@ -687,9 +769,27 @@ async function renderThread(userId) {
       const t = m.sent_at ? new Date(m.sent_at).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}) : '';
       return `<div class="bubble ${mine ? 'out' : 'in'}">${m.content}<br><span style="font-size:10px;opacity:.6">${t}</span></div>`;
     }).join('');
-    el.scrollTop = el.scrollHeight;
+    setTimeout(() => { el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }); }, 50);
   } catch(e) { el.innerHTML = ''; }
 }
+
+// Actualización en segundo plano de mensajes
+setInterval(() => {
+  if (activeContact && document.getElementById('sec-messages').classList.contains('visible')) {
+    apiFetch(`${API}/messages.php?action=thread&with=${activeContact.user_id}&limit=50`).then(data => {
+      if (data.success && data.messages) {
+        const el = document.getElementById('chatMsgs');
+        const isAtBottom = el.scrollHeight - el.scrollTop <= el.clientHeight + 50;
+        el.innerHTML = data.messages.map(m => {
+          const mine = m.sender_id == coachId;
+          const t = m.sent_at ? new Date(m.sent_at).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}) : '';
+          return `<div class="bubble ${mine ? 'out' : 'in'}">${m.content}<br><span style="font-size:10px;opacity:.6">${t}</span></div>`;
+        }).join('');
+        if (isAtBottom) el.scrollTop = el.scrollHeight;
+      }
+    });
+  }
+}, 5000);
 
 async function coachSend() {
   if (!activeContact) return;
@@ -798,6 +898,38 @@ function openClientProfile(userId) {
       <label class="label">Notas</label><textarea class="input" rows="3" placeholder="Descripción del plan…" style="resize:vertical"></textarea>
     </div>
     <div class="modal-actions"><button class="btn-ghost" onclick="closeModal(this)">Cancelar</button><button class="btn-lime" onclick="closeModal(this)">Guardar</button></div>
+  </div>
+</div>
+
+<!-- Manage Exercises -->
+<div class="modal-overlay" id="modal-manage-exercises">
+  <div class="modal-box" onclick="event.stopPropagation()" style="max-width: 600px;">
+    <div class="modal-head"><h2 id="manage-plan-title">Rutina</h2><button class="modal-close" onclick="closeModal(this)">✕</button></div>
+    <div class="grid2">
+      <!-- Añadir Ejercicio -->
+      <div style="background:rgba(255,255,255,.02); border:1px solid var(--border); border-radius:12px; padding:16px;">
+        <h3 style="font-size:13px; color:var(--lime); margin-bottom:12px; text-transform:uppercase;">Añadir Nuevo</h3>
+        <label class="label">Día de la semana</label>
+        <select class="input" id="exDay" style="margin-bottom:10px;">
+          <option value="MON">Lunes</option><option value="TUE">Martes</option><option value="WED">Miércoles</option><option value="THU">Jueves</option><option value="FRI">Viernes</option><option value="SAT">Sábado</option><option value="SUN">Domingo</option>
+        </select>
+        <label class="label">Ejercicio</label>
+        <input class="input" id="exName" placeholder="Ej: Sentadilla búlgara" style="margin-bottom:10px;">
+        <div class="grid3" style="gap:8px; margin-bottom:14px;">
+          <div><label class="label">Series</label><input type="number" class="input" id="exSets" value="3"></div>
+          <div><label class="label">Reps</label><input type="number" class="input" id="exReps" value="10"></div>
+          <div><label class="label">Carga (kg)</label><input type="number" step="0.5" class="input" id="exLoad" placeholder="0"></div>
+        </div>
+        <button class="btn-lime" style="width:100%" onclick="addExercise()">Añadir Ejercicio</button>
+      </div>
+      <!-- Lista -->
+      <div style="display:flex; flex-direction:column;">
+        <h3 style="font-size:13px; color:var(--muted); margin-bottom:12px; text-transform:uppercase;">Ejercicios Asignados</h3>
+        <div id="exercise-list" style="flex:1; overflow-y:auto; max-height:280px; padding-right:4px;">
+          <!-- Items dinámicos -->
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
