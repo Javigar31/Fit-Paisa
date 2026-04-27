@@ -706,25 +706,27 @@ body.ready .sidebar, body.ready .main{opacity:1}
       </div>
       <div class="slide-hero">
         <div class="slide-tag">Mensajería directa</div>
-        <div class="slide-title">TU ENTRE<br>NADORA<br><em>EN LÍNEA.</em></div>
-        <div class="slide-desc">Comunicación bidireccional directa con Laura Vidal. Ajusta rutinas, resuelve dudas y recibe feedback en tiempo real.</div>
-        <div style="display:flex;align-items:center;gap:10px;padding:14px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;max-width:280px">
-          <div class="avatar" style="width:40px;height:40px;font-size:15px">LV</div>
+        <div class="slide-title" id="msg-hero-title">TU ENTRE<br>NADOR<br><em>EN LÍNEA.</em></div>
+        <div class="slide-desc" id="msg-hero-desc">Tu plan premium incluye chat directo. Selecciona un entrenador para empezar.</div>
+        <div style="display:flex;align-items:center;gap:10px;padding:14px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;max-width:280px" id="msg-coach-card">
+          <div class="avatar" id="msg-coach-avatar" style="width:40px;height:40px;font-size:15px">?</div>
           <div>
-            <div style="font-size:14px;font-weight:700">Laura Vidal</div>
-            <div style="font-size:12px;color:var(--success);display:flex;align-items:center;gap:5px">
-              <span style="width:6px;height:6px;border-radius:50%;background:var(--success);display:inline-block"></span>En línea
+            <div style="font-size:14px;font-weight:700" id="msg-coach-name">Sin asignar</div>
+            <div style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px" id="msg-coach-status">
+              <span style="width:6px;height:6px;border-radius:50%;background:var(--border);display:inline-block"></span>Offline
             </div>
           </div>
         </div>
       </div>
       <div class="slide-panel">
         <div class="card" style="flex:1;display:flex;flex-direction:column">
-          <div class="card-title">Chat con Laura Vidal</div>
-          <div id="chatMessages" style="flex:1;display:flex;flex-direction:column;gap:8px;min-height:200px;margin-bottom:14px;overflow-y:auto;max-height:320px"></div>
+          <div class="card-title" id="chat-title">Chat</div>
+          <div id="chatMessages" style="flex:1;display:flex;flex-direction:column;gap:8px;min-height:200px;margin-bottom:14px;overflow-y:auto;max-height:320px">
+            <div style="text-align:center;padding:40px 20px;color:var(--muted);font-size:13px">No tienes un chat activo actualmente.</div>
+          </div>
           <div style="display:flex;gap:8px">
             <input class="input" id="chatInput" placeholder="Escribe un mensaje…" onkeydown="if(event.key==='Enter')sendMsg()" style="flex:1">
-            <button class="btn-lime" onclick="sendMsg()" style="padding:10px 16px;flex-shrink:0">→</button>
+            <button class="btn-lime" id="chatSendBtn" onclick="sendMsg()" style="padding:10px 16px;flex-shrink:0">→</button>
           </div>
         </div>
       </div>
@@ -1925,6 +1927,27 @@ let activeChatUserId = null;
 async function openChat(userId, name) {
   activeChatUserId = userId;
   const token = localStorage.getItem('fp_token');
+  
+  // Actualizar UI del hero
+  const heroTitle = document.getElementById('msg-hero-title');
+  const heroDesc = document.getElementById('msg-hero-desc');
+  const coachAvatar = document.getElementById('msg-coach-avatar');
+  const coachName = document.getElementById('msg-coach-name');
+  const coachStatus = document.getElementById('msg-coach-status');
+  const chatTitle = document.getElementById('chat-title');
+
+  if (name) {
+    if(heroTitle) heroTitle.innerHTML = `TU ENTRE<br>NADOR<br><em>EN LÍNEA.</em>`;
+    if(heroDesc) heroDesc.textContent = `Comunicación directa con ${name}. Ajusta rutinas y resuelve dudas en tiempo real.`;
+    if(coachAvatar) coachAvatar.textContent = name.charAt(0).toUpperCase();
+    if(coachName) coachName.textContent = name;
+    if(coachStatus) {
+      coachStatus.innerHTML = `<span style="width:6px;height:6px;border-radius:50%;background:var(--success);display:inline-block"></span>En línea`;
+      coachStatus.style.color = 'var(--success)';
+    }
+    if(chatTitle) chatTitle.textContent = `Chat con ${name}`;
+  }
+
   try {
     const res = await fetch(`/api/messages.php?action=thread&with=${userId}`, {
       headers: { 'Authorization': `Bearer ${token}` }
