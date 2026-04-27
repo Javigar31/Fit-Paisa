@@ -35,15 +35,17 @@ function handle_search_food(): never
         fp_success(['results' => []]);
     }
 
-    // 1. Búsqueda Local
+    // 1. Búsqueda Local (Exacta e ILIKE)
     $localRows = fp_query(
-        "SELECT * FROM food_catalog 
+        "SELECT *, similarity(name, :q_orig) as score FROM food_catalog 
          WHERE name ILIKE :q 
-         ORDER BY is_verified DESC, (name ILIKE :q_exact) DESC, name ASC 
+         OR name % :q_orig
+         ORDER BY (name ILIKE :q_exact) DESC, score DESC, is_verified DESC
          LIMIT 15",
         [
             ':q' => '%' . $q . '%',
-            ':q_exact' => $q . '%'
+            ':q_exact' => $q . '%',
+            ':q_orig' => $q
         ]
     )->fetchAll();
 
@@ -53,9 +55,27 @@ function handle_search_food(): never
         $results[] = $row;
     }
 
-    // 2. Fallback automático a Open Food Facts si hay pocos resultados locales
+    // 2. Fallback a Caché de Búsqueda
+    $qNorm = mb_strtolower(trim($q));
     if (count($results) < 5) {
-        $externalResults = search_open_food_facts($q);
+        $cached = fp_query(
+            "SELECT results_json FROM food_search_cache WHERE query_text = :q AND created_at > NOW() - INTERVAL '7 days'",
+            [':q' => $qNorm]
+        )->fetchColumn();
+
+        if ($cached) {
+            $externalResults = json_decode($cached, true) ?: [];
+        } else {
+            // 3. Fallback real a Open Food Facts
+            $externalResults = search_open_food_facts($q);
+            if (!empty($externalResults)) {
+                fp_query(
+                    "INSERT INTO food_search_cache (query_text, results_json) VALUES (:q, :json)
+                     ON CONFLICT (query_text) DO UPDATE SET results_json = EXCLUDED.results_json, created_at = NOW()",
+                    [':q' => $qNorm, ':json' => json_encode($externalResults)]
+                );
+            }
+        }
         
         // Evitar duplicados si el producto ya está en local (por barcode/external_id)
         $localExternalIds = array_filter(array_column($results, 'external_id'));

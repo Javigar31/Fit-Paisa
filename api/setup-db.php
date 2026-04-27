@@ -225,6 +225,18 @@ run_step($db, 'TABLE: rate_limits', "
 ");
 
 /* ══════════════════════════════════════════════════════════════════════
+   TABLA: food_search_cache — Caché de resultados de búsqueda
+   ══════════════════════════════════════════════════════════════════════ */
+run_step($db, 'TABLE: food_search_cache', "
+    CREATE TABLE IF NOT EXISTS food_search_cache (
+        query_text VARCHAR(100) PRIMARY KEY,
+        results_json TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+");
+$db->exec("DELETE FROM food_search_cache WHERE created_at < NOW() - INTERVAL '30 days'");
+
+/* ══════════════════════════════════════════════════════════════════════
    TABLA: food_catalog — Catálogo local de alimentos
    ══════════════════════════════════════════════════════════════════════ */
 run_step($db, 'TABLE: food_catalog', "
@@ -510,4 +522,11 @@ try {
     $db->exec("CREATE INDEX IF NOT EXISTS idx_subs_updated_at ON subscriptions(updated_at, status)");
     $db->exec("CREATE INDEX IF NOT EXISTS idx_wp_coach_status ON workout_plans(coach_id, status)");
     $db->exec("CREATE INDEX IF NOT EXISTS idx_subs_user_id ON subscriptions(user_id)");
+
+    // Búsqueda Difusa (Trigram)
+    try {
+        $db->exec("CREATE EXTENSION IF NOT EXISTS pg_trgm");
+        $db->exec("CREATE INDEX IF NOT EXISTS idx_food_catalog_trgm ON food_catalog USING gin (name gin_trgm_ops)");
+    } catch (PDOException $e) { /* ignore if no superuser */ }
+
 } catch (PDOException $e) { /* ignore */ }
