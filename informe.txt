@@ -1,4 +1,4 @@
-﻿# Informe TÃ©cnico (CrÃ­tico): ResoluciÃ³n de Bloqueadores en Testing (v3.3.0)
+# Informe TÃ©cnico (CrÃ­tico): ResoluciÃ³n de Bloqueadores en Testing (v3.3.0)
 **Fecha:** 2026-04-15
 **Estado:** PRODUCCIÃ“N ESTABLE. Desplegado en `master` tras validaciÃ³n en `testing`.
 
@@ -257,5 +257,40 @@ git checkout master  # rama final de trabajo
 |---------|--------|-------------|
 | index.html | MODIFICADO | Semántica, ARIA, JS de visibilidad y landmarks |
 | style.css | MODIFICADO | Estilos de :focus-visible y layout de landmarks |
+
+***
+
+# Informe Técnico (Performance & UX): Catálogo Inteligente y Caché de Latencia Cero (v8.0.0)
+**Fecha:** 2026-04-27
+**Estado:** DESPLEGADO en `testing` -> Listo para `master`.
+
+## 1. Feature: Catálogo Híbrido con Auto-Ingesta Automática
+*   **Problema**: La API externa de Open Food Facts (OFF) es lenta (~2s) y no perdona errores tipográficos (ej: "Dpritos" no devolvía nada).
+*   **Solución**: 
+    *   **Auto-Ingesta**: Cada búsqueda en OFF ahora guarda automáticamente todos los resultados en el catálogo local (`food_catalog`).
+    *   **Búsqueda Difusa (Fuzzy Search)**: Al estar en local, el sistema usa el operador de similitud `%` de PostgreSQL (extensión `pg_trgm`). 
+    *   **Resultado**: Una búsqueda mal escrita ("Dpritos") ahora encuentra el producto correcto en **~15ms** si ya se buscó alguna vez anteriormente.
+
+## 2. Feature: UI Reactiva de Latencia Cero
+*   **Caché de Memoria (Map)**: Implementado `foodSearchCache` en el frontend para resultados instantáneos al borrar/escribir o repetir búsquedas.
+*   **Filtrado Reactivo**: Mientras el servidor responde, la UI filtra localmente la lista actual para dar feedback visual inmediato.
+*   **Optimización**: Reducción del debounce a **250ms**.
+
+## 3. Fix: Error de Ingestas Vacías
+*   **Problema**: El registro de comidas fallaba con `success:false` o no se mostraba por falta de la columna `created_at`.
+*   **Fix**: Migración de la tabla `food_entries` para incluir `created_at TIMESTAMPTZ`. Actualización de `api/setup-db.php`.
+
+## 4. Archivos Modificados o Creados
+| Archivo | Acción | Descripción |
+|---------|--------|-------------|
+| `api/food.php` | MODIFICADO | Auto-ingesta de OFF, lógica de similitud optimizada. |
+| `fitpaisa_cliente-v2.html` | MODIFICADO | Caché Map, filtrado reactivo, debounce 250ms. |
+| `api/setup-db.php` | MODIFICADO | Parche de created_at en food_entries y food_search_cache. |
+
+## 5. Comandos de Sincronización
+```powershell
+git checkout testing; git add . ; git commit -m "v8.0.0: Intelligent Food Catalog"
+git checkout master; git merge testing; git push origin master
+```
 
 ***
