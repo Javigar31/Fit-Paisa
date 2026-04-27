@@ -291,18 +291,20 @@ select.input{cursor:none;appearance:none}
       <div class="card-title">Nuevo plan</div>
       <div class="grid2" style="gap:14px;margin-bottom:14px">
         <div class="field"><label class="label">Cliente</label>
-          <select class="input"><option>Seleccionar cliente...</option></select>
+          <select class="input" id="clientSelect"><option value="">Seleccionar cliente…</option></select>
+        </div>
+        <div class="field"><label class="label">Nombre del plan</label>
+          <input class="input" id="planName" placeholder="Ej: Plan fuerza 8 semanas">
         </div>
         <div class="field"><label class="label">Tipo</label>
-          <select class="input"><option>Entrenamiento</option><option>Nutrición</option></select>
+          <select class="input" id="planType"><option>Entrenamiento</option><option>Nutrición</option></select>
         </div>
-        <div class="field"><label class="label">Objetivo</label><input class="input" placeholder="Ej: Ganar masa muscular"></div>
         <div class="field"><label class="label">Duración</label>
           <select class="input"><option>4 semanas</option><option>8 semanas</option><option>12 semanas</option></select>
         </div>
       </div>
       <div class="field" style="margin-bottom:14px"><label class="label">Notas / descripción</label><textarea class="input" rows="3" placeholder="Descripción del plan…" style="resize:vertical"></textarea></div>
-      <div style="display:flex;gap:10px"><button class="btn-lime" onclick="openModal('modal-save-draft');toggleNewPlan()">Guardar borrador</button><button class="btn-ghost" onclick="toggleNewPlan()">Cancelar</button></div>
+      <div style="display:flex;gap:10px"><button class="btn-lime" onclick="savePlan()">Guardar borrador</button><button class="btn-ghost" onclick="toggleNewPlan()">Cancelar</button></div>
     </div>
     <div class="card reveal r2">
       <div class="card-title">Todos los planes</div>
@@ -341,11 +343,10 @@ select.input{cursor:none;appearance:none}
       <div class="card">
         <div class="card-title">Datos personales</div>
         <div style="display:flex;flex-direction:column;gap:12px">
-          <div class="field"><label class="label">Nombre completo</label><input class="input" value="Laura Vidal"></div>
-          <div class="field"><label class="label">Correo electrónico</label><input class="input" value="laura@fitpaisa.com"></div>
-          <div class="field"><label class="label">Especialidad</label><input class="input" value="Fuerza y nutrición deportiva"></div>
-          <div class="field"><label class="label">Nueva contraseña</label><input class="input" type="password" placeholder="••••••••"></div>
-          <button class="btn-lime" onclick="openModal('modal-save-settings')">Guardar cambios</button>
+          <div class="field"><label class="label">Nombre completo</label><input class="input" id="settings-name" placeholder="Tu nombre"></div>
+          <div class="field"><label class="label">Correo electrónico</label><input class="input" id="settings-email" placeholder="tu@email.com"></div>
+          <div class="field"><label class="label">Nueva contraseña</label><input class="input" type="password" placeholder="••••••••" disabled title="Próximamente"></div>
+          <button class="btn-lime" onclick="saveSettings()">Guardar cambios</button>
         </div>
       </div>
       <div class="card">
@@ -372,7 +373,388 @@ select.input{cursor:none;appearance:none}
 
 <script>
 // ── State ─────────────────────────────
-let appState = { profile: null };
+const API = '/api';
+let coachId   = null;
+let coachData = {};       // { user_id, full_name, role }
+let clientsCache = [];    // Clientes cargados
+let activeContact = null; // { user_id, full_name }
+let threadCache = {};     // { userId: [messages] }
+
+// ── AUTH CHECK ──────────────────────────
+(function checkAuth(){
+  const token = localStorage.getItem('fp_token');
+  const user  = JSON.parse(localStorage.getItem('fp_user') || 'null');
+  if (!token || !user || user.role !== 'COACH') {
+    window.location.href = 'index.html';
+    return;
+  }
+  coachId   = user.user_id;
+  coachData = user;
+
+  const name     = user.full_name || 'Coach';
+  const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().substring(0, 2);
+  document.getElementById('coach-initials').textContent = initials;
+  document.getElementById('coach-name').textContent     = name;
+  document.body.classList.add('ready');
+
+  // Detectar zona horaria
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (tz) fetch(`${API}/profile.php?action=update`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ timezone: tz })
+  }).catch(() => {});
+
+  loadDashboard();
+})();
+
+// ── API Helper ──────────────────────────
+function authHeader() {
+  return { 'Authorization': `Bearer ${localStorage.getItem('fp_token')}`, 'Content-Type': 'application/json' };
+}
+async function apiFetch(url) {
+  const r = await fetch(url, { headers: authHeader() });
+  return r.json();
+}
+async function apiPost(url, body) {
+  const r = await fetch(url, { method: 'POST', headers: authHeader(), body: JSON.stringify(body) });
+  return r.json();
+}
+
+// ── SKELETON helper ─────────────────────
+function skeleton(n = 3) {
+  return Array(n).fill('<div style="height:52px;background:rgba(255,255,255,.04);border-radius:10px;animation:pulse 1.5s ease infinite"></div>').join('');
+}
+
+function logout(){
+  localStorage.removeItem('fp_token');
+  localStorage.removeItem('fp_user');
+  window.location.href = 'index.html';
+}
+
+// ── Custom cursor ────────────────────────
+const cur = document.getElementById('cur'), ring = document.getElementById('cur-ring');
+let mx = 0, my = 0, rx = 0, ry = 0;
+document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; cur.style.left = mx+'px'; cur.style.top = my+'px'; });
+(function anim(){ rx += (mx-rx)*.1; ry += (my-ry)*.1; ring.style.left = rx+'px'; ring.style.top = ry+'px'; requestAnimationFrame(anim); })();
+document.querySelectorAll('button,.nav-item,.client-card').forEach(el => {
+  el.addEventListener('mouseenter', () => { cur.style.width='20px'; cur.style.height='20px'; });
+  el.addEventListener('mouseleave', () => { cur.style.width='10px'; cur.style.height='10px'; });
+});
+
+// ── Section navigation ───────────────────
+const sections = ['dashboard','clients','plans','messages','settings'];
+let activeSec = 'dashboard';
+
+function show(id, el) {
+  if (id === activeSec) return;
+  const prev = document.getElementById('sec-'+activeSec);
+  const next = document.getElementById('sec-'+id);
+  const prevIdx = sections.indexOf(activeSec);
+  const nextIdx = sections.indexOf(id);
+
+  if (window.innerWidth <= 768) {
+    next && next.scrollIntoView({ behavior: 'smooth' });
+  } else {
+    prev.className = 'section ' + (nextIdx > prevIdx ? 'hidden-left' : 'hidden-right');
+    next.className = 'section visible';
+  }
+  activeSec = id;
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('on'));
+  if (el) el.classList.add('on');
+  document.getElementById('topbar-prog').style.width = ((sections.indexOf(id)+1)/sections.length*100)+'%';
+
+  if (id === 'clients')  renderClients();
+  if (id === 'plans')    renderPlans();
+  if (id === 'messages') renderContacts();
+  if (id === 'settings') loadSettings();
+}
+
+// ════════════════════════════════════════
+// DASHBOARD
+// ════════════════════════════════════════
+async function loadDashboard() {
+  try {
+    const data = await apiFetch(`${API}/coach.php?action=dashboard`);
+    if (!data.success) return;
+    const k = data.kpis;
+
+    // KPI cards
+    const cards = document.querySelectorAll('#sec-dashboard .grid4 .card');
+    if (cards[0]) { cards[0].querySelector('.stat-v').textContent = k.active_clients; cards[0].querySelector('.stat-s').textContent = `${k.total_plans} planes en total`; }
+    if (cards[1]) { cards[1].querySelector('.stat-v').textContent = k.active_plans;   cards[1].querySelector('.stat-s').textContent = `${k.draft_plans} borrador(es)`; }
+    if (cards[2]) { cards[2].querySelector('.stat-v').textContent = k.unread_messages; cards[2].querySelector('.stat-s').textContent = 'Mensajes sin leer';
+      // badge sidebar
+      const badge = document.querySelector('.nav-item .nbadge');
+      if (badge) badge.textContent = k.unread_messages > 0 ? k.unread_messages : '0';
+    }
+    if (cards[3]) { cards[3].querySelector('.stat-v').textContent = k.active_clients > 0 ? '—' : '0'; cards[3].querySelector('.stat-s').textContent = 'Sin datos suficientes'; }
+
+    // Adherencia por cliente (basada en planes activos)
+    const adhEl = document.getElementById('dash-adh-list');
+    if (data.recent_clients && data.recent_clients.length > 0) {
+      adhEl.innerHTML = data.recent_clients.map(c => `
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;justify-content:space-between;font-size:12px">
+            <span>${c.full_name}</span>
+            <span style="color:var(--lime)">${c.current_plan_status || '—'}</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill" style="width:${c.current_plan_status === 'ACTIVE' ? '100' : '40'}%"></div></div>
+        </div>`).join('');
+    } else {
+      adhEl.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:12px">Sin clientes asignados aún</div>';
+    }
+
+    // Planes recientes
+    const plansEl = document.getElementById('dash-recent-plans');
+    if (data.recent_plans && data.recent_plans.length > 0) {
+      const stC = { ACTIVE:'b-lime', DRAFT:'b-gray', PENDING:'b-yellow' };
+      plansEl.innerHTML = data.recent_plans.map(p => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div>
+            <div style="font-size:13px;font-weight:600">${p.client_name}</div>
+            <div style="font-size:11px;color:var(--muted)">${p.name}</div>
+          </div>
+          <span class="badge ${stC[p.status] || 'b-gray'}">${p.status}</span>
+        </div>`).join('');
+    } else {
+      plansEl.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:12px">Sin planes creados aún</div>';
+    }
+  } catch(e) {
+    console.error('Dashboard error:', e);
+  }
+}
+
+// ════════════════════════════════════════
+// CLIENTES
+// ════════════════════════════════════════
+async function renderClients() {
+  const grid = document.getElementById('clientGrid');
+  grid.innerHTML = skeleton(4);
+  try {
+    const data = await apiFetch(`${API}/coach.php?action=clients`);
+    if (!data.success || !data.clients.length) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px">No tienes clientes asignados aún</div>';
+      return;
+    }
+    clientsCache = data.clients;
+    grid.innerHTML = data.clients.map(c => {
+      const initials = c.full_name.split(' ').map(w => w[0]).join('').toUpperCase().substring(0,2);
+      const statusBadge = c.current_plan_status === 'ACTIVE'
+        ? '<span class="badge b-lime">Activo</span>'
+        : '<span class="badge b-yellow">Pendiente</span>';
+      return `
+        <div class="client-card reveal">
+          <div class="client-top">
+            <div class="avatar" style="width:40px;height:40px;font-size:14px">${initials}</div>
+            <div>
+              <div class="client-name">${c.full_name}</div>
+              <div class="client-plan">Plan: ${c.current_plan_name || 'Sin plan'} · ${statusBadge}</div>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:5px;display:flex;justify-content:space-between">
+            <span>Estado del plan</span>
+            <span>${c.current_plan_status || '—'}</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill" style="width:${c.current_plan_status === 'ACTIVE' ? '100' : '40'}%"></div></div>
+          <div style="display:flex;gap:8px;margin-top:14px">
+            <button class="btn-ghost" style="flex:1;font-size:12px" onclick="openClientProfile(${c.user_id});event.stopPropagation()">Ver perfil</button>
+            <button class="btn-ghost" style="flex:1;font-size:12px" onclick="startChat(${c.user_id},'${c.full_name.replace(/'/g,'&apos;')}');event.stopPropagation()">Mensajear</button>
+          </div>
+        </div>`;
+    }).join('');
+  } catch(e) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px">Error al cargar clientes</div>';
+  }
+}
+
+// ════════════════════════════════════════
+// PLANES
+// ════════════════════════════════════════
+async function renderPlans() {
+  const tbody = document.getElementById('planBody');
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">Cargando planes…</td></tr>';
+  try {
+    const data = await apiFetch(`${API}/coach.php?action=plans`);
+    if (!data.success || !data.plans.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">Sin planes creados</td></tr>';
+      return;
+    }
+    const stMap = { ACTIVE:'b-lime', PENDING:'b-yellow', DRAFT:'b-gray' };
+    tbody.innerHTML = data.plans.map(p => {
+      const initials = p.client_name.split(' ').map(w => w[0]).join('').toUpperCase().substring(0,2);
+      const fecha = p.created_at ? new Date(p.created_at).toLocaleDateString('es-ES',{day:'2-digit',month:'short'}) : '—';
+      const isApprove = p.status === 'PENDING' || p.status === 'DRAFT';
+      return `<tr>
+        <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:26px;height:26px;font-size:10px">${initials}</div>${p.client_name}</div></td>
+        <td><span style="font-size:12px;background:rgba(255,255,255,.05);padding:3px 10px;border-radius:99px;color:var(--muted)">${p.name}</span></td>
+        <td><span class="badge ${stMap[p.status]||'b-gray'}">${p.status}</span></td>
+        <td style="color:var(--muted)">${fecha}</td>
+        <td><button class="btn-ghost" style="font-size:12px;padding:6px 12px" onclick="${isApprove ? `approvePlan(${p.plan_id})` : `openModal('modal-edit-plan')`}">${isApprove ? '✓ Aprobar' : 'Editar'}</button></td>
+      </tr>`;
+    }).join('');
+
+    // Poblar select de clientes en "Nuevo plan"
+    const sel = document.getElementById('clientSelect');
+    if (sel && clientsCache.length === 0) {
+      const cd = await apiFetch(`${API}/coach.php?action=clients`);
+      if (cd.success) clientsCache = cd.clients;
+    }
+    if (sel) {
+      sel.innerHTML = '<option value="">Seleccionar cliente…</option>' +
+        clientsCache.map(c => `<option value="${c.user_id}">${c.full_name}</option>`).join('');
+    }
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">Error al cargar planes</td></tr>';
+  }
+}
+
+async function approvePlan(planId) {
+  const r = await apiPost(`${API}/workouts.php?action=approve`, { plan_id: planId });
+  if (r.success) { renderPlans(); }
+}
+
+function toggleNewPlan(){
+  const f = document.getElementById('newPlanForm');
+  const visible = f.style.display !== 'none';
+  f.style.display = visible ? 'none' : 'block';
+  if (!visible && clientsCache.length === 0) renderPlans(); // carga clientes
+}
+
+async function savePlan() {
+  const userId = document.getElementById('clientSelect').value;
+  const name   = document.getElementById('planName').value.trim();
+  if (!userId || !name) { alert('Selecciona un cliente y escribe un nombre.'); return; }
+  const r = await apiPost(`${API}/workouts.php?action=create_plan`, { user_id: parseInt(userId), name });
+  if (r.success) { toggleNewPlan(); openModal('modal-save-draft'); renderPlans(); }
+  else alert(r.message || 'Error al guardar');
+}
+
+// ════════════════════════════════════════
+// MENSAJES
+// ════════════════════════════════════════
+async function renderContacts() {
+  const list = document.getElementById('contactList');
+  list.innerHTML = skeleton(3);
+  try {
+    const data = await apiFetch(`${API}/messages.php?action=inbox`);
+    if (!data.success || !data.threads || !data.threads.length) {
+      list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:12px">Sin conversaciones aún</div>';
+      return;
+    }
+    list.innerHTML = data.threads.map(t => `
+      <div onclick="selectContact(${t.other_id},'${t.other_name.replace(/'/g,'&apos;')}')"
+           style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;cursor:none;transition:all .2s;
+                  background:${activeContact && activeContact.user_id == t.other_id ? 'var(--limedim)' : 'transparent'};
+                  border:1px solid ${activeContact && activeContact.user_id == t.other_id ? 'rgba(255,107,107,.2)' : 'transparent'}">
+        <div class="avatar" style="width:32px;height:32px;font-size:11px">${t.other_name.split(' ').map(w=>w[0]).join('').substring(0,2)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600">${t.other_name}</div>
+          <div style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.last_content ? t.last_content.substring(0,35)+'…' : ''}</div>
+        </div>
+        ${t.unread_count > 0 ? `<span class="nbadge">${t.unread_count}</span>` : ''}
+      </div>`).join('');
+
+    if (!activeContact && data.threads.length) {
+      selectContact(data.threads[0].other_id, data.threads[0].other_name);
+    } else if (activeContact) {
+      renderThread(activeContact.user_id);
+    }
+  } catch(e) {
+    list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:12px">Error al cargar mensajes</div>';
+  }
+}
+
+async function selectContact(userId, name) {
+  activeContact = { user_id: userId, full_name: name };
+  document.getElementById('chatTitle').textContent = name;
+  await renderThread(userId);
+  renderContacts(); // re-render para highlight
+  // Marcar como leídos
+  apiPost(`${API}/messages.php?action=read`, { sender_id: userId }).catch(() => {});
+}
+
+async function renderThread(userId) {
+  const el = document.getElementById('chatMsgs');
+  el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:20px">Cargando…</div>';
+  try {
+    const data = await apiFetch(`${API}/messages.php?action=thread&with=${userId}&limit=50`);
+    if (!data.success) { el.innerHTML = ''; return; }
+    const msgs = data.messages || [];
+    if (!msgs.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:20px">Sin mensajes aún. ¡Escribe el primero!</div>'; return; }
+    el.innerHTML = msgs.map(m => {
+      const mine = m.sender_id == coachId;
+      const t = m.sent_at ? new Date(m.sent_at).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}) : '';
+      return `<div class="bubble ${mine ? 'out' : 'in'}">${m.content}<br><span style="font-size:10px;opacity:.6">${t}</span></div>`;
+    }).join('');
+    el.scrollTop = el.scrollHeight;
+  } catch(e) { el.innerHTML = ''; }
+}
+
+async function coachSend() {
+  if (!activeContact) return;
+  const inp  = document.getElementById('coachInput');
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  const r = await apiPost(`${API}/messages.php?action=send`, { receiver_id: activeContact.user_id, content: text });
+  if (r.success) await renderThread(activeContact.user_id);
+  else { inp.value = text; alert(r.message || 'Error al enviar'); }
+}
+
+// Iniciar chat desde la tarjeta de cliente
+function startChat(userId, name) {
+  activeContact = { user_id: userId, full_name: name };
+  show('messages');
+}
+
+// ════════════════════════════════════════
+// AJUSTES
+// ════════════════════════════════════════
+function loadSettings() {
+  document.getElementById('settings-name').value  = coachData.full_name || '';
+  document.getElementById('settings-email').value = coachData.email || '';
+}
+
+async function saveSettings() {
+  const name  = document.getElementById('settings-name').value.trim();
+  const email = document.getElementById('settings-email').value.trim();
+  const r = await apiPost(`${API}/coach.php?action=update_settings`, { full_name: name, email });
+  if (r.success) {
+    coachData.full_name = name; coachData.email = email;
+    localStorage.setItem('fp_user', JSON.stringify(coachData));
+    document.getElementById('coach-name').textContent = name;
+    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().substring(0,2);
+    document.getElementById('coach-initials').textContent = initials;
+    openModal('modal-save-settings');
+  } else alert(r.message || 'Error al guardar');
+}
+
+// ═══ Modals ═══
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(el){ el.closest('.modal-overlay').classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); }));
+document.addEventListener('keydown', e => { if(e.key==='Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open')); });
+
+function openClientProfile(userId) {
+  const c = clientsCache.find(cl => cl.user_id == userId);
+  if (!c) return;
+  const initials = c.full_name.split(' ').map(w => w[0]).join('').toUpperCase().substring(0,2);
+  document.getElementById('cp-title').textContent = 'Perfil de ' + c.full_name;
+  document.getElementById('cp-body').innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+      <div class="avatar" style="width:48px;height:48px;font-size:16px">${initials}</div>
+      <div><div style="font-size:16px;font-weight:700">${c.full_name}</div><div style="font-size:12px;color:var(--muted)">Plan: ${c.current_plan_name||'Sin plan'} · ${c.current_plan_status||'—'}</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:13px"><strong>Correo:</strong> <span style="color:var(--muted)">${c.email}</span></div>
+      ${c.weight ? `<div style="font-size:13px"><strong>Peso:</strong> <span style="color:var(--muted)">${c.weight} kg</span></div>` : ''}
+      ${c.height ? `<div style="font-size:13px"><strong>Talla:</strong> <span style="color:var(--muted)">${c.height} cm</span></div>` : ''}
+      ${c.objective ? `<div style="font-size:13px"><strong>Objetivo:</strong> <span style="color:var(--muted)">${c.objective}</span></div>` : ''}
+    </div>`;
+  openModal('modal-client-profile');
+}
+
 
 // ── AUTH CHECK ──
 (function checkAuth(){

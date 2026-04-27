@@ -149,6 +149,7 @@ $action  = fp_sanitize($_GET['action'] ?? 'my_plans', 32, 'slug');
 
 match ($action) {
     'my_plans'     => handle_my_plans($payload),
+    'coach_plans'  => handle_coach_plans($payload),
     'plan'         => handle_get_plan($payload),
     'create_plan'  => handle_create_plan($payload),
     'add_exercise' => handle_add_exercise($payload),
@@ -167,6 +168,26 @@ function handle_my_plans(array $payload): never
     )->fetchAll();
     fp_success(['plans' => $plans]);
 }
+
+function handle_coach_plans(array $payload): never
+{
+    if (!in_array($payload['role'] ?? '', ['COACH', 'ADMIN'])) {
+        fp_error(403, 'Solo coaches pueden acceder a esta acción.');
+    }
+
+    $plans = fp_query(
+        "SELECT wp.plan_id, wp.name, wp.status, wp.start_date, wp.end_date, wp.created_at,
+                u.full_name AS client_name, u.user_id AS client_id
+         FROM workout_plans wp
+         JOIN users u ON u.user_id = wp.user_id
+         WHERE wp.coach_id = :cid
+         ORDER BY wp.created_at DESC",
+        [':cid' => $payload['user_id']]
+    )->fetchAll();
+
+    fp_success(['plans' => $plans]);
+}
+
 
 function handle_get_plan(array $payload): never
 {
