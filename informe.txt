@@ -294,3 +294,40 @@ git checkout master; git merge testing; git push origin master
 ```
 
 ***
+
+# Informe Técnico (UX/UI & Algoritmia): Progreso Evolutivo "Fitia Style" (v9.0.0)
+**Fecha:** 2026-04-27
+**Estado:** DESPLEGADO en `testing`.
+
+## 1. Feature: Rediseño de Progreso y Balance Calórico
+*   **Petición del Usuario**: Replantear cómo se calcula y visualiza el progreso (estilo Fitia.app). Las calorías quemadas por entrenamiento deben descontarse, y la gráfica debe mostrar peso vs meta (sin incluir otras medidas corporales en la gráfica).
+*   **Problema**: El progreso era una lista simple de pesos sin contexto de los objetivos calóricos ni proyección hacia la meta. La sincronización de peso estaba fragmentada.
+*   **Solución**: 
+    *   **Balance Neto Dinámico**: Integración de un widget de balance en tiempo real (`Ingerido - Quemado`).
+    *   **Algoritmo de Quema**: Deducción automática de **300 kcal** por cada ejercicio marcado como completado en la sección de entrenamiento, integrándolo en el balance general.
+    *   **Meta de Peso Inteligente**: Widget que calcula dinámicamente los kg restantes para la meta, comparando con el registro inicial y objetivo final.
+    *   **Sincronización Total**: Al registrar el peso en la sección de dieta o progreso, se actualiza la tabla `body_logs` y la UI instantáneamente.
+
+## 2. Feature: Gráfica de Peso con Línea de Objetivo Teórico
+*   **Problema**: El usuario no tenía referencia visual de si su ritmo de pérdida/ganancia de peso era adecuado respecto a las semanas objetivo establecidas en su perfil.
+*   **Solución**: 
+    *   **Línea de Objetivo Teórico**: Implementación de una línea punteada en el Canvas que representa la trayectoria ideal desde el inicio del plan hasta la meta final.
+    *   **Normalización de Ejes**: El gráfico ahora ajusta automáticamente sus límites para mostrar siempre tanto el peso real como la línea objetivo.
+    *   **Exclusión de medidas**: Se mantienen las medidas (pecho, cadera, etc.) en un panel lateral aislado para no contaminar la gráfica exclusiva de peso.
+
+## 3. Fixes y Correcciones Menores
+*   **Asignación de Entrenadores**: La lista de clientes del entrenador no mostraba a los usuarios asignados. Corregida la query SQL en `api/coach.php` (usando `LEFT JOIN`) para filtrar correctamente a los usuarios con `preferred_coach_id` igual al ID del entrenador.
+*   **Foco y Parpadeo UI**: Corregido problema visual de sincronización donde los widgets se mostraban en blanco hasta recargar.
+
+## 4. Archivos Modificados
+| Archivo | Acción | Descripción |
+|---------|--------|-------------|
+| `fitpaisa_cliente-v2.html` | MODIFICADO | Nueva UI de progreso, lógica de `drawChart` extendida con línea teórica, widgets de balance. |
+| `api/profile.php` | MODIFICADO | Sincronización automática de `profiles` a `body_logs`. |
+| `api/coach.php` | MODIFICADO | Corrección en query de listado de clientes. |
+
+## 5. Comandos de Sincronización
+```powershell
+git checkout testing; git add . ; git commit -m "feat: progress redesign Fitia style & bugfixes"
+git push origin testing
+```
