@@ -781,11 +781,11 @@ body.ready .sidebar, body.ready .main{opacity:1}
         </div>
         <div class="card">
           <div class="card-title">Medidas corporales</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Pecho</span><strong>42.3 cm <span style="color:var(--success);font-size:11px">▲ 0.2</span></strong></div>
-            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Cadera</span><strong>58.7 cm <span style="color:var(--muted);font-size:11px">—</span></strong></div>
-            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Bíceps</span><strong>36.5 cm <span style="color:var(--success);font-size:11px">▲ 0.4</span></strong></div>
-            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Muslo</span><strong>58.2 cm <span style="color:var(--success);font-size:11px">▲ 0.6</span></strong></div>
+          <div style="display:flex;flex-direction:column;gap:8px" id="body-measures-list">
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Pecho</span><strong>—</strong></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Cadera</span><strong>—</strong></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Bíceps</span><strong>—</strong></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Muslo</span><strong>—</strong></div>
           </div>
           <button class="btn-ghost" style="width:100%;margin-top:14px;font-size:12px" onclick="openModal('modal-measures')">+ Registrar medidas</button>
         </div>
@@ -2257,6 +2257,22 @@ function updateProgressWidgets() {
   // 4. Racha (Simulada por ahora con el historial de body_logs)
   const streakEl = document.getElementById('prog-streak');
   if (streakEl) streakEl.textContent = h.length > 0 ? h.length : '0';
+
+  // 5. Medidas corporales laterales (REAL DATA)
+  const measuresList = document.getElementById('body-measures-list');
+  if (measuresList) {
+    const chest = p.chest ? `${parseFloat(p.chest).toFixed(1)} cm` : '—';
+    const hip = p.hip ? `${parseFloat(p.hip).toFixed(1)} cm` : '—';
+    const biceps = p.biceps ? `${parseFloat(p.biceps).toFixed(1)} cm` : '—';
+    const thigh = p.thigh ? `${parseFloat(p.thigh).toFixed(1)} cm` : '—';
+    
+    measuresList.innerHTML = `
+      <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Pecho</span><strong>${chest}</strong></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Cadera</span><strong>${hip}</strong></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Bíceps</span><strong>${biceps}</strong></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Muslo</span><strong>${thigh}</strong></div>
+    `;
+  }
 }
 
 function drawChart() {
