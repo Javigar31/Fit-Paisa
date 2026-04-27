@@ -1,4 +1,4 @@
-﻿<!-- FitPaisa Version: 1.2.1 - Forced Deploy Reset -->
+<!-- FitPaisa Version: 1.2.1 - Forced Deploy Reset -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1330,15 +1330,35 @@ async function saveDietSetup(btn) {
 // ── Nutrición Real ────────────────────
 let selectedFood = null;
 let searchTimer;
-let editingMealId = null; // Para saber si estamos editando
+let editingMealId = null; 
+const foodSearchCache = new Map(); // Caché en memoria para velocidad instantánea
+let lastFetchedList = []; // Para filtrado inmediato reactivo
 
 function searchFoodDebounced(q) {
   clearTimeout(searchTimer);
+  q = q.trim().toLowerCase();
+  
   if (!q || q.length < 2) {
     document.getElementById('food-suggestions').style.display = 'none';
     return;
   }
-  searchTimer = setTimeout(() => fetchFood(q), 300);
+
+  // 1. FILTRADO INMEDIATO (Optimismo): Si ya tenemos una lista cargada y el query crece,
+  // filtramos localmente para mostrar algo AL INSTANTE mientras llega el fetch.
+  if (lastFetchedList.length > 0) {
+    const filtered = lastFetchedList.filter(f => f.name.toLowerCase().includes(q));
+    if (filtered.length > 0) {
+      renderSuggestions(filtered);
+    }
+  }
+
+  // 2. CACHÉ DE SESIÓN: Si ya buscamos exactamente esto, no disparamos red.
+  if (foodSearchCache.has(q)) {
+    renderSuggestions(foodSearchCache.get(q));
+    return;
+  }
+
+  searchTimer = setTimeout(() => fetchFood(q), 250); // Reducido a 250ms para mayor agilidad
 }
 
 async function fetchFood(q) {
@@ -1349,6 +1369,8 @@ async function fetchFood(q) {
     });
     const data = await res.json();
     if (data.success && data.results && data.results.length > 0) {
+      foodSearchCache.set(q, data.results); // Guardar en caché
+      lastFetchedList = data.results;      // Guardar para filtrado reactivo
       renderSuggestions(data.results);
     } else {
       document.getElementById('food-suggestions').style.display = 'none';

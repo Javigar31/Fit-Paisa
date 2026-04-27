@@ -69,11 +69,34 @@ function handle_search_food(): never
             // 3. Fallback real a Open Food Facts
             $externalResults = search_open_food_facts($q);
             if (!empty($externalResults)) {
+                // Guardar en caché de búsqueda (el blob JSON para respuesta rápida)
                 fp_query(
                     "INSERT INTO food_search_cache (query_text, results_json) VALUES (:q, :json)
                      ON CONFLICT (query_text) DO UPDATE SET results_json = EXCLUDED.results_json, created_at = NOW()",
                     [':q' => $qNorm, ':json' => json_encode($externalResults)]
                 );
+
+                // AUTO-INGESTA: Guardar cada producto individual en food_catalog 
+                // para que el índice de trigramas lo haga 'local' y 'difuso' para la próxima vez.
+                foreach ($externalResults as $ext) {
+                    try {
+                        fp_query(
+                            "INSERT INTO food_catalog 
+                             (name, calories_100g, protein_100g, carbs_100g, fat_100g, external_id, is_verified, image_url, unit_name, weight_std)
+                             VALUES (:name, :cal, :pro, :carb, :fat, :ext, false, :img, '100g', 100)
+                             ON CONFLICT (external_id) DO NOTHING",
+                            [
+                                ':name' => $ext['name'],
+                                ':cal'  => $ext['calories_100g'],
+                                ':pro'  => $ext['protein_100g'],
+                                ':carb' => $ext['carbs_100g'],
+                                ':fat'  => $ext['fat_100g'],
+                                ':ext'  => $ext['external_id'],
+                                ':img'  => $ext['image_url'] ?? null
+                            ]
+                        );
+                    } catch (Exception $e) { /* Silencioso si falla un insert individual */ }
+                }
             }
         }
         
@@ -96,13 +119,14 @@ function handle_search_food(): never
  */
 function search_open_food_facts(string $query): array
 {
-    $url = "https://world.openfoodfacts.org/cgi/search.pl?search_terms=" . urlencode($query) . "&search_simple=1&action=process&json=1&page_size=15&fields=product_name,nutriments,code,image_small_url";
+    // Usar el tag lc=es para priorizar resultados en español
+    $url = "https://world.openfoodfacts.org/cgi/search.pl?search_terms=" . urlencode($query) . "&search_simple=1&action=process&json=1&page_size=15&lc=es&fields=product_name,nutriments,code,image_small_url";
     
     $opts = [
         'http' => [
             'method' => 'GET',
             'header' => 'User-Agent: FitPaisa - WebApp - Version 1.0',
-            'timeout' => 2.5 // Timeout agresivo para no bloquear la UX
+            'timeout' => 2.5 
         ]
     ];
 
@@ -116,7 +140,6 @@ function search_open_food_facts(string $query): array
 
     $mapped = [];
     foreach ($data['products'] as $p) {
-        // Solo incluir si tiene al menos calorías
         if (!isset($p['nutriments']['energy-kcal_100g'])) continue;
 
         $mapped[] = [
