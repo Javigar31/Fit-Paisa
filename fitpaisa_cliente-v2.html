@@ -900,7 +900,7 @@ async function detectAndSyncTimezone() {
 const secs = ['dashboard', 'training', 'diet', 'messages', 'progress', 'support'];
 let active = 'dashboard';
 const prog = document.getElementById('prog');
-let appState = { profile: null, macros: null }; // datos reales del backend
+let appState = { profile: null, macros: null, burnedCalories: 0 }; // burnedCalories real-time tracker
 
 // ── Helpers de traducción ──────────────
 const OBJECTIVE_LABELS = {
@@ -1715,23 +1715,37 @@ async function loadDailySummary() {
         const totals = dataSum.totals;
         const targets = dataSum.targets;
 
-        // 1. Actualizar Dashboard (Solo si es HOY para no confundir al usuario)
-        const isToday = dietSelectedDate === getLocalDateString();
-        if (totals && isToday) {
-          document.getElementById('v2-kcal').textContent = Math.round(totals.total_calories || 0);
+        // 1. Calcular calorías quemadas reales para el balance (Estilo Fitia)
+        const resEx = await fetch(`/api/workouts.php?action=my_exercises&date=${dietSelectedDate}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        let burnedToday = 0;
+        if (resEx.ok) {
+          const dataEx = await resEx.json();
+          if (dataEx.success && dataEx.exercises) {
+            const doneCount = dataEx.exercises.filter(e => e.is_done).length;
+            burnedToday = doneCount * 300; // Constante de 300 kcal por ejercicio completado
+          }
+        }
+        appState.burnedCalories = burnedToday;
+
+        if (totals && dietSelectedDate === getLocalDateString()) {
+          const netKcal = Math.max(0, Math.round((totals.total_calories || 0) - burnedToday));
+          document.getElementById('v2-kcal').textContent = netKcal;
           document.getElementById('v2-prot').textContent = Math.round(totals.total_protein || 0) + 'g';
           document.getElementById('v2-carb').textContent = Math.round(totals.total_carbs || 0) + 'g';
           document.getElementById('v2-fat').textContent = Math.round(totals.total_fat || 0) + 'g';
         }
 
-        // 2. Actualizar sección Dieta (Barras de progreso)
+        // 2. Actualizar sección Dieta (Barras de progreso con balance)
         if (targets && totals) {
-          setMacroBar('bar-kcal', totals.total_calories, targets.calories, 'var(--lime)');
+          const netTotal = Math.max(0, totals.total_calories - burnedToday);
+          setMacroBar('bar-kcal', netTotal, targets.calories, 'var(--lime)');
           setMacroBar('bar-prot', totals.total_protein, targets.protein_g, 'var(--success)');
           setMacroBar('bar-carb', totals.total_carbs, targets.carbs_g, 'var(--warn)');
           setMacroBar('bar-fat', totals.total_fat, targets.fat_g, 'var(--purple)');
 
-          setMacroLabel('lbl-kcal', Math.round(totals.total_calories), targets.calories);
+          setMacroLabel('lbl-kcal', Math.round(netTotal), targets.calories);
           setMacroLabel('lbl-prot', Math.round(totals.total_protein), targets.protein_g, 'g');
           setMacroLabel('lbl-carb', Math.round(totals.total_carbs), targets.carbs_g, 'g');
           setMacroLabel('lbl-fat', Math.round(totals.total_fat), targets.fat_g, 'g');
@@ -2106,6 +2120,7 @@ async function toggleEx(exerciseId, markDone) {
     });
     if (res.ok) {
       loadDailyWorkouts();
+      loadDailySummary(); // Actualizar balance calórico en tiempo real
     }
   } catch(e){}
 }
@@ -2247,14 +2262,15 @@ function updateProgressWidgets() {
     }
   }
 
-  // 3. Placeholders realistas (Basados en el perfil si existen)
+  // 3. Grasa Corporal
   const fatEl = document.getElementById('prog-fat');
-  if (fatEl) fatEl.textContent = "—"; // No tenemos este dato aún en la BD
+  if (fatEl) fatEl.textContent = p.body_fat ? `${parseFloat(p.body_fat).toFixed(1)}%` : "—";
 
+  // 4. Cintura
   const waistEl = document.getElementById('prog-waist');
   if (waistEl) waistEl.textContent = p.waist ? parseFloat(p.waist).toFixed(1) : "—";
 
-  // 4. Racha (Simulada por ahora con el historial de body_logs)
+  // 5. Racha de registros (Body Logs)
   const streakEl = document.getElementById('prog-streak');
   if (streakEl) streakEl.textContent = h.length > 0 ? h.length : '0';
 
@@ -2417,13 +2433,10 @@ function toggleEditObjective() {
   <div class="modal-box" onclick="event.stopPropagation()">
     <div class="modal-head"><h2>REGISTRAR MEDIDAS</h2><button class="modal-close" onclick="closeModal(this)">✕</button></div>
     <div class="modal-body">
-      <div class="grid2" style="gap:12px">
-        <div class="field"><label class="label">Peso (kg)</label><input class="input" id="measure-weight" placeholder="74.2" type="number"></div>
-        <div class="field"><label class="label">% Grasa</label><input class="input" placeholder="18.4" type="number"></div>
-        <div class="field"><label class="label">Cintura (cm)</label><input class="input" placeholder="82.0" type="number"></div>
-        <div class="field"><label class="label">Cadera (cm)</label><input class="input" placeholder="95.0" type="number"></div>
-        <div class="field"><label class="label">Pecho (cm)</label><input class="input" placeholder="98.0" type="number"></div>
-        <div class="field"><label class="label">Bíceps (cm)</label><input class="input" placeholder="36.5" type="number"></div>
+      <div class="field" style="margin-bottom:15px"><label class="label">Peso Actual (kg)</label><input class="input" id="measure-weight" placeholder="74.2" type="number" step="0.1" style="font-size:24px; height:60px; text-align:center"></div>
+      <div class="grid2" style="gap:12px; opacity: 0.6">
+        <div class="field"><label class="label">% Grasa (Opcional)</label><input class="input" id="measure-fat" placeholder="18.4" type="number" step="0.1"></div>
+        <div class="field"><label class="label">Cintura (Opcional)</label><input class="input" id="measure-waist" placeholder="82.0" type="number" step="0.1"></div>
       </div>
     </div>
     <div class="modal-actions">
@@ -2451,9 +2464,16 @@ async function saveMeasures(btn) {
     });
     const data = await res.json();
     if (data.success) {
-      alert("Medidas guardadas con éxito.");
+      // Actualizar estado local para reflejo inmediato
+      if (appState.profile) appState.profile.weight = weight;
+      
       closeModal(btn);
       await loadProgressData();
+      await loadDailySummary(); // Para que el TMB/Macros se vean afectados si hay lógica reactiva
+      
+      // Feedback visual
+      const user = JSON.parse(localStorage.getItem('fp_user') || '{}');
+      populateUI(appState.profile, appState.macros, user);
     } else {
       alert(data.message || 'Error al guardar medidas.');
     }
