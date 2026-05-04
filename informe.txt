@@ -141,7 +141,7 @@
     2. Fallback automÃ¡tico a Open Food Facts si < 5 resultados locales (timeout 2.5s).
     3. DeduplicaciÃ³n inteligente de resultados.
 *   **Persistencia AutomÃ¡tica**: Los alimentos seleccionados de OFF se guardan en `food_catalog` con `is_verified = FALSE`, haciendo el catÃ¡logo local cada vez mÃ¡s completo.
-*   **UI Premium**: Iconos de verificaciÃ³n (âœ… local, ðŸŒ externo) y miniaturas de imagen en los resultados de bÃºsqueda.
+*   **UI Premium**: Iconos de verificaciÃ³n (âœ… local, ðŸŒ  externo) y miniaturas de imagen en los resultados de bÃºsqueda.
 *   **Seguridad**: Datos sanitizados con `fp_sanitize` antes de persistencia. `INSERT ... ON CONFLICT DO UPDATE` para evitar duplicados.
 
 ### Cambios de BD:
@@ -185,32 +185,32 @@ git checkout master  # rama final de trabajo
 
 ***
 
-# Informe Técnico (Fixes): Corrección de Bugs en Testing (v7.1.0)
+# Informe TÃ©cnico (Fixes): CorrecciÃ³n de Bugs en Testing (v7.1.0)
 **Fecha:** 2026-04-21
 **Estado:** DESPLEGADO en `testing` ? Mergeado a `master`.
 
-## 1. Bug: Formulario de Contacto (`Error de conexión`)
-*   **Causa**: `fp_mail()` en `api/_mailer.php` tenía el parámetro `\` como obligatorio. `contact.php` lo llamaba con 3 argumentos, provocando un **Fatal PHP Error** silencioso.
-*   **Fix**: `string \ = ''` (parámetro opcional con valor por defecto vacío).
+## 1. Bug: Formulario de Contacto (`Error de conexiÃ³n`)
+*   **Causa**: `fp_mail()` en `api/_mailer.php` tenÃ­a el parÃ¡metro `\` como obligatorio. `contact.php` lo llamaba con 3 argumentos, provocando un **Fatal PHP Error** silencioso.
+*   **Fix**: `string \ = ''` (parÃ¡metro opcional con valor por defecto vacÃ­o).
 
 ## 2. Bug: Timer Bar del Modal Descolocado
-*   **Causa**: `.modal-progress` sin `overflow: hidden` en el contenedor `.success-modal`, la barra se salía del borde redondeado.
+*   **Causa**: `.modal-progress` sin `overflow: hidden` en el contenedor `.success-modal`, la barra se salÃ­a del borde redondeado.
 *   **Fix**: `overflow: hidden` + `padding-bottom: 44px` en `.success-modal`. Barra a `4px` con `border-radius` en esquinas inferiores.
 
 ## 3. Bug: Error al Crear Admin/Coach en Testing
 *   **Causa**: Tabla `users` en `fitpaisa_testing` recreada sin columnas `is_active`, `phone`, `login_attempts`, `locked_until`, `last_login`.
-*   **Fix**: Parche SQL en Neon Console para añadir columnas faltantes antes de llamar a `seed-admin.php`.
+*   **Fix**: Parche SQL en Neon Console para aÃ±adir columnas faltantes antes de llamar a `seed-admin.php`.
 
 ## 4. Archivos Modificados
 | Archivo | Cambio |
 |---------|--------|
-| `api/_mailer.php` | `\ = ''` — parámetro opcional |
+| `api/_mailer.php` | `\ = ''` â€” parÃ¡metro opcional |
 | `index.html` | `overflow:hidden` + timer bar corregida |
 | `.agent/skills/fitpaisa-db-doctor/SKILL.md` | v7.1.0 documentado |
 
 ***
 
-# Informe Técnico: Formulario de Soporte Premium + Registro de Clientes (v7.2.0)
+# Informe TÃ©cnico: Formulario de Soporte Premium + Registro de Clientes (v7.2.0)
 **Fecha:** 2026-04-21
 **Estado:** DESPLEGADO en `testing` -> Mergeado a `master`.
 
@@ -243,51 +243,51 @@ git checkout master  # rama final de trabajo
 
 ***
 
-## 5. Optimización de Accesibilidad (WCAG 2.1) - Rama testing
-* **Objetivo**: Resolver alertas de Vercel (Axe) y cumplir con estándares de accesibilidad sin romper el diseño premium.
+## 5. OptimizaciÃ³n de Accesibilidad (WCAG 2.1) - Rama testing
+* **Objetivo**: Resolver alertas de Vercel (Axe) y cumplir con estÃ¡ndares de accesibilidad sin romper el diseÃ±o premium.
 * **Resultados**:
-    * **Semántica**: Landmark <main> añadido y jerarquía H1/H2 corregida.
+    * **SemÃ¡ntica**: Landmark <main> aÃ±adido y jerarquÃ­a H1/H2 corregida.
     * **Navegacin**: Botones de puntos y flechas convertidos de div a <button> con aria-label.
-    * **Axe Fix (Foco)**: Sincronización de visibility: hidden y aria-hidden en diapositivas inactivas para evitar el 'foco fantasma'.
-    * **UX**: añadido :focus-visible para una navegacin por teclado estética y funcional.
+    * **Axe Fix (Foco)**: SincronizaciÃ³n de visibility: hidden y aria-hidden en diapositivas inactivas para evitar el 'foco fantasma'.
+    * **UX**: aÃ±adido :focus-visible para una navegacin por teclado estÃ©tica y funcional.
 * **Estado**: Desplegado en rama testing.
 
 ## 6. Archivos Modificados (A11y)
 | Archivo | Accion | Descripcion |
 |---------|--------|-------------|
-| index.html | MODIFICADO | Semántica, ARIA, JS de visibilidad y landmarks |
+| index.html | MODIFICADO | SemÃ¡ntica, ARIA, JS de visibilidad y landmarks |
 | style.css | MODIFICADO | Estilos de :focus-visible y layout de landmarks |
 
 ***
 
-# Informe Técnico (Performance & UX): Catálogo Inteligente y Caché de Latencia Cero (v8.0.0)
+# Informe TÃ©cnico (Performance & UX): CatÃ¡logo Inteligente y CachÃ© de Latencia Cero (v8.0.0)
 **Fecha:** 2026-04-27
 **Estado:** DESPLEGADO en `testing` -> Listo para `master`.
 
-## 1. Feature: Catálogo Híbrido con Auto-Ingesta Automática
-*   **Problema**: La API externa de Open Food Facts (OFF) es lenta (~2s) y no perdona errores tipográficos (ej: "Dpritos" no devolvía nada).
-*   **Solución**: 
-    *   **Auto-Ingesta**: Cada búsqueda en OFF ahora guarda automáticamente todos los resultados en el catálogo local (`food_catalog`).
-    *   **Búsqueda Difusa (Fuzzy Search)**: Al estar en local, el sistema usa el operador de similitud `%` de PostgreSQL (extensión `pg_trgm`). 
-    *   **Resultado**: Una búsqueda mal escrita ("Dpritos") ahora encuentra el producto correcto en **~15ms** si ya se buscó alguna vez anteriormente.
+## 1. Feature: CatÃ¡logo HÃ­brido con Auto-Ingesta AutomÃ¡tica
+*   **Problema**: La API externa de Open Food Facts (OFF) es lenta (~2s) y no perdona errores tipogrÃ¡ficos (ej: "Dpritos" no devolvÃ­a nada).
+*   **SoluciÃ³n**: 
+    *   **Auto-Ingesta**: Cada bÃºsqueda en OFF ahora guarda automÃ¡ticamente todos los resultados en el catÃ¡logo local (`food_catalog`).
+    *   **BÃºsqueda Difusa (Fuzzy Search)**: Al estar en local, el sistema usa el operador de similitud `%` de PostgreSQL (extensiÃ³n `pg_trgm`). 
+    *   **Resultado**: Una bÃºsqueda mal escrita ("Dpritos") ahora encuentra el producto correcto en **~15ms** si ya se buscÃ³ alguna vez anteriormente.
 
 ## 2. Feature: UI Reactiva de Latencia Cero
-*   **Caché de Memoria (Map)**: Implementado `foodSearchCache` en el frontend para resultados instantáneos al borrar/escribir o repetir búsquedas.
+*   **CachÃ© de Memoria (Map)**: Implementado `foodSearchCache` en el frontend para resultados instantÃ¡neos al borrar/escribir o repetir bÃºsquedas.
 *   **Filtrado Reactivo**: Mientras el servidor responde, la UI filtra localmente la lista actual para dar feedback visual inmediato.
-*   **Optimización**: Reducción del debounce a **250ms**.
+*   **OptimizaciÃ³n**: ReducciÃ³n del debounce a **250ms**.
 
-## 3. Fix: Error de Ingestas Vacías
+## 3. Fix: Error de Ingestas VacÃ­as
 *   **Problema**: El registro de comidas fallaba con `success:false` o no se mostraba por falta de la columna `created_at`.
-*   **Fix**: Migración de la tabla `food_entries` para incluir `created_at TIMESTAMPTZ`. Actualización de `api/setup-db.php`.
+*   **Fix**: MigraciÃ³n de la tabla `food_entries` para incluir `created_at TIMESTAMPTZ`. ActualizaciÃ³n de `api/setup-db.php`.
 
 ## 4. Archivos Modificados o Creados
-| Archivo | Acción | Descripción |
+| Archivo | AcciÃ³n | DescripciÃ³n |
 |---------|--------|-------------|
-| `api/food.php` | MODIFICADO | Auto-ingesta de OFF, lógica de similitud optimizada. |
-| `fitpaisa_cliente-v2.html` | MODIFICADO | Caché Map, filtrado reactivo, debounce 250ms. |
+| `api/food.php` | MODIFICADO | Auto-ingesta de OFF, lÃ³gica de similitud optimizada. |
+| `fitpaisa_cliente-v2.html` | MODIFICADO | CachÃ© Map, filtrado reactivo, debounce 250ms. |
 | `api/setup-db.php` | MODIFICADO | Parche de created_at en food_entries y food_search_cache. |
 
-## 5. Comandos de Sincronización
+## 5. Comandos de SincronizaciÃ³n
 ```powershell
 git checkout testing; git add . ; git commit -m "v8.0.0: Intelligent Food Catalog"
 git checkout master; git merge testing; git push origin master
@@ -295,39 +295,70 @@ git checkout master; git merge testing; git push origin master
 
 ***
 
-# Informe Técnico (UX/UI & Algoritmia): Progreso Evolutivo "Fitia Style" (v9.0.0)
+# Informe TÃ©cnico (UX/UI & Algoritmia): Progreso Evolutivo "Fitia Style" (v9.0.0)
 **Fecha:** 2026-04-27
 **Estado:** DESPLEGADO en `testing`.
 
-## 1. Feature: Rediseño de Progreso y Balance Calórico
-*   **Petición del Usuario**: Replantear cómo se calcula y visualiza el progreso (estilo Fitia.app). Las calorías quemadas por entrenamiento deben descontarse, y la gráfica debe mostrar peso vs meta (sin incluir otras medidas corporales en la gráfica).
-*   **Problema**: El progreso era una lista simple de pesos sin contexto de los objetivos calóricos ni proyección hacia la meta. La sincronización de peso estaba fragmentada.
-*   **Solución**: 
-    *   **Balance Neto Dinámico**: Integración de un widget de balance en tiempo real (`Ingerido - Quemado`).
-    *   **Algoritmo de Quema**: Deducción automática de **300 kcal** por cada ejercicio marcado como completado en la sección de entrenamiento, integrándolo en el balance general.
-    *   **Meta de Peso Inteligente**: Widget que calcula dinámicamente los kg restantes para la meta, comparando con el registro inicial y objetivo final.
-    *   **Sincronización Total**: Al registrar el peso en la sección de dieta o progreso, se actualiza la tabla `body_logs` y la UI instantáneamente.
+## 1. Feature: RediseÃ±o de Progreso y Balance CalÃ³rico
+*   **PeticiÃ³n del Usuario**: Replantear cÃ³mo se calcula y visualiza el progreso (estilo Fitia.app). Las calorÃ­as quemadas por entrenamiento deben descontarse, y la grÃ¡fica debe mostrar peso vs meta (sin incluir otras medidas corporales en la grÃ¡fica).
+*   **Problema**: El progreso era una lista simple de pesos sin contexto de los objetivos calÃ³ricos ni proyecciÃ³n hacia la meta. La sincronizaciÃ³n de peso estaba fragmentada.
+*   **SoluciÃ³n**: 
+    *   **Balance Neto DinÃ¡mico**: IntegraciÃ³n de un widget de balance en tiempo real (`Ingerido - Quemado`).
+    *   **Algoritmo de Quema**: DeducciÃ³n automÃ¡tica de **300 kcal** por cada ejercicio marcado como completado en la secciÃ³n de entrenamiento, integrÃ¡ndolo en el balance general.
+    *   **Meta de Peso Inteligente**: Widget que calcula dinÃ¡micamente los kg restantes para la meta, comparando con el registro inicial y objetivo final.
+    *   **SincronizaciÃ³n Total**: Al registrar el peso en la secciÃ³n de dieta o progreso, se actualiza la tabla `body_logs` y la UI instantÃ¡neamente.
 
-## 2. Feature: Gráfica de Peso con Línea de Objetivo Teórico
-*   **Problema**: El usuario no tenía referencia visual de si su ritmo de pérdida/ganancia de peso era adecuado respecto a las semanas objetivo establecidas en su perfil.
-*   **Solución**: 
-    *   **Línea de Objetivo Teórico**: Implementación de una línea punteada en el Canvas que representa la trayectoria ideal desde el inicio del plan hasta la meta final.
-    *   **Normalización de Ejes**: El gráfico ahora ajusta automáticamente sus límites para mostrar siempre tanto el peso real como la línea objetivo.
-    *   **Exclusión de medidas**: Se mantienen las medidas (pecho, cadera, etc.) en un panel lateral aislado para no contaminar la gráfica exclusiva de peso.
+## 2. Feature: GrÃ¡fica de Peso con LÃ­nea de Objetivo TeÃ³rico
+*   **Problema**: El usuario no tenÃ­a referencia visual de si su ritmo de pÃ©rdida/ganancia de peso era adecuado respecto a las semanas objetivo establecidas en su perfil.
+*   **SoluciÃ³n**: 
+    *   **LÃ­nea de Objetivo TeÃ³rico**: ImplementaciÃ³n de una lÃ­nea punteada en el Canvas que representa la trayectoria ideal desde el inicio del plan hasta la meta final.
+    *   **NormalizaciÃ³n de Ejes**: El grÃ¡fico ahora ajusta automÃ¡ticamente sus lÃ­mites para mostrar siempre tanto el peso real como la lÃ­nea objetivo.
+    *   **ExclusiÃ³n de medidas**: Se mantienen las medidas (pecho, cadera, etc.) en un panel lateral aislado para no contaminar la grÃ¡fica exclusiva de peso.
 
 ## 3. Fixes y Correcciones Menores
-*   **Asignación de Entrenadores**: La lista de clientes del entrenador no mostraba a los usuarios asignados. Corregida la query SQL en `api/coach.php` (usando `LEFT JOIN`) para filtrar correctamente a los usuarios con `preferred_coach_id` igual al ID del entrenador.
-*   **Foco y Parpadeo UI**: Corregido problema visual de sincronización donde los widgets se mostraban en blanco hasta recargar.
+*   **AsignaciÃ³n de Entrenadores**: La lista de clientes del entrenador no mostraba a los usuarios asignados. Corregida la query SQL en `api/coach.php` (usando `LEFT JOIN`) para filtrar correctamente a los usuarios con `preferred_coach_id` igual al ID del entrenador.
+*   **Foco y Parpadeo UI**: Corregido problema visual de sincronizaciÃ³n donde los widgets se mostraban en blanco hasta recargar.
 
 ## 4. Archivos Modificados
-| Archivo | Acción | Descripción |
+| Archivo | AcciÃ³n | DescripciÃ³n |
 |---------|--------|-------------|
-| `fitpaisa_cliente-v2.html` | MODIFICADO | Nueva UI de progreso, lógica de `drawChart` extendida con línea teórica, widgets de balance. |
-| `api/profile.php` | MODIFICADO | Sincronización automática de `profiles` a `body_logs`. |
-| `api/coach.php` | MODIFICADO | Corrección en query de listado de clientes. |
+| `fitpaisa_cliente-v2.html` | MODIFICADO | Nueva UI de progreso, lÃ³gica de `drawChart` extendida con lÃ­nea teÃ³rica, widgets de balance. |
+| `api/profile.php` | MODIFICADO | SincronizaciÃ³n automÃ¡tica de `profiles` a `body_logs`. |
+| `api/coach.php` | MODIFICADO | CorrecciÃ³n en query de listado de clientes. |
 
-## 5. Comandos de Sincronización
+## 5. Comandos de SincronizaciÃ³n
 ```powershell
 git checkout testing; git add . ; git commit -m "feat: progress redesign Fitia style & bugfixes"
 git push origin testing
 ```
+
+***
+
+# Informe Técnico (Estabilidad & Rendimiento): Catálogo Blindado y UX Reactiva (v10.0.0)
+**Fecha:** 2026-05-04
+**Estado:** DESPLEGADO en `master` y `testing`. Resuelve Error 500 en producción.
+
+## 1. Resolución de Error 500 (Catálogo en Producción)
+*   **Problema**: El endpoint `api/food.php` fallaba críticamente al usar el operador de similitud `%` (trigramas) en entornos sin la extensión `pg_trgm` activa en PostgreSQL. Además, `fp_query()` forzaba un `exit` en caso de cualquier error SQL, rompiendo la búsqueda.
+*   **Solución (Capa Defensiva)**:
+    *   **Fallback Automático**: Reescritura del controlador con lógica de 3 niveles: Búsqueda por Trigramas (fuzzy) -> Fallback a ILIKE (patrón simple) -> Fallback a Array vacío.
+    *   **PDO Directo**: Migración de `fp_query` a `PDO` directo con bloques `try-catch` independientes para que errores en tablas opcionales (caché) o extensiones no detengan el servicio.
+    *   **Auto-Ingesta Robusta**: Procesos de persistencia de Open Food Facts ahora son silenciosos ante errores de duplicidad o esquema incompleto.
+
+## 2. Optimización de Rendimiento y UX (Buscador)
+*   **Debounce Balanceado**: Aumento del tiempo de espera de 250ms a **500ms** para reducir la carga en el servidor y evitar peticiones en cadena durante latencias altas de Vercel/Neon.
+*   **Loading Indicator (Spinner)**: Inyección de feedback visual inmediato ("Buscando...") mientras se procesa la consulta externa o de base de datos.
+*   **Caché Defensiva**: La tabla `food_search_cache` ahora se gestiona de forma opcional; si no existe, el sistema simplemente continúa sin degradar la experiencia.
+
+## 3. Archivos Modificados
+| Archivo | Acción | Descripción |
+|---------|--------|-------------|
+| `api/food.php` | REESCRITURA | Lógica defensiva por capas, PDO nativo y fallback de trigramas. |
+| `fitpaisa_cliente-v2.html` | MODIFICADO | Debounce 500ms, Spinner de carga, CSS de animación spin. |
+
+## 4. Estado del Despliegue
+```powershell
+git checkout master; git merge testing; git push origin master
+git checkout testing; git push origin testing
+```
+*   **Sincronización**: Ambas ramas (`master` y `testing`) están en paridad total con la versión 10.0.0.
