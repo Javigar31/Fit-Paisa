@@ -229,6 +229,7 @@ body.ready .sidebar, body.ready .main{opacity:1}
 .cs-option.active { color: var(--lime); font-weight: 700; background: rgba(255,255,255,0.03); }
 
 @keyframes csFadeIn { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+@keyframes spin { to{transform:rotate(360deg)} }
 .input::placeholder{color:var(--muted)}
 .label{font-size:11px;color:var(--muted);margin-bottom:5px;display:block}
 .field{display:flex;flex-direction:column}
@@ -1417,24 +1418,32 @@ function searchFoodDebounced(q) {
     return;
   }
 
-  searchTimer = setTimeout(() => fetchFood(q), 250); // Reducido a 250ms para mayor agilidad
+  searchTimer = setTimeout(() => fetchFood(q), 500); // 500ms: balance entre agilidad y carga de servidor
 }
 
 async function fetchFood(q) {
   const token = localStorage.getItem('fp_token');
+  const box = document.getElementById('food-suggestions');
+
+  // Feedback inmediato al usuario mientras llega la respuesta
+  box.innerHTML = '<div style="padding:14px 18px;color:var(--muted);font-size:12px;display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:50%;border:2px solid var(--lime);border-top-color:transparent;display:inline-block;animation:spin .6s linear infinite"></span>Buscando...</div>';
+  box.style.display = 'block';
+
   try {
     const res = await fetch(`/api/food.php?action=search&q=${encodeURIComponent(q)}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const data = await res.json();
     if (data.success && data.results && data.results.length > 0) {
-      foodSearchCache.set(q, data.results); // Guardar en caché
-      lastFetchedList = data.results;      // Guardar para filtrado reactivo
+      foodSearchCache.set(q, data.results); // Guardar en caché de sesión
+      lastFetchedList = data.results;        // Para filtrado reactivo
       renderSuggestions(data.results);
     } else {
-      document.getElementById('food-suggestions').style.display = 'none';
+      box.style.display = 'none';
     }
-  } catch(e) {}
+  } catch(e) {
+    box.style.display = 'none';
+  }
 }
 
 function renderSuggestions(list) {
