@@ -574,8 +574,20 @@ async function renderClients() {
 async function renderPlans() {
   const tbody = document.getElementById('planBody');
   tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">Cargando planes…</td></tr>';
+  const sel = document.getElementById('clientSelect');
   try {
     const data = await apiFetch(`${API}/coach.php?action=plans`);
+
+    // Cargar clientes asignados siempre, incluso si aún no hay planes.
+    if (sel && clientsCache.length === 0) {
+      const cd = await apiFetch(`${API}/coach.php?action=clients`);
+      if (cd.success) clientsCache = cd.clients;
+    }
+    if (sel) {
+      sel.innerHTML = '<option value="">Seleccionar cliente…</option>' +
+        clientsCache.map(c => `<option value="${c.user_id}">${c.full_name}</option>`).join('');
+    }
+
     if (!data.success || !data.plans.length) {
       tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">Sin planes creados</td></tr>';
       return;
@@ -598,17 +610,6 @@ async function renderPlans() {
         </td>
       </tr>`;
     }).join('');
-
-    // Poblar select de clientes en "Nuevo plan"
-    const sel = document.getElementById('clientSelect');
-    if (sel && clientsCache.length === 0) {
-      const cd = await apiFetch(`${API}/coach.php?action=clients`);
-      if (cd.success) clientsCache = cd.clients;
-    }
-    if (sel) {
-      sel.innerHTML = '<option value="">Seleccionar cliente…</option>' +
-        clientsCache.map(c => `<option value="${c.user_id}">${c.full_name}</option>`).join('');
-    }
   } catch(e) {
     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">Error al cargar planes</td></tr>';
   }
