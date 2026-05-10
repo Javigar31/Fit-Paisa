@@ -362,3 +362,61 @@ git checkout master; git merge testing; git push origin master
 git checkout testing; git push origin testing
 ```
 *   **Sincronización**: Ambas ramas (`master` y `testing`) están en paridad total con la versión 10.0.0.
+
+***
+
+# Informe Tecnico (Coach, Chat & Training UX): Realtime + Resumen Diario (v10.1.0)
+**Fecha:** 2026-05-10
+**Estado:** DESPLEGADO en `testing`. Listo para merge a `master`.
+
+## 1. Fix Critico: Coach sin clientes seleccionables al crear plan
+*   **Problema**: En el panel de entrenador, si no existian planes previos, el selector de clientes quedaba vacio y no permitia crear el primer plan.
+*   **Solucion**: `renderPlans()` ahora carga `coach.php?action=clients` antes de evaluar la lista de planes, garantizando que `clientSelect` se pueble siempre.
+
+## 2. Feature: Mensajeria en tiempo real (cliente <-> entrenador)
+*   **Backend (`api/messages.php`)**:
+    *   Nuevo soporte de polling incremental con `since_id` en `action=thread`.
+    *   Retorno optimizado solo con mensajes nuevos para reducir transferencia.
+*   **Frontend Entrenador (`fitpaisa_entrenador.html`)**:
+    *   Polling cada 2.5s, solo cuando la seccion de mensajes esta activa y la pestana visible.
+    *   Merge incremental en memoria + auto-mark as read.
+*   **Frontend Cliente (`fitpaisa_cliente-v2.html`)**:
+    *   Polling del chat activo cada 2.5s con `since_id`.
+    *   Actualizacion inmediata del hilo sin recargar pagina.
+
+## 3. UX Mobile/Tablet en panel Entrenador
+*   **Problema**: No existia opcion directa de cerrar sesion en navegacion responsive.
+*   **Solucion**: Se agrego item `Cerrar sesion` en la sidebar mobile/tablet con comportamiento consistente al panel admin.
+
+## 4. Feature: Creacion de plan con ejercicios por dia desde el formulario
+*   **Panel Entrenador**:
+    *   Nuevo bloque "Plan del dia (opcional)" en "Nuevo plan".
+    *   Permite cargar ejercicios temporales por dia/series/reps/carga antes de guardar.
+    *   Al guardar: crea plan + inserta ejercicios automaticamente.
+
+## 5. Fix Critico: "undefined" en ejercicios asignados del cliente
+*   **Causa**: Desalineacion de contrato API/UI (`name` vs `exercise_name`, `load_kg` vs `weight_kg`, `done` vs `is_done`) y ausencia de `calendar` en `workout_calendar`.
+*   **Backend (`api/workouts.php`)**:
+    *   `my_exercises` ahora devuelve aliases compatibles: `exercise_name`, `weight_kg`, `is_done`.
+    *   `workout_calendar` ahora devuelve `calendar` (7 dias con `date`, `completed`, `total`) y `summary`.
+*   **Frontend Cliente (`fitpaisa_cliente-v2.html`)**:
+    *   Normalizacion defensiva de payload para evitar regresiones.
+    *   Nuevo "Resumen del dia": KPIs de completados/pendientes/total + chips de ejercicios completados.
+    *   Fallback para entornos legacy que aun no devuelvan `calendar`.
+
+## 6. Archivos Modificados
+| Archivo | Accion | Descripcion |
+|---------|--------|-------------|
+| `api/messages.php` | MODIFICADO | Polling incremental por `since_id` |
+| `api/workouts.php` | MODIFICADO | Contrato estable de ejercicios + calendario semanal |
+| `fitpaisa_entrenador.html` | MODIFICADO | Clientes en nuevo plan, logout responsive, pre-carga de ejercicios |
+| `fitpaisa_cliente-v2.html` | MODIFICADO | Realtime chat + render robusto + resumen diario |
+
+## 7. Estado de ramas
+```powershell
+git checkout testing
+git push origin testing
+git checkout master
+git merge testing
+git push origin master
+```
