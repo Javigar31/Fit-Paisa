@@ -142,8 +142,34 @@ function handle_thread(array $payload): never
         fp_error(400, 'ID de usuario inválido.');
     }
 
+    $sinceId = max((int) ($_GET['since_id'] ?? 0), 0);
     $limit  = min((int) ($_GET['limit'] ?? 50), 200);
     $offset = max((int) ($_GET['offset'] ?? 0), 0);
+
+    // Polling incremental opcional: traer solo mensajes nuevos desde el último message_id.
+    if ($sinceId > 0) {
+        $messages = fp_query(
+            'SELECT m.message_id, m.sender_id, m.receiver_id, m.content,
+                    m.sent_at, m.read_at,
+                    s.full_name AS sender_name
+             FROM messages m
+             JOIN users s ON s.user_id = m.sender_id
+             WHERE ((m.sender_id = :uid AND m.receiver_id = :oid)
+                 OR (m.sender_id = :oid AND m.receiver_id = :uid))
+               AND m.is_deleted = FALSE
+               AND m.message_id > :sid
+             ORDER BY m.message_id ASC
+             LIMIT :lim',
+            [
+                ':uid' => $payload['user_id'],
+                ':oid' => $otherUserId,
+                ':sid' => $sinceId,
+                ':lim' => $limit,
+            ]
+        )->fetchAll();
+
+        fp_success(['messages' => $messages, 'with_user_id' => $otherUserId]);
+    }
 
     $messages = fp_query(
         'SELECT m.message_id, m.sender_id, m.receiver_id, m.content,

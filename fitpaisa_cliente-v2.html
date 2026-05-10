@@ -1975,8 +1975,11 @@ async function fetchInbox() {
 }
 
 let activeChatUserId = null;
+let activeChatName = '';
+let activeChatLastId = 0;
 async function openChat(userId, name) {
   activeChatUserId = userId;
+  if (name) activeChatName = name;
   const token = localStorage.getItem('fp_token');
   
   // Actualizar UI del hero
@@ -2000,18 +2003,25 @@ async function openChat(userId, name) {
   }
 
   try {
-    const res = await fetch(`/api/messages.php?action=thread&with=${userId}`, {
+    const res = await fetch(`/api/messages.php?action=thread&with=${userId}&limit=50`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const data = await res.json();
     if (data.success) {
       const u = JSON.parse(localStorage.getItem('fp_user'));
       messages = data.messages.map(m => ({
+        id: m.message_id,
         text: m.content,
         mine: m.sender_id === u.user_id,
         time: new Date(m.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }));
+      activeChatLastId = messages.length ? (messages[messages.length - 1].id || 0) : 0;
       renderChat();
+      fetch('/api/messages.php?action=read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ sender_id: userId })
+      }).catch(() => {});
     }
   } catch (e) {}
 }
@@ -2225,12 +2235,50 @@ async function selectCoach(coachId, coachName) {
 
 // ── Chat ──────────────────────────────
 let messages = [];
-function renderChat() {
+function renderChat(forceBottom = true) {
   const el = document.getElementById('chatMessages');
   el.innerHTML = messages.map(m=>`
     <div class="bubble ${m.mine?'out':'in'}">${m.text}<br><span style="font-size:10px;opacity:.6">${m.time}</span></div>`).join('');
-  el.scrollTop = el.scrollHeight;
+  if (forceBottom) el.scrollTop = el.scrollHeight;
 }
+
+async function pollActiveChatRealtime() {
+  if (!activeChatUserId || active !== 'messages' || document.visibilityState !== 'visible') return;
+  const token = localStorage.getItem('fp_token');
+  const el = document.getElementById('chatMessages');
+  const isAtBottom = el ? (el.scrollHeight - el.scrollTop <= el.clientHeight + 50) : true;
+  try {
+    const res = await fetch(`/api/messages.php?action=thread&with=${activeChatUserId}&since_id=${activeChatLastId}&limit=50`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (!data.success || !data.messages || !data.messages.length) return;
+
+    const u = JSON.parse(localStorage.getItem('fp_user'));
+    const incoming = data.messages.map(m => ({
+      id: m.message_id,
+      text: m.content,
+      mine: m.sender_id === u.user_id,
+      time: new Date(m.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }));
+    messages = messages.concat(incoming).slice(-100);
+    activeChatLastId = messages.length ? (messages[messages.length - 1].id || activeChatLastId) : activeChatLastId;
+    renderChat(isAtBottom);
+    loadLastMessage();
+
+    const hasUnreadIncoming = data.messages.some(m => m.sender_id === activeChatUserId && !m.read_at);
+    if (hasUnreadIncoming) {
+      fetch('/api/messages.php?action=read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ sender_id: activeChatUserId })
+      }).catch(() => {});
+    }
+  } catch (e) {}
+}
+
+setInterval(pollActiveChatRealtime, 2500);
+
 async function sendMsg() {
   const inp = document.getElementById('chatInput');
   const text = inp.value.trim(); 
@@ -2246,7 +2294,7 @@ async function sendMsg() {
     const data = await res.json();
     if (data.success) {
       inp.value = '';
-      openChat(activeChatUserId); // Recargar hilo
+      openChat(activeChatUserId, activeChatName || undefined); // Recargar hilo
       loadLastMessage(); // Actualizar dashboard
     }
   } catch (e) {}
