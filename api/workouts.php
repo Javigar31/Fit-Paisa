@@ -277,8 +277,13 @@ function handle_my_exercises(array $payload): never
     $dow    = $dowMap[(int)date('w', strtotime($date))];
 
     $exercises = fp_query(
-        "SELECT e.exercise_id, e.name, e.sets, e.reps, e.load_kg, e.rest_seconds, e.day_of_week, e.notes,
+        "SELECT e.exercise_id,
+                e.name AS exercise_name, e.name,
+                e.sets, e.reps,
+                e.load_kg AS weight_kg, e.load_kg,
+                e.rest_seconds, e.day_of_week, e.notes,
                 wp.plan_id, wp.name AS plan_name,
+                CASE WHEN el.log_id IS NOT NULL THEN TRUE ELSE FALSE END AS is_done,
                 CASE WHEN el.log_id IS NOT NULL THEN TRUE ELSE FALSE END AS done
          FROM exercises e
          JOIN workout_plans wp ON wp.plan_id = e.plan_id
@@ -375,9 +380,45 @@ function handle_workout_calendar(array $payload): never
         [':uid' => $uid]
     )->fetchAll();
 
+    // Construir calendario semanal listo para frontend (date, completed, total).
+    $assignedMap = [];
+    foreach ($assigned as $a) {
+        $assignedMap[$a['day_of_week']] = (int) ($a['total'] ?? 0);
+    }
+
+    $completedMap = [];
+    foreach ($logs as $l) {
+        $completedMap[$l['log_date']] = (int) ($l['done_count'] ?? 0);
+    }
+
+    $dowMap = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    $calendar = [];
+    $totalAssignedWeek = 0;
+    $totalCompletedWeek = 0;
+
+    for ($i = 0; $i < 7; $i++) {
+        $date = date('Y-m-d', strtotime($weekStart . " +{$i} days"));
+        $dow = $dowMap[(int) date('w', strtotime($date))];
+        $total = (int) ($assignedMap[$dow] ?? 0);
+        $completed = (int) ($completedMap[$date] ?? 0);
+        $calendar[] = [
+            'date' => $date,
+            'day_of_week' => $dow,
+            'completed' => $completed,
+            'total' => $total,
+        ];
+        $totalAssignedWeek += $total;
+        $totalCompletedWeek += $completed;
+    }
+
     fp_success([
         'week_start'     => $weekStart,
         'week_end'       => $weekEnd,
+        'calendar'       => $calendar,
+        'summary'        => [
+            'completed' => $totalCompletedWeek,
+            'assigned'  => $totalAssignedWeek,
+        ],
         'completed_days' => $logs,
         'assigned_days'  => $assigned,
     ]);

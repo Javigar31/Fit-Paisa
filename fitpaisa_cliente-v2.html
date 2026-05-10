@@ -154,6 +154,13 @@ body.ready .sidebar, body.ready .main{opacity:1}
 .check-btn{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:none;transition:all .2s;font-size:10px;flex-shrink:0}
 .check-btn.done{background:var(--lime);border-color:var(--lime);color:var(--dark);font-weight:800}
 .check-btn:hover{border-color:var(--lime)}
+.workout-summary-row{display:flex;justify-content:space-between;gap:10px;align-items:center;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px}
+.workout-kpi{font-size:11px;color:var(--muted)}
+.workout-kpi strong{display:block;font-size:15px;color:var(--text);line-height:1.2}
+.workout-completed-wrap{margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
+.workout-completed-title{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px}
+.workout-completed-list{display:flex;flex-wrap:wrap;gap:6px}
+.workout-completed-pill{font-size:11px;padding:4px 9px;border-radius:999px;background:rgba(255,138,138,.14);color:var(--success);border:1px solid rgba(255,138,138,.25)}
 
 .meal-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
 .meal-item:last-child{border-bottom:none}
@@ -530,7 +537,18 @@ body.ready .sidebar, body.ready .main{opacity:1}
       <div class="slide-panel">
         <div class="card">
           <div class="card-title">Ejercicios Asignados</div>
+          <div class="workout-summary-row">
+            <div class="workout-kpi"><strong id="workout-done-kpi">0</strong>Completados</div>
+            <div class="workout-kpi"><strong id="workout-pending-kpi">0</strong>Pendientes</div>
+            <div class="workout-kpi"><strong id="workout-total-kpi">0</strong>Total del día</div>
+          </div>
           <div id="exList"></div>
+          <div class="workout-completed-wrap">
+            <div class="workout-completed-title">Resumen del día</div>
+            <div id="workout-completed-list" class="workout-completed-list">
+              <span style="font-size:12px;color:var(--muted)">Aún no has completado ejercicios hoy.</span>
+            </div>
+          </div>
         </div>
         <div class="card" id="coach-info-card">
           <div class="card-title">Tu Entrenador</div>
@@ -2112,8 +2130,32 @@ async function loadWorkoutSummary() {
   try {
     const res = await fetch('/api/workouts.php?action=workout_calendar', { headers: { 'Authorization': `Bearer ${token}` } });
     const data = await res.json();
-    if(data.success) renderWorkoutSummary(data.calendar || []);
+    if (data.success) {
+      const calendar = Array.isArray(data.calendar) ? data.calendar : buildCalendarFromLegacyWorkoutData(data);
+      renderWorkoutSummary(calendar);
+    }
   } catch(e){}
+}
+
+function buildCalendarFromLegacyWorkoutData(data) {
+  const assignedMap = {};
+  const completedMap = {};
+  (data.assigned_days || []).forEach(d => { assignedMap[d.day_of_week] = parseInt(d.total || 0, 10); });
+  (data.completed_days || []).forEach(d => { completedMap[d.log_date] = parseInt(d.done_count || 0, 10); });
+  const weekStart = data.week_start || getLocalDateString(new Date(Date.now() - 6 * 86400000));
+  const dowMap = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  const calendar = [];
+  for (let i = 0; i < 7; i++) {
+    const date = getLocalDateString(new Date(new Date(weekStart + 'T00:00:00').getTime() + i * 86400000));
+    const dow = dowMap[new Date(date + 'T00:00:00').getDay()];
+    calendar.push({
+      date,
+      day_of_week: dow,
+      completed: completedMap[date] || 0,
+      total: assignedMap[dow] || 0,
+    });
+  }
+  return calendar;
 }
 
 function renderWorkoutSummary(calendar) {
@@ -2121,11 +2163,19 @@ function renderWorkoutSummary(calendar) {
   const labelsContainer = document.getElementById('workout-weekly-labels');
   if (!container || !labelsContainer) return;
 
+  if (!Array.isArray(calendar) || calendar.length === 0) {
+    container.innerHTML = '<div style="color:var(--muted); font-size:12px; align-self:center; width:100%; text-align:center;">Sin datos esta semana</div>';
+    labelsContainer.innerHTML = '';
+    return;
+  }
+
   container.innerHTML = calendar.map(day => {
-    let pct = day.total > 0 ? (day.completed / day.total) * 100 : 0;
+    const total = Number(day.total || 0);
+    const completed = Number(day.completed || 0);
+    let pct = total > 0 ? (completed / total) * 100 : 0;
     let color = pct === 100 ? 'var(--lime)' : (pct > 0 ? 'var(--warn)' : 'rgba(255,255,255,0.05)');
     let height = pct > 0 ? Math.max(pct, 10) : 10;
-    return `<div style="flex:1; background:${color}; height:${height}%; border-radius:4px; transition:height 0.4s ease, background 0.4s ease;" title="${day.date}: ${day.completed}/${day.total}"></div>`;
+    return `<div style="flex:1; background:${color}; height:${height}%; border-radius:4px; transition:height 0.4s ease, background 0.4s ease;" title="${day.date}: ${completed}/${total}"></div>`;
   }).join('');
 
   labelsContainer.innerHTML = calendar.map(day => {
@@ -2136,17 +2186,48 @@ function renderWorkoutSummary(calendar) {
 }
 
 function renderExList(exercises) {
-  const doneCount = exercises.filter(e => e.is_done).length;
-  const total = exercises.length;
+  const normalized = (exercises || []).map(e => ({
+    exercise_id: e.exercise_id,
+    exercise_name: e.exercise_name || e.name || 'Ejercicio',
+    sets: Number(e.sets || 0),
+    reps: Number(e.reps || 0),
+    weight_kg: Number(e.weight_kg ?? e.load_kg ?? 0),
+    is_done: Boolean(e.is_done ?? e.done),
+  }));
+
+  const doneCount = normalized.filter(e => e.is_done).length;
+  const total = normalized.length;
+  const pending = Math.max(total - doneCount, 0);
+  const doneEl = document.getElementById('workout-done-kpi');
+  const pendingEl = document.getElementById('workout-pending-kpi');
+  const totalEl = document.getElementById('workout-total-kpi');
+  if (doneEl) doneEl.textContent = String(doneCount);
+  if (pendingEl) pendingEl.textContent = String(pending);
+  if (totalEl) totalEl.textContent = String(total);
+
   document.getElementById('woProgress').style.width = total > 0 ? ((doneCount / total) * 100) + '%' : '0%';
-  document.getElementById('woLabel').textContent = total > 0 ? `${doneCount} de ${total} completados` : 'Día de descanso';
+  document.getElementById('woLabel').textContent = total > 0
+    ? `${doneCount} de ${total} completados · ${pending} pendientes`
+    : 'Día de descanso';
+
+  const completedList = document.getElementById('workout-completed-list');
+  if (completedList) {
+    const completed = normalized.filter(e => e.is_done);
+    if (!completed.length) {
+      completedList.innerHTML = '<span style="font-size:12px;color:var(--muted)">Aún no has completado ejercicios hoy.</span>';
+    } else {
+      completedList.innerHTML = completed.map(e =>
+        `<span class="workout-completed-pill">${e.exercise_name}</span>`
+      ).join('');
+    }
+  }
   
   if (total === 0) {
     document.getElementById('exList').innerHTML = `<div style="text-align:center;padding:30px 20px;color:var(--muted);font-size:14px;background:rgba(255,255,255,.02);border-radius:12px">No hay ejercicios asignados para este día.</div>`;
     return;
   }
   
-  document.getElementById('exList').innerHTML = exercises.map((e, i) => `
+  document.getElementById('exList').innerHTML = normalized.map((e, i) => `
     <div class="ex-item ${e.is_done ? 'done-item' : ''}" style="transition: all 0.3s ease;">
       <div class="ex-n">${String(i + 1).padStart(2, '0')}</div>
       <div style="flex:1">
