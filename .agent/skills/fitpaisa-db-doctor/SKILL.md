@@ -30,12 +30,12 @@ FitPaisa utiliza un sistema de conexión centralizado. **Cualquier cambio en la 
 | Producción  | `neondb`            | `PGDATABASE_PROD`   |
 | Testing     | `fitpaisa_testing`  | `PGDATABASE`        |
 
-### Esquema Completo (Tablas v7.2.0)
+### Esquema Completo (Tablas v7.3.0)
 
 | Tabla                | Descripción                                        |
 |----------------------|----------------------------------------------------|
 | `users`             | Usuarios del sistema (roles: USER, COACH, ADMIN)   |
-| `profiles`          | Datos físicos del usuario (peso, talla, objetivos) |
+| `profiles`          | Datos físicos del usuario + **Asignación de Coach** |
 | `food_catalog`      | Catálogo de alimentos (local + externo/OFF)        |
 | `food_entries`      | Registro diario de nutrición                       |
 | `workout_plans`     | Planes de entrenamiento                            |
@@ -57,10 +57,9 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMPTZ;
 ```
 
-### Columnas Críticas en `profiles` (parche completo v7.2.0):
+### Columnas Críticas en `profiles` (parche completo v7.3.0):
 ```sql
--- ⚠️ CRÍTICO: CREATE TABLE IF NOT EXISTS NO modifica tablas existentes.
--- Si profiles fue recreada con esquema simplificado, ejecutar TODO este bloque:
+-- ⚠️ CRÍTICO: El parche v7.3.0 añade la gestión de entrenadores preferidos.
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS weight         DECIMAL(5,2)   NOT NULL DEFAULT 0.01;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS height         DECIMAL(5,2)   NOT NULL DEFAULT 0.01;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS age            SMALLINT       NOT NULL DEFAULT 25;
@@ -71,6 +70,8 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS target_weight  DECIMAL(5,2);
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS target_time_weeks SMALLINT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS timezone       VARCHAR(50);
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS updated_at     TIMESTAMPTZ    NOT NULL DEFAULT NOW();
+-- Selección de entrenador (v7.3.0)
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS preferred_coach_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL;
 ```
 
 ### Columnas Críticas en `food_catalog` (v7.0.0):
@@ -82,21 +83,39 @@ ALTER TABLE food_catalog ADD COLUMN IF NOT EXISTS image_url TEXT;
 
 ---
 
-## 3. Sistema de Correo (Gmail SMTP)
+## 3. Gestión de Suscripciones Premium (v7.3.0)
+
+FitPaisa requiere una suscripción activa para acceder a funciones avanzadas como la selección de entrenador personal.
+
+### Activación Manual de Premium:
+Existe un endpoint seguro para otorgar acceso sin pasar por pasarela de pago:
+`GET /api/grant-premium.php?token=SETUP_TOKEN&email=usuario@ejemplo.com&months=12`
+
+### Reglas de Negocio de Suscripción:
+- Solo usuarios con `status = 'ACTIVE'` en la tabla `subscriptions` pueden listar entrenadores.
+- La validación se realiza en el backend (`api/workouts.php`) y se refleja en el frontend mediante el overlay de pago/bloqueo.
+
+---
+
+## 4. Validación de Perfil Completo
+
+Para asegurar la integridad de los cálculos de macros, el sistema utiliza la función centralizada `fp_profile_is_complete()` en `api/profile.php`.
+
+### Criterios de Completitud:
+- `weight` > 1.0, `height` > 1.0, `age` > 0.
+- `objective` y `activity_level` válidos.
+- Si el objetivo es perder/ganar peso, `target_weight` debe ser > 1.0.
+
+---
+
+## 5. Sistema de Correo (Gmail SMTP)
 
 El sistema de correo fue **migrado de SendGrid a Gmail SMTP** el 2026-04-21.
 
 ### Configuración Actual:
 - **Motor**: PHPMailer ^6.9 (vía Composer)
 - **Remitente**: `fit.paisa.app@gmail.com`
-- **Credenciales**: Contraseña de Aplicación de Google (16 letras)
-- **Variables de Entorno**: `GMAIL_USER`, `GMAIL_APP_PASS`
-
-### ⚠️ Firma de `fp_mail()` — CRÍTICO:
-```php
-// El 4º parámetro $code ES OPCIONAL. Llamar sin él es correcto.
-function fp_mail(string $to, string $subject, string $html, string $code = ''): bool
-```
+- **Variables de Env**: `GMAIL_USER`, `GMAIL_APP_PASS`
 
 ### Variables de Entorno Requeridas en Vercel:
 
@@ -117,7 +136,7 @@ function fp_mail(string $to, string $subject, string $html, string $code = ''): 
 
 ---
 
-## 4. Sistema de Emails de Soporte (v7.2.0)
+## 6. Sistema de Emails de Soporte (v7.2.0)
 
 ### Archivos involucrados:
 | Archivo | Propósito |
@@ -148,7 +167,7 @@ $ticketId = 'FP-' . strtoupper(substr(uniqid('', true), -8));
 
 ---
 
-## 5. Gestión de Usuarios Privilegiados (Admin / Coach)
+## 7. Gestión de Usuarios Privilegiados (Admin / Coach)
 
 El script `api/seed-admin.php` crea o actualiza usuarios con rol especial.
 
@@ -163,12 +182,12 @@ https://[HOST]/api/seed-admin.php
 ```
 
 ### ⚠️ Prerequisito CRÍTICO:
-La tabla `users` DEBE tener `is_active`. La tabla `profiles` DEBE tener las 10 columnas del parche.
+La tabla `users` DEBE tener `is_active`. La tabla `profiles` DEBE tener las 11 columnas del parche (incluyendo `preferred_coach_id`).
 Ejecutar SIEMPRE `setup-db.php` antes de llamar a `seed-admin.php`.
 
 ---
 
-## 6. Catálogo Híbrido (Open Food Facts)
+## 8. Catálogo Híbrido (Open Food Facts)
 
 1. **Local**: Busca primero en `food_catalog` donde `is_verified = TRUE`.
 2. **OFF Fallback**: Si hay < 5 resultados, consulta Open Food Facts API (timeout 2.5s).
@@ -176,74 +195,48 @@ Ejecutar SIEMPRE `setup-db.php` antes de llamar a `seed-admin.php`.
 
 ---
 
-## 7. Diagnóstico de Errores Comunes
+## 9. Diagnóstico de Errores Comunes
 
 ### "SQLSTATE[42703]: Undefined column updated_at of relation profiles"
-- **Causa**: La tabla `profiles` fue recreada con esquema simplificado sin `updated_at` (ni otras 6 columnas).
-- **Causa raíz**: `CREATE TABLE IF NOT EXISTS` no altera tablas existentes. El setup antiguo solo parchaba 3 columnas.
-- **Fix**: Ejecutar el parche SQL completo de la Sección 2 en Neon Console.
-
-### Error de respuesta vacía / "0 bytes"
-- **Causa**: Error de sintaxis PHP en algún controlador.
-- **Acción**: `php -l api/auth.php` para detectar el error exacto.
-
-### "Error de conexión." (formulario de contacto o soporte)
-- **Causa más probable**: `fp_mail()` tiene `$code` como parámetro obligatorio.
-- **Fix**: `string $code = ''` en `_mailer.php`.
-
-### Timer del modal descolocado
-- **Causa**: Falta `overflow: hidden` en `.success-modal`.
-- **Fix**: `overflow: hidden` + `padding-bottom: 44px` en `.success-modal` (index.html).
-
-### Correos que no llegan
-- **Diagnóstico**: `GET /api/test-mail.php?to=EMAIL`
+- **Causa**: La tabla `profiles` fue recreada con esquema simplificado sin `updated_at`.
+- **Fix**: Ejecutar el parche SQL completo de la Sección 2 en Neon Console o vía `setup-db.php`.
 
 ---
 
-## 8. Procedimiento de Reparación Estándar
+## 10. Procedimiento de Reparación Estándar
 
-1. Verificar kernel `api/_db.php` sin modificaciones accidentales.
-2. Eliminar duplicidades de `fp_db()` — usar solo `require_once '_db.php'`.
-3. Auditar DSN: `"pgsql:host={$host};port={$port};dbname={$db};sslmode=require"`.
-4. Ejecutar `setup-db.php` para parchar columnas faltantes.
-5. Diagnóstico: `/api/diag_db.php`.
+1. Verificar kernel `api/_db.php`.
+2. Ejecutar `setup-db.php` para parchar columnas faltantes.
+3. Diagnóstico: `/api/diag_db.php`.
 
 ---
 
-## 9. URLs de Referencia
+## 11. URLs de Referencia
 
 | Acción                    | URL |
 |---------------------------|-----|
 | Setup DB (Producción)     | `https://fit-paisa.vercel.app/api/setup-db.php?token=fitpaisa_setup_2026` |
 | Setup DB (Testing)        | `https://fit-paisa-git-testing-fit-paisa.vercel.app/api/setup-db.php?token=fitpaisa_setup_2026` |
-| Crear Admin (Testing)     | `https://fit-paisa-git-testing-fit-paisa.vercel.app/api/seed-admin.php?token=fitpaisa_setup_2026&role=ADMIN&email=...` |
-| Test de Correo            | `https://fit-paisa.vercel.app/api/test-mail.php?to=EMAIL` |
-| Diagnóstico DB            | `https://fit-paisa.vercel.app/api/diag_db.php` |
+| Activar Premium (PROD)    | `https://fit-paisa.vercel.app/api/grant-premium.php?token=fitpaisa_setup_2026&email=EMAIL` |
 
 ---
 
-## 10. Flujo de Sincronización de Ramas
+## 12. Flujo de Sincronización de Ramas
 
 ```powershell
-# Verificar sintaxis
-php -l api/auth.php
-
 # Testing → Master (promover a producción)
 git checkout master; git merge testing; git push origin master
 
 # Master → Testing (propagar fixes de producción)
 git checkout testing; git merge master; git push origin testing
-
-git checkout master  # volver a trabajar en master
 ```
 
 ---
 
-## 11. Recreación de la BD de Testing desde Cero
+## 13. Recreación de la BD de Testing desde Cero
 
 1. **En Neon Console**: Crear nueva BD `fitpaisa_testing`.
-2. **Ejecutar ENUMs** desde la consola SQL (ver `api/setup-db.php`).
-3. **Ejecutar `setup-db.php`** desde la URL de testing — parcheará todas las columnas.
-4. **Crear usuarios privilegiados** via `seed-admin.php`.
+2. **Ejecutar `setup-db.php`** desde la URL de testing.
+3. **Crear usuarios privilegiados** via `seed-admin.php`.
 
 > ⚠️ **NUNCA** usar SQL manual simplificado para crear las tablas. Siempre ejecutar `setup-db.php` que es idempotente y garantiza el esquema completo.
