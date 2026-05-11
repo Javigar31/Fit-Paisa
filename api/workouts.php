@@ -103,6 +103,44 @@ function fp_sanitize(mixed $value, int $maxLen = 255, string $type = 'string'): 
     return ($maxLen > 0) ? mb_substr($val, 0, $maxLen) : $val;
 }
 
+function fp_table_exists(string $table): bool
+{
+    static $cache = [];
+    if (array_key_exists($table, $cache)) return $cache[$table];
+
+    try {
+        $stmt = fp_db()->prepare('SELECT to_regclass(:table_name)');
+        $stmt->execute([':table_name' => 'public.' . $table]);
+        $cache[$table] = !empty($stmt->fetchColumn());
+    } catch (Throwable) {
+        $cache[$table] = false;
+    }
+
+    return $cache[$table];
+}
+
+function fp_column_exists(string $table, string $column): bool
+{
+    $key = $table . '.' . $column;
+    static $cache = [];
+    if (array_key_exists($key, $cache)) return $cache[$key];
+
+    try {
+        $stmt = fp_db()->prepare(
+            "SELECT 1
+             FROM information_schema.columns
+             WHERE table_schema = 'public' AND table_name = :table AND column_name = :column
+             LIMIT 1"
+        );
+        $stmt->execute([':table' => $table, ':column' => $column]);
+        $cache[$key] = (bool) $stmt->fetchColumn();
+    } catch (Throwable) {
+        $cache[$key] = false;
+    }
+
+    return $cache[$key];
+}
+
 function fp_json_body(): array
 {
     $raw = file_get_contents('php://input');
@@ -276,27 +314,48 @@ function handle_my_exercises(array $payload): never
     $dowMap = [0=>'SUN',1=>'MON',2=>'TUE',3=>'WED',4=>'THU',5=>'FRI',6=>'SAT'];
     $dow    = $dowMap[(int)date('w', strtotime($date))];
 
-    $exercises = fp_query(
-        "SELECT e.exercise_id,
-                e.name AS exercise_name, e.name,
-                e.sets, e.reps,
-                e.load_kg AS weight_kg, e.load_kg,
-                e.rest_seconds, e.day_of_week, e.notes,
-                wp.plan_id, wp.name AS plan_name,
-                CASE WHEN el.log_id IS NOT NULL THEN TRUE ELSE FALSE END AS is_done,
-                CASE WHEN el.log_id IS NOT NULL THEN TRUE ELSE FALSE END AS done
-         FROM exercises e
-         JOIN workout_plans wp ON wp.plan_id = e.plan_id
-         LEFT JOIN exercise_logs el
-               ON el.exercise_id = e.exercise_id
-              AND el.user_id = :uid
-              AND el.log_date = :date
-         WHERE wp.user_id = :uid2
-           AND wp.status = 'ACTIVE'
-           AND e.day_of_week = :dow
-         ORDER BY e.exercise_id",
-        [':uid' => $uid, ':uid2' => $uid, ':date' => $date, ':dow' => $dow]
-    )->fetchAll();
+    $hasExerciseLogs = fp_table_exists('exercise_logs');
+    if ($hasExerciseLogs) {
+        $exercises = fp_query(
+            "SELECT e.exercise_id,
+                    e.name AS exercise_name, e.name,
+                    e.sets, e.reps,
+                    e.load_kg AS weight_kg, e.load_kg,
+                    e.rest_seconds, e.day_of_week, e.notes,
+                    wp.plan_id, wp.name AS plan_name,
+                    CASE WHEN el.log_id IS NOT NULL THEN TRUE ELSE FALSE END AS is_done,
+                    CASE WHEN el.log_id IS NOT NULL THEN TRUE ELSE FALSE END AS done
+             FROM exercises e
+             JOIN workout_plans wp ON wp.plan_id = e.plan_id
+             LEFT JOIN exercise_logs el
+                   ON el.exercise_id = e.exercise_id
+                  AND el.user_id = :uid
+                  AND el.log_date = :date
+             WHERE wp.user_id = :uid2
+               AND wp.status = 'ACTIVE'
+               AND e.day_of_week = :dow
+             ORDER BY e.exercise_id",
+            [':uid' => $uid, ':uid2' => $uid, ':date' => $date, ':dow' => $dow]
+        )->fetchAll();
+    } else {
+        $exercises = fp_query(
+            "SELECT e.exercise_id,
+                    e.name AS exercise_name, e.name,
+                    e.sets, e.reps,
+                    e.load_kg AS weight_kg, e.load_kg,
+                    e.rest_seconds, e.day_of_week, e.notes,
+                    wp.plan_id, wp.name AS plan_name,
+                    FALSE AS is_done,
+                    FALSE AS done
+             FROM exercises e
+             JOIN workout_plans wp ON wp.plan_id = e.plan_id
+             WHERE wp.user_id = :uid
+               AND wp.status = 'ACTIVE'
+               AND e.day_of_week = :dow
+             ORDER BY e.exercise_id",
+            [':uid' => $uid, ':dow' => $dow]
+        )->fetchAll();
+    }
 
     fp_success(['exercises' => $exercises, 'date' => $date, 'day_of_week' => $dow]);
 }
@@ -355,20 +414,23 @@ function handle_workout_calendar(array $payload): never
     }
     $weekEnd = date('Y-m-d', strtotime($weekStart . ' +6 days'));
 
-    // Días con al menos 1 ejercicio completado
-    $logs = fp_query(
-        "SELECT el.log_date,
-                COUNT(el.log_id) AS done_count,
-                COUNT(DISTINCT e.exercise_id) AS total_assigned
-         FROM exercise_logs el
-         JOIN exercises e ON e.exercise_id = el.exercise_id
-         JOIN workout_plans wp ON wp.plan_id = e.plan_id
-         WHERE el.user_id = :uid
-           AND el.log_date BETWEEN :start AND :end
-         GROUP BY el.log_date
-         ORDER BY el.log_date",
-        [':uid' => $uid, ':start' => $weekStart, ':end' => $weekEnd]
-    )->fetchAll();
+    $logs = [];
+    if (fp_table_exists('exercise_logs')) {
+        // Días con al menos 1 ejercicio completado
+        $logs = fp_query(
+            "SELECT el.log_date,
+                    COUNT(el.log_id) AS done_count,
+                    COUNT(DISTINCT e.exercise_id) AS total_assigned
+             FROM exercise_logs el
+             JOIN exercises e ON e.exercise_id = el.exercise_id
+             JOIN workout_plans wp ON wp.plan_id = e.plan_id
+             WHERE el.user_id = :uid
+               AND el.log_date BETWEEN :start AND :end
+             GROUP BY el.log_date
+             ORDER BY el.log_date",
+            [':uid' => $uid, ':start' => $weekStart, ':end' => $weekEnd]
+        )->fetchAll();
+    }
 
     // Total de ejercicios asignados por día de semana en planes activos
     $assigned = fp_query(
@@ -429,6 +491,8 @@ function handle_workout_calendar(array $payload): never
    ══════════════════════════════════════════════════════════════════════ */
 function handle_available_coaches(array $payload): never
 {
+    if (!fp_table_exists('subscriptions')) fp_error(503, 'Configuración premium incompleta. Ejecuta setup-db.');
+
     // Verificar suscripción activa
     $sub = fp_query(
         "SELECT 1 FROM subscriptions
@@ -437,21 +501,31 @@ function handle_available_coaches(array $payload): never
     )->fetch();
     if (!$sub) fp_error(403, 'Función exclusiva para usuarios Premium.');
 
-    $coaches = fp_query(
-        "SELECT u.user_id, u.full_name, u.email,
-                (SELECT COUNT(*) FROM workout_plans wp WHERE wp.coach_id = u.user_id AND wp.status = 'ACTIVE') AS active_clients
-         FROM users u
-         WHERE u.role = 'COACH' AND u.is_active = TRUE
-         ORDER BY active_clients ASC, u.full_name ASC"
-    )->fetchAll();
+    $usersHasActive = fp_column_exists('users', 'is_active');
+    $coachesSql = $usersHasActive
+        ? "SELECT u.user_id, u.full_name, u.email,
+                  (SELECT COUNT(*) FROM workout_plans wp WHERE wp.coach_id = u.user_id AND wp.status = 'ACTIVE') AS active_clients
+           FROM users u
+           WHERE u.role = 'COACH' AND u.is_active = TRUE
+           ORDER BY active_clients ASC, u.full_name ASC"
+        : "SELECT u.user_id, u.full_name, u.email,
+                  (SELECT COUNT(*) FROM workout_plans wp WHERE wp.coach_id = u.user_id AND wp.status = 'ACTIVE') AS active_clients
+           FROM users u
+           WHERE u.role = 'COACH'
+           ORDER BY active_clients ASC, u.full_name ASC";
+
+    $coaches = fp_query($coachesSql)->fetchAll();
 
     // Obtener coach seleccionado actualmente
-    $current = fp_query(
-        "SELECT p.preferred_coach_id, u.full_name AS coach_name
-         FROM profiles p LEFT JOIN users u ON u.user_id = p.preferred_coach_id
-         WHERE p.user_id = :uid",
-        [':uid' => $payload['user_id']]
-    )->fetch();
+    $current = null;
+    if (fp_column_exists('profiles', 'preferred_coach_id')) {
+        $current = fp_query(
+            "SELECT p.preferred_coach_id, u.full_name AS coach_name
+             FROM profiles p LEFT JOIN users u ON u.user_id = p.preferred_coach_id
+             WHERE p.user_id = :uid",
+            [':uid' => $payload['user_id']]
+        )->fetch();
+    }
 
     fp_success(['coaches' => $coaches, 'current_coach' => $current]);
 }
@@ -462,6 +536,8 @@ function handle_available_coaches(array $payload): never
 function handle_select_coach(array $payload): never
 {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') fp_error(405, 'Método no permitido.');
+    if (!fp_column_exists('profiles', 'preferred_coach_id')) fp_error(503, 'Falta columna preferred_coach_id. Ejecuta setup-db.');
+    if (!fp_table_exists('subscriptions')) fp_error(503, 'Configuración premium incompleta. Ejecuta setup-db.');
 
     // Verificar suscripción activa
     $sub = fp_query(
@@ -475,10 +551,11 @@ function handle_select_coach(array $payload): never
     if ($coachId <= 0) fp_error(400, 'coach_id requerido.');
 
     // Verificar que el coach exista y sea COACH activo
-    $coach = fp_query(
-        "SELECT user_id, full_name FROM users WHERE user_id = :cid AND role = 'COACH' AND is_active = TRUE",
-        [':cid' => $coachId]
-    )->fetch();
+    $usersHasActive = fp_column_exists('users', 'is_active');
+    $coachSql = $usersHasActive
+        ? "SELECT user_id, full_name FROM users WHERE user_id = :cid AND role = 'COACH' AND is_active = TRUE"
+        : "SELECT user_id, full_name FROM users WHERE user_id = :cid AND role = 'COACH'";
+    $coach = fp_query($coachSql, [':cid' => $coachId])->fetch();
     if (!$coach) fp_error(404, 'Entrenador no encontrado.');
 
     fp_query(

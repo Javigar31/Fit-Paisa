@@ -180,13 +180,16 @@ function handle_get_profile(array $payload): never
 
     if (!$profile) fp_error(404, 'Perfil no encontrado.');
 
-    $macros = calculate_macros(
-        (float)$profile['weight'], (float)$profile['height'], (int)$profile['age'],
-        $profile['gender'], $profile['objective'], $profile['activity_level'],
-        (float)($profile['target_weight'] ?? 0), (int)($profile['target_time_weeks'] ?? 0)
-    );
+    $isComplete = fp_profile_is_complete($profile);
+    $macros = $isComplete
+        ? calculate_macros(
+            (float)$profile['weight'], (float)$profile['height'], (int)$profile['age'],
+            $profile['gender'], $profile['objective'], $profile['activity_level'],
+            (float)($profile['target_weight'] ?? 0), (int)($profile['target_time_weeks'] ?? 0)
+        )
+        : null;
 
-    fp_success(['profile' => $profile, 'macro_targets' => $macros]);
+    fp_success(['profile' => $profile, 'macro_targets' => $macros, 'is_profile_complete' => $isComplete]);
 }
 
 function handle_update_profile(array $payload): never
@@ -233,10 +236,16 @@ function handle_update_profile(array $payload): never
         }
     }
 
-    $macros = calculate_macros($weight, $height, $age, $gender, $objective, $activity, $targetWeight, $weeks);
     $profile = fp_query('SELECT * FROM profiles WHERE user_id = :uid', [':uid' => $userId])->fetch();
+    $isComplete = fp_profile_is_complete($profile ?: []);
+    $macros = $isComplete ? calculate_macros($weight, $height, $age, $gender, $objective, $activity, $targetWeight, $weeks) : null;
 
-    fp_success(['message' => 'Perfil actualizado correctamente.', 'macro_targets' => $macros, 'profile' => $profile]);
+    fp_success([
+        'message' => 'Perfil actualizado correctamente.',
+        'macro_targets' => $macros,
+        'profile' => $profile,
+        'is_profile_complete' => $isComplete
+    ]);
 }
 
 function handle_setup_macros(array $payload): never
@@ -279,8 +288,10 @@ function handle_setup_macros(array $payload): never
     $gender = fp_query('SELECT gender FROM profiles WHERE user_id=:uid',[':uid'=>$payload['user_id']])->fetchColumn() ?: 'OTHER';
     $activity = fp_query('SELECT activity_level FROM profiles WHERE user_id=:uid',[':uid'=>$payload['user_id']])->fetchColumn() ?: 'MODERATE';
 
-    $macros = calculate_macros($w, $h, $a, $gender, $obj, $activity, $tw, $weeks);
-    fp_success(['message' => 'Configurado.', 'macro_targets' => $macros]);
+    $profile = fp_query('SELECT * FROM profiles WHERE user_id = :uid', [':uid' => $payload['user_id']])->fetch();
+    $isComplete = fp_profile_is_complete($profile ?: []);
+    $macros = $isComplete ? calculate_macros($w, $h, $a, $gender, $obj, $activity, $tw, $weeks) : null;
+    fp_success(['message' => 'Configurado.', 'macro_targets' => $macros, 'is_profile_complete' => $isComplete]);
 }
 
 function handle_log_body(array $payload): never
@@ -320,4 +331,27 @@ function calculate_macros($weight, $height, $age, $gender, $objective, $activity
     $fat = ($cal * 0.25) / 9;
     $carb = ($cal - ($prot*4 + $fat*9)) / 4;
     return ['calories' => (int)round($cal), 'protein_g' => (int)round($prot), 'carbs_g' => (int)round($carb), 'fat_g' => (int)round($fat), 'tmb' => (int)round($tmb), 'tdee' => (int)round($tdee), 'adjustment' => (int)round($cal - $tdee)];
+}
+
+function fp_profile_is_complete(array $profile): bool
+{
+    $weight = (float)($profile['weight'] ?? 0);
+    $height = (float)($profile['height'] ?? 0);
+    $age = (int)($profile['age'] ?? 0);
+    $objective = (string)($profile['objective'] ?? '');
+    $activity = (string)($profile['activity_level'] ?? '');
+    $targetWeight = (float)($profile['target_weight'] ?? 0);
+
+    $validObjectives = ['LOSE_WEIGHT', 'GAIN_MUSCLE', 'MAINTAIN', 'IMPROVE_HEALTH'];
+    $validActivities = ['SEDENTARY', 'LIGHT', 'MODERATE', 'ACTIVE', 'VERY_ACTIVE'];
+
+    if ($weight <= 1 || $height <= 1 || $age <= 0) return false;
+    if (!in_array($objective, $validObjectives, true)) return false;
+    if (!in_array($activity, $validActivities, true)) return false;
+
+    if (in_array($objective, ['LOSE_WEIGHT', 'GAIN_MUSCLE'], true) && $targetWeight <= 1) {
+        return false;
+    }
+
+    return true;
 }

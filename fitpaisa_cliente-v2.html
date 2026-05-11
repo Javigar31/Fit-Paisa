@@ -934,7 +934,7 @@ async function detectAndSyncTimezone() {
 const secs = ['dashboard', 'training', 'diet', 'messages', 'progress', 'support'];
 let active = 'dashboard';
 const prog = document.getElementById('prog');
-let appState = { profile: null, macros: null, burnedCalories: 0 }; // burnedCalories real-time tracker
+let appState = { profile: null, macros: null, burnedCalories: 0, profileComplete: false }; // burnedCalories real-time tracker
 
 // ── Helpers de traducción ──────────────
 const OBJECTIVE_LABELS = {
@@ -950,6 +950,27 @@ const ACTIVITY_LABELS = {
   ACTIVE: 'Activo',
   VERY_ACTIVE: 'Muy activo',
 };
+
+function isProfileComplete(profile, backendFlag = null) {
+  if (typeof backendFlag === 'boolean') return backendFlag;
+  if (!profile) return false;
+
+  const weight = parseFloat(profile.weight || 0);
+  const height = parseFloat(profile.height || 0);
+  const age = parseInt(profile.age || 0, 10);
+  const objective = profile.objective || '';
+  const activity = profile.activity_level || '';
+  const targetWeight = parseFloat(profile.target_weight || 0);
+
+  const validObjectives = ['LOSE_WEIGHT', 'GAIN_MUSCLE', 'MAINTAIN', 'IMPROVE_HEALTH'];
+  const validActivities = ['SEDENTARY', 'LIGHT', 'MODERATE', 'ACTIVE', 'VERY_ACTIVE'];
+
+  if (weight <= 1 || height <= 1 || age <= 0) return false;
+  if (!validObjectives.includes(objective)) return false;
+  if (!validActivities.includes(activity)) return false;
+  if ((objective === 'LOSE_WEIGHT' || objective === 'GAIN_MUSCLE') && targetWeight <= 1) return false;
+  return true;
+}
 
 // ── Navegación ────────────────────────
 function show(id, el) {
@@ -1007,10 +1028,12 @@ window.addEventListener('load', async () => {
 
     if (!data.success) {
       // Si el perfil no existe aún, usamos datos básicos del localStorage
+      appState.profileComplete = false;
       populateUI(null, null, user);
     } else {
       appState.profile = data.profile;
-      appState.macros  = data.macro_targets;
+      appState.profileComplete = isProfileComplete(data.profile, data.is_profile_complete);
+      appState.macros  = appState.profileComplete ? data.macro_targets : null;
       populateUI(appState.profile, appState.macros, user);
       
       // Sincronizar zona horaria si es necesario
@@ -1123,7 +1146,7 @@ function populateUI(profile, macros, user) {
   // ── Modal de perfil
   document.getElementById('pm-avatar').textContent = initials;
   document.getElementById('pm-name').textContent = name;
-  const hasPhysical = profile && parseFloat(profile.weight) > 1;
+  const hasPhysical = isProfileComplete(profile, appState.profileComplete);
   document.getElementById('pm-email-plan').textContent = `${email} · ${isPremium ? 'Premium' : 'Básico'}`;
   document.getElementById('pm-weight').textContent = hasPhysical ? `${parseFloat(profile.weight).toFixed(1)} kg` : '—';
   document.getElementById('pm-height').textContent = hasPhysical ? `${parseFloat(profile.height).toFixed(0)} cm` : '—';
@@ -1335,7 +1358,8 @@ async function saveProfile(btn) {
 
     if (data.success) {
       appState.profile = data.profile;
-      appState.macros  = data.macro_targets;
+      appState.profileComplete = isProfileComplete(data.profile, data.is_profile_complete);
+      appState.macros  = appState.profileComplete ? data.macro_targets : null;
       const user = JSON.parse(localStorage.getItem('fp_user') || '{}');
       populateUI(appState.profile, appState.macros, user);
       loadDailySummary();
@@ -2256,6 +2280,8 @@ async function toggleEx(exerciseId, markDone) {
 // ── Coach Management ──────────────────────
 async function loadAvailableCoaches() {
   const token = localStorage.getItem('fp_token');
+  const coachListEl = document.getElementById('coaches-list');
+  const coachListModalEl = document.getElementById('coaches-list-modal');
   try {
     const res = await fetch('/api/workouts.php?action=available_coaches', { headers: { 'Authorization': `Bearer ${token}` } });
     const data = await res.json();
@@ -2268,8 +2294,8 @@ async function loadAvailableCoaches() {
           <button class="btn-lime" style="width:100%" onclick="selectCoach(${c.user_id}, '${c.full_name}')">Seleccionar Entrenador</button>
         </div>
       `).join('');
-      document.getElementById('coaches-list').innerHTML = html;
-      document.getElementById('coaches-list-modal').innerHTML = html.replace(/flex:0 0 280px;/g, 'flex:1;'); // Modal styles
+      coachListEl.innerHTML = html;
+      coachListModalEl.innerHTML = html.replace(/flex:0 0 280px;/g, 'flex:1;'); // Modal styles
       
       // Update assigned coach info if any
       const assigned = data.coaches.find(c => c.user_id === appState.profile?.preferred_coach_id);
@@ -2277,8 +2303,17 @@ async function loadAvailableCoaches() {
         document.getElementById('current-coach-name').textContent = assigned.full_name;
         document.getElementById('current-coach-avatar').textContent = assigned.full_name.charAt(0);
       }
+    } else {
+      const msg = data?.message || 'No se pudieron cargar entrenadores.';
+      const fallback = `<div style="color:var(--muted); font-size:13px; font-style:italic; text-align:center; padding:8px 0">${msg}</div>`;
+      coachListEl.innerHTML = fallback;
+      coachListModalEl.innerHTML = fallback;
     }
-  } catch(e){}
+  } catch(e){
+    const fallback = `<div style="color:var(--muted); font-size:13px; font-style:italic; text-align:center; padding:8px 0">Error de conexión al cargar entrenadores.</div>`;
+    coachListEl.innerHTML = fallback;
+    coachListModalEl.innerHTML = fallback;
+  }
 }
 
 async function selectCoach(coachId, coachName) {
@@ -2710,7 +2745,10 @@ async function saveMeasures(btn) {
     const data = await res.json();
     if (data.success) {
       // Actualizar estado local para reflejo inmediato
-      if (appState.profile) appState.profile.weight = weight;
+      if (appState.profile) {
+        appState.profile.weight = weight;
+        appState.profileComplete = isProfileComplete(appState.profile);
+      }
       
       closeModal(btn);
       await loadProgressData();
