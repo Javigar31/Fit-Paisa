@@ -215,7 +215,7 @@ function search_open_food_facts(string $query): array
  */
 function handle_save_external(): never
 {
-    $data = fp_input(); // Captura el body JSON
+    $data = fp_json_body(); // Captura el body JSON
 
     if (empty($data['external_id']) || empty($data['name'])) {
         fp_error(400, 'Datos de alimento insuficientes para guardar.');
