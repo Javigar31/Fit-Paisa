@@ -420,3 +420,33 @@ git checkout master
 git merge testing
 git push origin master
 ```
+
+***
+
+# Informe Tecnico (Admin & Roles): Creacion Manual de Usuarios y Planes (v10.2.0)
+**Fecha:** 2026-05-11
+**Estado:** DESPLEGADO en `testing`. PENDIENTE DE REVISION.
+
+## 1. Feature: Creacion manual de usuarios desde panel de Administrador
+*   **Problema**: El administrador no podia dar de alta cuentas nuevas directamente (ej: entrenadores nuevos, clientes VIP).
+*   **Solucion**:
+    *   **Backend (`api/admin.php`)**: Nuevo endpoint `create_user_manual` que recibe `name`, `email`, `password`, `role` y `plan`. Realiza validaciones, aplica hash bcrypt al password, inicializa el `profile` y asigna la suscripcion inicial.
+    *   **Asignacion de Planes**: Se creo la logica para asignar suscripcion `FREE` (1 mes) o `PREMIUM` (1 ano) desde la misma llamada de creacion manual.
+    *   **Frontend (`fitpaisa_admin.html`)**: Nuevo boton "+ Anadir usuario" y Modal con selector de Roles (`USER`, `COACH`, `ADMIN`) y Planes (`FREE`, `PREMIUM`). 
+    *   **Integracion**: Peticion via API con token Bearer JWT y refresco automatico de la tabla de usuarios sin recargar la pagina.
+
+## 2. Archivos Modificados
+| Archivo | Accion | Descripcion |
+|---------|--------|-------------|
+| `api/admin.php` | MODIFICADO | Nuevo endpoint `create_user_manual` |
+| `fitpaisa_admin.html` | MODIFICADO | UI de Modal "Crear Usuario" y JS `saveAddUser` |
+
+## 3. Estado actual
+```powershell
+# Cambios en rama testing
+git add api/admin.php fitpaisa_admin.html
+git commit -m "feat: panel admin - crear usuarios manualmente y asignar planes"
+git push origin testing
+
+# Pendiente revision para mover a master
+```
