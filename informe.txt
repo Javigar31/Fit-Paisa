@@ -455,7 +455,7 @@ git push origin testing
 
 # Informe Tecnico (Bug Fix Auth): Logs de Login en Panel Admin (v10.2.1)
 **Fecha:** 2026-05-11
-**Estado:** FIX APLICADO en `testing`. PENDIENTE DE REVISION junto con v10.2.0.
+**Estado:** ESTABLE / DESPLEGADO en `testing`. Verificado satisfactoriamente.
 
 ## 1. Bug: last_login nunca se actualizaba al iniciar sesion
 
