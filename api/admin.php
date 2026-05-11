@@ -32,8 +32,9 @@ match ($action) {
     'coaches'         => handle_coaches(),
     'recent_activity' => handle_recent_activity(),
     'subscriptions'   => handle_subscriptions(),
-    'update_user'     => handle_update_user($payload),
-    default           => fp_error(400, "Acción '{$action}' no reconocida."),
+    'update_user'        => handle_update_user($payload),
+    'create_user_manual' => handle_create_user_manual($payload),
+    default              => fp_error(400, "Acción '{$action}' no reconocida."),
 };
 
 /** 
@@ -310,4 +311,62 @@ function handle_update_user(array $adminPayload): never
     );
 
     fp_success(['message' => 'Usuario actualizado correctamente.']);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   CREATE USER MANUAL — Creación de usuarios desde el panel
+   ══════════════════════════════════════════════════════════════════ */
+function handle_create_user_manual(array $adminPayload): never
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        fp_error(405, 'Método no permitido.');
+    }
+
+    $body  = fp_json_body();
+    $name  = fp_sanitize($body['name'] ?? '');
+    $email = strtolower(fp_sanitize($body['email'] ?? '', 150, 'email'));
+    $pass  = $body['password'] ?? '';
+    $role  = fp_sanitize($body['role'] ?? 'USER', 10, 'slug');
+    $plan  = fp_sanitize($body['plan'] ?? 'FREE', 10, 'slug');
+
+    if (empty($name) || empty($email) || empty($pass)) {
+        fp_error(400, 'Nombre, email y contraseña son obligatorios.');
+    }
+
+    if (!in_array($role, ['USER', 'COACH', 'ADMIN'], true)) {
+        fp_error(400, 'Rol inválido.');
+    }
+
+    if (!in_array($plan, ['FREE', 'PREMIUM'], true)) {
+        fp_error(400, 'Plan inválido.');
+    }
+
+    if (fp_query('SELECT 1 FROM users WHERE email = :e', [':e' => $email])->fetchColumn()) {
+        fp_error(409, 'El correo ya está registrado.');
+    }
+
+    $db = fp_db();
+    $db->beginTransaction();
+    try {
+        $stmt = $db->prepare("INSERT INTO users (email, password_hash, full_name, role, is_active, created_at) VALUES (:e, :h, :n, :r, TRUE, NOW()) RETURNING user_id");
+        $stmt->execute([
+            ':e' => $email,
+            ':h' => password_hash($pass, PASSWORD_BCRYPT, ['cost' => 12]),
+            ':n' => $name,
+            ':r' => $role
+        ]);
+        $uid = $stmt->fetchColumn();
+
+        $db->prepare("INSERT INTO profiles (user_id, weight, height, age, gender, objective, activity_level, updated_at) VALUES (:uid, 0.01, 0.01, 25, 'OTHER', 'MAINTAIN', 'MODERATE', NOW())")->execute([':uid' => $uid]);
+        
+        $endDate = $plan === 'PREMIUM' ? "CURRENT_DATE + INTERVAL '1 year'" : "CURRENT_DATE + INTERVAL '1 month'";
+        $db->prepare("INSERT INTO subscriptions (user_id, plan_type, status, start_date, end_date, amount) VALUES (:uid, :plan, 'ACTIVE', CURRENT_DATE, $endDate, 0)")->execute([':uid' => $uid, ':plan' => $plan]);
+
+        $db->commit();
+        fp_success(['message' => 'Usuario creado correctamente.']);
+    } catch (Exception $e) {
+        $db->rollBack();
+        error_log("[FitPaisa][ADMIN] Error creando usuario manual: " . $e->getMessage());
+        fp_error(500, 'Error al crear el usuario.');
+    }
 }

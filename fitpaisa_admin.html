@@ -286,6 +286,7 @@ select.input{appearance:none;cursor:none}
         <input id="search-input" class="input" placeholder="Buscar usuario…" style="width:200px"
           onkeydown="if(event.key==='Enter') loadUsers(1, this.value)">
         <button class="btn-lime" onclick="loadUsers(1, document.getElementById('search-input').value)">Buscar</button>
+        <button class="btn-lime" onclick="openModal('modal-add-user')">+ Añadir usuario</button>
       </div>
     </div>
     <div class="card r r2">
@@ -731,6 +732,66 @@ async function saveEditUser(){
   editingUserId=null;
 }
 
+// ══ ADD USER ══
+async function saveAddUser() {
+  const nameInput = document.getElementById('add-user-name');
+  const emailInput = document.getElementById('add-user-email');
+  const passwordInput = document.getElementById('add-user-password');
+  const roleInput = document.getElementById('add-user-role');
+  const planInput = document.getElementById('add-user-plan');
+
+  const payload = {
+    name: nameInput.value.trim(),
+    email: emailInput.value.trim(),
+    password: passwordInput.value,
+    role: roleInput.value,
+    plan: planInput.value
+  };
+
+  if (!payload.name || !payload.email || !payload.password) {
+    showToast('Por favor, completa todos los campos.');
+    return;
+  }
+  if (payload.password.length < 6) {
+    showToast('La contraseña debe tener al menos 6 caracteres.');
+    return;
+  }
+
+  const btn = document.querySelector('#modal-add-user .btn-lime');
+  const originalText = btn.textContent;
+  btn.textContent = 'Creando...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API_BASE}?action=create_user_manual`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al crear usuario.');
+    
+    showToast('Usuario creado correctamente.', 'success');
+    closeModal(document.querySelector('#modal-add-user .modal-close'));
+    nameInput.value = '';
+    emailInput.value = '';
+    passwordInput.value = '';
+    roleInput.value = 'USER';
+    planInput.value = 'FREE';
+    
+    // Refresh table
+    loadUsers(currentPage, currentSearch);
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
+}
+
 // ══ SUSPEND/ACTIVATE MODAL ══
 let suspendId=null, suspendCurrentlyActive=false;
 function openSuspendModal(userId, name, isActive){
@@ -836,6 +897,33 @@ initDashboard();
 </style>
 
 <!-- ═══ MODALS ═══ -->
+
+<!-- Add User -->
+<div class="modal-overlay" id="modal-add-user">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-head"><h2>Crear Usuario</h2><button class="modal-close" onclick="closeModal(this)">✕</button></div>
+    <div class="modal-body">
+      <label class="label">Nombre Completo</label>
+      <input type="text" id="add-user-name" class="input" placeholder="Nombre Completo" style="width:100%;margin-bottom:12px">
+      <label class="label">Correo Electrónico</label>
+      <input type="email" id="add-user-email" class="input" placeholder="Correo Electrónico" style="width:100%;margin-bottom:12px">
+      <label class="label">Contraseña</label>
+      <input type="password" id="add-user-password" class="input" placeholder="Contraseña (mín 6 caracteres)" style="width:100%;margin-bottom:12px">
+      <label class="label">Rol</label>
+      <select id="add-user-role" class="input" style="width:100%;margin-bottom:12px">
+        <option value="USER">Usuario Normal (USER)</option>
+        <option value="COACH">Entrenador (COACH)</option>
+        <option value="ADMIN">Administrador (ADMIN)</option>
+      </select>
+      <label class="label">Plan de Suscripción</label>
+      <select id="add-user-plan" class="input" style="width:100%;margin-bottom:12px">
+        <option value="FREE">Gratuito (FREE)</option>
+        <option value="PREMIUM">Premium (PREMIUM)</option>
+      </select>
+    </div>
+    <div class="modal-actions"><button class="btn-ghost" onclick="closeModal(this)">Cancelar</button><button class="btn-lime" onclick="saveAddUser()">Crear Usuario</button></div>
+  </div>
+</div>
 
 <!-- Edit User -->
 <div class="modal-overlay" id="modal-edit-user">
