@@ -450,3 +450,26 @@ git push origin testing
 
 # Pendiente revision para mover a master
 ```
+
+***
+
+# Informe Tecnico (Bug Fix Auth): Logs de Login en Panel Admin (v10.2.1)
+**Fecha:** 2026-05-11
+**Estado:** ESTABLE / DESPLEGADO en `testing`. Verificado satisfactoriamente.
+
+## 1. Bug: last_login nunca se actualizaba al iniciar sesion
+
+*   **Problema**: El panel de administrador mostraba `null` en la columna "Ultima sesion" para todos los usuarios, incluso los que habian iniciado sesion recientemente.
+*   **Causa Raiz**: `handle_login()` en `api/auth.php` verificaba credenciales y emitia el JWT correctamente, pero **nunca ejecutaba un UPDATE** sobre la columna `last_login` de la tabla `users`. La columna existe desde el parche v7.1.0 pero estaba perpetuamente en `null`.
+*   **Analisis Multi-Agente**: Validado con proceso Esceptico + Guardian de Restricciones + Defensor del Usuario antes de implementar.
+
+## 2. Solucion
+
+*   **Fix**: Insercion de un `UPDATE` atomico en `handle_login()` justo despues de validar credenciales y estado activo.
+*   **Alcance ampliado (seguridad)**: El mismo UPDATE resetea `login_attempts = 0` y `locked_until = NULL` en cada login exitoso, limpiando bloqueos temporales previos que hubieran expirado.
+
+## 3. Archivos Modificados
+
+| Archivo | Accion | Descripcion |
+|---------|--------|-------------|
+| `api/auth.php` | MODIFICADO | UPDATE `last_login`, `login_attempts`, `locked_until` en login exitoso |

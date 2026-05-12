@@ -115,6 +115,12 @@ function handle_login(): never
     if (!$user || !password_verify($body['password']??'', $user['password_hash'])) fp_error(401, 'Credenciales inválidas.');
     if (!$user['is_active']) fp_error(403, 'Bloqueada.');
 
+    /* Registrar el inicio de sesión y limpiar bloqueos previos */
+    fp_query(
+        "UPDATE users SET last_login = NOW(), login_attempts = 0, locked_until = NULL WHERE user_id = :uid",
+        [':uid' => $user['user_id']]
+    );
+
     $token = jwt_create(['user_id'=>$user['user_id'], 'email'=>$user['email'], 'role'=>$user['role'], 'name'=>$user['full_name']]);
     fp_success(['token'=>$token, 'user'=>['user_id'=>$user['user_id'], 'email'=>$user['email'], 'name'=>$user['full_name'], 'role'=>$user['role'], 'plan'=>$user['plan_type']??'FREE']]);
 }
