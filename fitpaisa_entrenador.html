@@ -874,10 +874,12 @@ async function renderContacts() {
         ${t.unread_count > 0 ? `<span class="nbadge">${t.unread_count}</span>` : ''}
       </div>`).join('');
 
-    if (!activeContact && data.threads.length) {
+    // Si hay un contacto activo (fijado por startChat u otra selección), cargarlo.
+    // Si no hay ninguno y existen hilos, seleccionar el primero por defecto.
+    if (activeContact) {
+      selectContact(activeContact.user_id, activeContact.full_name);
+    } else if (data.threads.length) {
       selectContact(data.threads[0].other_id, data.threads[0].other_name);
-    } else if (activeContact) {
-      renderThread(activeContact.user_id);
     }
   } catch(e) {
     list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:12px">Error al cargar mensajes</div>';
