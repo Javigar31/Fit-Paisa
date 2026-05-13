@@ -2359,18 +2359,22 @@ function renderChat(forceBottom = true) {
 }
 
 async function pollActiveChatRealtime() {
-  if (!activeChatUserId || active !== 'messages' || document.visibilityState !== 'visible') return;
+  // Solo pollear si hay un chat activo y el usuario está en la sección mensajes.
+  // Eliminada la condición visibilityState para que los mensajes lleguen aunque la pestaña esté en segundo plano.
+  if (!activeChatUserId || active !== 'messages') return;
   const token = localStorage.getItem('fp_token');
+  if (!token) return; // Guard: evitar carrera si el token aún no existe
   const el = document.getElementById('chatMessages');
   const isAtBottom = el ? (el.scrollHeight - el.scrollTop <= el.clientHeight + 50) : true;
   try {
     const res = await fetch(`/api/messages.php?action=thread&with=${activeChatUserId}&since_id=${activeChatLastId}&limit=50`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
+    if (res.status === 401 || res.status === 403) return; // Token inválido/expirado: ignorar silenciosamente
     const data = await res.json();
     if (!data.success || !data.messages || !data.messages.length) return;
 
-    const u = JSON.parse(localStorage.getItem('fp_user'));
+    const u = JSON.parse(localStorage.getItem('fp_user') || '{}');
     const incoming = data.messages.map(m => ({
       id: m.message_id,
       text: m.content,
@@ -2397,17 +2401,23 @@ setInterval(pollActiveChatRealtime, 2500);
 
 // Notificaciones Globales en Navegador (polling de Inbox)
 let globalUnreadCount = 0;
-if ("Notification" in window && Notification.permission === "default") {
-  Notification.requestPermission();
+
+// Solicitar permiso de notificaciones tras interacción del usuario (requisito del navegador)
+function requestNotificationPermission() {
+  if ("Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission();
+  }
 }
+document.addEventListener('click', requestNotificationPermission, { once: true });
 
 setInterval(async () => {
   const token = localStorage.getItem('fp_token');
-  if (!token) return;
+  if (!token) return; // Guard: no intentar si no hay sesión activa
   try {
     const res = await fetch('/api/messages.php?action=inbox', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
+    if (res.status === 401 || res.status === 403) return; // Token inválido: ignorar silenciosamente
     const data = await res.json();
     if (data.success && data.threads) {
       let totalUnread = 0;
@@ -2424,13 +2434,14 @@ setInterval(async () => {
       }
 
       if (totalUnread > globalUnreadCount) {
-        if ("Notification" in window && Notification.permission === "granted" && document.visibilityState !== "visible") {
-          new Notification("FitPaisa Cliente", {
-            body: `Tienes ${totalUnread - globalUnreadCount} nuevo(s) mensaje(s)`,
-            icon: "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23080a0f%22/><text x=%2250%22 y=%2266%22 font-family=%22Arial Black, sans-serif%22 font-size=%2258%22 font-weight=%22900%22 fill=%22%23ff3b3b%22 text-anchor=%22middle%22 style=%22filter:drop-shadow(0 0 4px %23ff3b3b)%22>FP</text></svg>"
+        // Disparar notificación si: la pestaña no está visible O el usuario está en otra sección (no en mensajes)
+        const shouldNotify = document.visibilityState !== 'visible' || active !== 'messages';
+        if ("Notification" in window && Notification.permission === "granted" && shouldNotify) {
+          new Notification("FitPaisa — Nuevo mensaje", {
+            body: `Tienes ${totalUnread - globalUnreadCount} mensaje(s) de tu entrenador/a`,
+            icon: "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23080a0f%22/><text x=%2250%22 y=%2266%22 font-family=%22Arial Black, sans-serif%22 font-size=%2258%22 font-weight=%22900%22 fill=%22%23ff3b3b%22 text-anchor=%22middle%22>FP</text></svg>"
           });
         }
-        // Actualizar dashboard cliente de forma pasiva si es necesario
       }
       globalUnreadCount = totalUnread;
     }

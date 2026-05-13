@@ -921,8 +921,9 @@ function renderThreadBubbles(msgs) {
 }
 
 // Actualización en segundo plano de mensajes (polling incremental)
+// Eliminada la condición visibilityState para que los mensajes lleguen aunque la pestaña esté en segundo plano.
 setInterval(() => {
-  if (activeSec === 'messages' && activeContact && document.visibilityState === 'visible') {
+  if (activeSec === 'messages' && activeContact) {
     const uid = activeContact.user_id;
     const since = threadLastId[uid] || 0;
     apiFetch(`${API}/messages.php?action=thread&with=${uid}&since_id=${since}&limit=50`).then(data => {
@@ -942,15 +943,20 @@ setInterval(() => {
           renderContacts();
         }
       }
-    });
+    }).catch(() => {}); // Guard: ignorar errores de red silenciosamente
   }
 }, 2500);
 
 // Notificaciones Globales en Navegador (polling de Inbox)
 let globalUnreadCount = 0;
-if ("Notification" in window && Notification.permission === "default") {
-  Notification.requestPermission();
+
+// Solicitar permiso tras primera interacción (requisito del navegador)
+function requestNotificationPermission() {
+  if ("Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission();
+  }
 }
+document.addEventListener('click', requestNotificationPermission, { once: true });
 
 setInterval(async () => {
   try {
@@ -970,10 +976,12 @@ setInterval(async () => {
       }
 
       if (totalUnread > globalUnreadCount) {
-        if ("Notification" in window && Notification.permission === "granted" && document.visibilityState !== "visible") {
-          new Notification("FitPaisa Coach", {
-            body: `Tienes ${totalUnread - globalUnreadCount} nuevo(s) mensaje(s)`,
-            icon: "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23080a0f%22/><text x=%2250%22 y=%2266%22 font-family=%22Arial Black, sans-serif%22 font-size=%2258%22 font-weight=%22900%22 fill=%22%23lime%22 text-anchor=%22middle%22 style=%22filter:drop-shadow(0 0 4px %23lime)%22>FP</text></svg>"
+        // Disparar notificación si: la pestaña no está visible O el entrenador está en otra sección
+        const shouldNotify = document.visibilityState !== 'visible' || activeSec !== 'messages';
+        if ("Notification" in window && Notification.permission === "granted" && shouldNotify) {
+          new Notification("FitPaisa Coach — Nuevo mensaje", {
+            body: `Tienes ${totalUnread - globalUnreadCount} mensaje(s) de un cliente`,
+            icon: "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23080a0f%22/><text x=%2250%22 y=%2266%22 font-family=%22Arial Black, sans-serif%22 font-size=%2258%22 font-weight=%22900%22 fill=%22%23c6f135%22 text-anchor=%22middle%22>FP</text></svg>"
           });
         }
         if (activeSec === 'messages') renderContacts();
