@@ -874,10 +874,12 @@ async function renderContacts() {
         ${t.unread_count > 0 ? `<span class="nbadge">${t.unread_count}</span>` : ''}
       </div>`).join('');
 
-    // Si hay un contacto activo (fijado por startChat u otra selección), cargarlo.
-    // Si no hay ninguno y existen hilos, seleccionar el primero por defecto.
+    // Si ya hay un contacto activo (puesto por startChat), solo renderizar su hilo.
+    // Si no hay ninguno, seleccionar el primer hilo por defecto.
+    // IMPORTANTE: no llamar selectContact() aquí para evitar bucle infinito
+    // (selectContact → renderContacts → selectContact → …)
     if (activeContact) {
-      selectContact(activeContact.user_id, activeContact.full_name);
+      renderThread(activeContact.user_id);
     } else if (data.threads.length) {
       selectContact(data.threads[0].other_id, data.threads[0].other_name);
     }
@@ -958,6 +960,9 @@ async function coachSend() {
 // Iniciar chat desde la tarjeta de cliente
 function startChat(userId, name) {
   activeContact = { user_id: userId, full_name: name };
+  // Actualizar título inmediatamente antes de navegar (fix original: faltaba esto)
+  const title = document.getElementById('chatTitle');
+  if (title) title.textContent = name;
   show('messages');
 }
 
