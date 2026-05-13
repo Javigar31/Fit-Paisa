@@ -423,9 +423,9 @@ git push origin master
 
 ***
 
-# Informe Tecnico (Admin & Roles): Creacion Manual de Usuarios y Planes (v10.2.0)
-**Fecha:** 2026-05-11
-**Estado:** DESPLEGADO en `testing`. PENDIENTE DE REVISION.
+# Informe Tecnico (Admin & Roles): Creacion Manual de Usuarios y Planes (v10.2.1)
+**Fecha:** 2026-05-13
+**Estado:** DESPLEGADO en `master`. FINALIZADO.
 
 ## 1. Feature: Creacion manual de usuarios desde panel de Administrador
 *   **Problema**: El administrador no podia dar de alta cuentas nuevas directamente (ej: entrenadores nuevos, clientes VIP).
@@ -441,20 +441,22 @@ git push origin master
 | `api/admin.php` | MODIFICADO | Nuevo endpoint `create_user_manual` |
 | `fitpaisa_admin.html` | MODIFICADO | UI de Modal "Crear Usuario" y JS `saveAddUser` |
 
-## 3. Estado actual
-```powershell
-# Cambios en rama testing
-git add api/admin.php fitpaisa_admin.html
-git commit -m "feat: panel admin - crear usuarios manualmente y asignar planes"
-git push origin testing
+## 4. Correcciones Criticas (v10.2.1)
+*   **Base de Datos (`api/setup-db.php`)**: Se detecto que el error 500 en el formulario de macros se debia a la falta de un indice unico en `body_logs`. Se anadio `UNIQUE(profile_id, log_date)` y un script de limpieza de duplicados.
+*   **Sanitizacion de Roles**: Se corrigió el uso de `slug` que forzaba minúsculas en roles/planes, rompiendo los ENUMs de la base de datos.
+*   **Panel Entrenador (`fitpaisa_entrenador.html`)**: Se elimino un bucle infinito en la mensajeria y se aseguro que el titulo del chat coincida con el cliente seleccionado desde la tarjeta.
 
-# Pendiente revision para mover a master
+## 5. Historial de Despliegue
+```powershell
+# Sincronizacion final 2026-05-13
+git checkout master
+git merge testing
+git push origin master
 ```
 
 ***
 
 # Informe Tecnico (Bug Fix Auth): Logs de Login en Panel Admin (v10.2.1)
-**Fecha:** 2026-05-11
 **Estado:** ESTABLE / DESPLEGADO en `testing`. Verificado satisfactoriamente.
 
 ## 1. Bug: last_login nunca se actualizaba al iniciar sesion
