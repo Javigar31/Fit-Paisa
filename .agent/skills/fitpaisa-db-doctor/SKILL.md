@@ -201,6 +201,15 @@ Ejecutar SIEMPRE `setup-db.php` antes de llamar a `seed-admin.php`.
 - **Causa**: La tabla `profiles` fue recreada con esquema simplificado sin `updated_at`.
 - **Fix**: Ejecutar el parche SQL completo de la Sección 2 en Neon Console o vía `setup-db.php`.
 
+### "Error 500 al guardar macros o peso: ON CONFLICT clause"
+- **Causa**: Si el índice único `UNIQUE(profile_id, log_date)` falta en `body_logs`, las sentencias `INSERT ... ON CONFLICT (profile_id, log_date)` lanzarán un error 500 fatal (violación de sintaxis de restricción faltante).
+- **Fix Crítico**: A partir de la versión v10.2.1, NUNCA usar `ON CONFLICT` para `body_logs`. Usar el patrón a prueba de fallos de dos pasos:
+  ```php
+  fp_query("DELETE FROM body_logs WHERE profile_id = :pid AND log_date = CURRENT_DATE", [':pid' => $pid]);
+  fp_query("INSERT INTO body_logs (profile_id, weight, log_date) VALUES (:pid, :w, CURRENT_DATE)", ...);
+  ```
+  Esto garantiza la idempotencia sin depender del estado del esquema de la base de datos de producción.
+
 ---
 
 ## 10. Procedimiento de Reparación Estándar
