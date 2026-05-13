@@ -337,9 +337,18 @@ function handle_create_user_manual(array $adminPayload): never
         fp_error(400, 'Rol inválido.');
     }
 
-    if (!in_array($plan, ['FREE', 'PREMIUM'], true)) {
+    /* ── Validar plan y mapear al ENUM correcto ── */
+    $planMap = ['FREE' => 'FREE', 'PREMIUM' => 'PREMIUM_MONTHLY'];
+    if (!array_key_exists($plan, $planMap)) {
         fp_error(400, 'Plan inválido.');
     }
+    $planType = $planMap[$plan];
+
+    /* ── Calcular fecha fin sin SQL interpolado ── */
+    $startDate = date('Y-m-d');
+    $endDate   = $plan === 'PREMIUM'
+        ? date('Y-m-d', strtotime('+1 year'))
+        : date('Y-m-d', strtotime('+1 month'));
 
     if (fp_query('SELECT 1 FROM users WHERE email = :e', [':e' => $email])->fetchColumn()) {
         fp_error(409, 'El correo ya está registrado.');
@@ -348,6 +357,7 @@ function handle_create_user_manual(array $adminPayload): never
     $db = fp_db();
     $db->beginTransaction();
     try {
+        /* 1. Crear usuario */
         $stmt = $db->prepare("INSERT INTO users (email, password_hash, full_name, role, is_active, created_at) VALUES (:e, :h, :n, :r, TRUE, NOW()) RETURNING user_id");
         $stmt->execute([
             ':e' => $email,
@@ -357,16 +367,22 @@ function handle_create_user_manual(array $adminPayload): never
         ]);
         $uid = $stmt->fetchColumn();
 
+        /* 2. Crear perfil básico */
         $db->prepare("INSERT INTO profiles (user_id, weight, height, age, gender, objective, activity_level, updated_at) VALUES (:uid, 0.01, 0.01, 25, 'OTHER', 'MAINTAIN', 'MODERATE', NOW())")->execute([':uid' => $uid]);
-        
-        $endDate = $plan === 'PREMIUM' ? "CURRENT_DATE + INTERVAL '1 year'" : "CURRENT_DATE + INTERVAL '1 month'";
-        $db->prepare("INSERT INTO subscriptions (user_id, plan_type, status, start_date, end_date, amount) VALUES (:uid, :plan, 'ACTIVE', CURRENT_DATE, $endDate, 0)")->execute([':uid' => $uid, ':plan' => $plan]);
+
+        /* 3. Crear suscripción con parámetros seguros (sin SQL interpolado) */
+        $db->prepare("INSERT INTO subscriptions (user_id, plan_type, status, start_date, end_date, amount) VALUES (:uid, :pt, 'ACTIVE', :sd, :ed, 0)")->execute([
+            ':uid' => $uid,
+            ':pt'  => $planType,
+            ':sd'  => $startDate,
+            ':ed'  => $endDate,
+        ]);
 
         $db->commit();
         fp_success(['message' => 'Usuario creado correctamente.']);
     } catch (Exception $e) {
         $db->rollBack();
         error_log("[FitPaisa][ADMIN] Error creando usuario manual: " . $e->getMessage());
-        fp_error(500, 'Error al crear el usuario.');
+        fp_error(500, 'Error al crear el usuario: ' . $e->getMessage());
     }
 }
