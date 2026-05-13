@@ -996,10 +996,34 @@ async function coachSend() {
   const inp  = document.getElementById('coachInput');
   const text = inp.value.trim();
   if (!text) return;
-  inp.value = '';
-  const r = await apiPost(`${API}/messages.php?action=send`, { receiver_id: activeContact.user_id, content: text });
-  if (r.success) await renderThread(activeContact.user_id);
-  else { inp.value = text; alert(r.message || 'Error al enviar'); }
+
+  inp.value = ''; // Limpiar input inmediatamente para mejor UX
+  const uid = activeContact.user_id;
+  const r = await apiPost(`${API}/messages.php?action=send`, { receiver_id: uid, content: text });
+  if (r.success) {
+    // Añadir optimistamente al cache local SIN recargar el hilo completo.
+    // Avanzar threadLastId: el polling no volverá a traer este mensaje.
+    const newMsg = {
+      message_id: r.message_id,
+      sender_id: coachId,
+      receiver_id: uid,
+      content: text,
+      sent_at: r.sent_at || new Date().toISOString(),
+      read_at: null
+    };
+    if (!threadCache[uid]) threadCache[uid] = [];
+    threadCache[uid].push(newMsg);
+    threadCache[uid] = threadCache[uid].slice(-100);
+    threadLastId[uid] = r.message_id;
+
+    const el = document.getElementById('chatMsgs');
+    const isAtBottom = el.scrollHeight - el.scrollTop <= el.clientHeight + 50;
+    el.innerHTML = renderThreadBubbles(threadCache[uid]);
+    if (isAtBottom) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+  } else {
+    inp.value = text; // Restaurar si el envío falló
+    alert(r.message || 'Error al enviar');
+  }
 }
 
 // Iniciar chat desde la tarjeta de cliente

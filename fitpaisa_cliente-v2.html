@@ -2450,9 +2450,10 @@ setInterval(async () => {
 
 async function sendMsg() {
   const inp = document.getElementById('chatInput');
-  const text = inp.value.trim(); 
-  if(!text || !activeChatUserId) return;
+  const text = inp.value.trim();
+  if (!text || !activeChatUserId) return;
 
+  inp.value = ''; // Limpiar input inmediatamente para mejor UX
   const token = localStorage.getItem('fp_token');
   try {
     const res = await fetch('/api/messages.php?action=send', {
@@ -2462,11 +2463,25 @@ async function sendMsg() {
     });
     const data = await res.json();
     if (data.success) {
-      inp.value = '';
-      openChat(activeChatUserId, activeChatName || undefined); // Recargar hilo
-      loadLastMessage(); // Actualizar dashboard
+      // Añadir optimistamente al array local SIN recargar el hilo completo.
+      // Avanzar activeChatLastId al nuevo message_id: el polling no volverá a traer este mensaje.
+      const u = JSON.parse(localStorage.getItem('fp_user') || '{}');
+      messages.push({
+        id: data.message_id,
+        text: text,
+        mine: true,
+        time: new Date(data.sent_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      });
+      messages = messages.slice(-100);
+      activeChatLastId = data.message_id;
+      renderChat(true); // Forzar scroll al fondo
+      loadLastMessage(); // Actualizar preview del dashboard
+    } else {
+      inp.value = text; // Restaurar si el envío falló
     }
-  } catch (e) {}
+  } catch (e) {
+    inp.value = text; // Restaurar en caso de error de red
+  }
 }
 renderChat();
 
