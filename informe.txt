@@ -1,4 +1,21 @@
-# Informe TÃ©cnico (CrÃ­tico): ResoluciÃ³n de Bloqueadores en Testing (v3.3.0)
+# Informe Técnico (UX & Real-time): Sistema de Notificaciones y Mensajería Síncrona (v6.0.0)
+**Fecha:** 2026-05-13
+**Estado:** DESPLEGADO EN MASTER. Sistema de chat reactivo y notificaciones nativas estabilizado.
+
+## 1. Resolución de Duplicidad de Mensajes (Race Condition)
+*   **Problema**: Al enviar un mensaje, la recarga completa del hilo (`openChat`/`renderThread`) colisionaba con el ciclo de polling (2.5s), provocando que el mismo mensaje apareciera duplicado visualmente hasta recargar la página.
+*   **Solución (Deduplicación Estructural)**:
+    *   **Actualización Optimista**: Los mensajes se añaden al array local instantáneamente con un ID temporal negativo.
+    *   **Filtrado por ID**: El polling ahora utiliza un `Set` de IDs existentes para ignorar cualquier mensaje que ya esté en memoria, eliminando la posibilidad de duplicados.
+    *   **Locks de Concurrencia**: Implementación de flags `isPolling` para evitar que múltiples peticiones de red se solapen si el servidor tarda en responder.
+
+## 2. Sistema de Notificaciones Nativas (Browser Notifications)
+*   **Alcance**: Activación de notificaciones del sistema (Windows/macOS/Android) cuando llega un mensaje y el usuario no está viendo activamente el chat (pestaña en segundo plano o navegando por otra sección de la SPA).
+*   **UX**: Solicitud de permisos vinculada a la primera interacción del usuario para evitar bloqueos automáticos del navegador.
+*   **Polling de Inbox**: Monitorización global cada 5 segundos para asegurar que el contador de mensajes pendientes sea preciso en todas las vistas.
+
+***
+
 **Fecha:** 2026-04-15
 **Estado:** PRODUCCIÃ“N ESTABLE. Desplegado en `master` tras validaciÃ³n en `testing`.
 
