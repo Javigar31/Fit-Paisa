@@ -269,7 +269,7 @@ function handle_update_user(array $adminPayload): never
 
     $body     = fp_json_body();
     $userId   = fp_sanitize($body['user_id'] ?? 0, 0, 'int');
-    $role     = fp_sanitize($body['role']      ?? '', 10, 'slug');
+    $role     = strtoupper(fp_sanitize($body['role'] ?? '', 10));
     $isActive = $body['is_active'] ?? null;
 
     if ($userId <= 0) {
@@ -326,8 +326,8 @@ function handle_create_user_manual(array $adminPayload): never
     $name  = fp_sanitize($body['name'] ?? '');
     $email = strtolower(fp_sanitize($body['email'] ?? '', 150, 'email'));
     $pass  = $body['password'] ?? '';
-    $role  = fp_sanitize($body['role'] ?? 'USER', 10, 'slug');
-    $plan  = fp_sanitize($body['plan'] ?? 'FREE', 10, 'slug');
+    $role  = strtoupper(fp_sanitize($body['role'] ?? 'USER', 10));
+    $plan  = strtoupper(fp_sanitize($body['plan'] ?? 'FREE', 10));
 
     if (empty($name) || empty($email) || empty($pass)) {
         fp_error(400, 'Nombre, email y contraseña son obligatorios.');
