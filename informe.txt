@@ -446,6 +446,7 @@ git push origin master
     *   **Fix a prueba de fallos**: Se reemplazó el uso de `ON CONFLICT` por una arquitectura de dos pasos (`DELETE FROM body_logs ...` seguido de `INSERT INTO body_logs ...`) en `api/profile.php`. Esto garantiza la idempotencia diaria de registros y evita que los entornos que no han corrido migraciones de base de datos (`setup-db.php`) se rompan, estabilizando permanentemente el ingreso de macros en producción.
 *   **Sanitizacion de Roles**: Se corrigió el uso de `slug` que forzaba minúsculas en roles/planes, rompiendo los ENUMs de la base de datos.
 *   **Panel Entrenador (`fitpaisa_entrenador.html`)**: Se elimino un bucle infinito en la mensajeria y se aseguro que el titulo del chat coincida con el cliente seleccionado desde la tarjeta.
+*   **Panel Cliente (`fitpaisa_cliente-v2.html`)**: Se corrigió un *bug visual* en el formulario de soporte que causaba un descolocamiento de los campos al seleccionar "Enviar otro mensaje". El reseteo alteraba la propiedad a `display: block`, anulando el grid flexbox de `.contact-form`. Corregido para restaurar a `display: flex`.
 
 ## 5. Historial de Despliegue
 ```powershell
