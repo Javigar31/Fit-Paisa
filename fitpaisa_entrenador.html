@@ -921,29 +921,37 @@ function renderThreadBubbles(msgs) {
 }
 
 // Actualización en segundo plano de mensajes (polling incremental)
-// Eliminada la condición visibilityState para que los mensajes lleguen aunque la pestaña esté en segundo plano.
+let isCoachPolling = false;
+
 setInterval(() => {
-  if (activeSec === 'messages' && activeContact) {
+  if (activeSec === 'messages' && activeContact && !isCoachPolling) {
+    isCoachPolling = true;
     const uid = activeContact.user_id;
     const since = threadLastId[uid] || 0;
     apiFetch(`${API}/messages.php?action=thread&with=${uid}&since_id=${since}&limit=50`).then(data => {
       if (data.success && data.messages && data.messages.length) {
+        // DEDUPLICACIÓN: filtrar por message_id para evitar race condition con coachSend.
+        const existingIds = new Set((threadCache[uid] || []).map(m => m.message_id));
+        const newMsgs = data.messages.filter(m => !existingIds.has(m.message_id));
+        if (!newMsgs.length) return; // Nada nuevo: no redibujar
+
         const el = document.getElementById('chatMsgs');
         const isAtBottom = el.scrollHeight - el.scrollTop <= el.clientHeight + 50;
-        const merged = (threadCache[uid] || []).concat(data.messages);
-        threadCache[uid] = merged.slice(-100); // Mantener histórico reciente en memoria.
+        const merged = (threadCache[uid] || []).filter(m => m.message_id > 0) // Excluir temp IDs
+                        .concat(newMsgs);
+        threadCache[uid] = merged.slice(-100);
         threadLastId[uid] = threadCache[uid].length ? (threadCache[uid][threadCache[uid].length - 1].message_id || 0) : since;
         el.innerHTML = renderThreadBubbles(threadCache[uid]);
-        if (isAtBottom) {
-          el.scrollTop = el.scrollHeight;
-        }
-        const hasUnreadIncoming = data.messages.some(m => m.sender_id == uid && !m.read_at);
+        if (isAtBottom) el.scrollTop = el.scrollHeight;
+
+        const hasUnreadIncoming = newMsgs.some(m => m.sender_id == uid && !m.read_at);
         if (hasUnreadIncoming) {
           apiPost(`${API}/messages.php?action=read`, { sender_id: uid }).catch(() => {});
           renderContacts();
         }
       }
-    }).catch(() => {}); // Guard: ignorar errores de red silenciosamente
+    }).catch(() => {})
+      .finally(() => { isCoachPolling = false; }); // Liberar lock siempre
   }
 }, 2500);
 
@@ -997,31 +1005,40 @@ async function coachSend() {
   const text = inp.value.trim();
   if (!text) return;
 
-  inp.value = ''; // Limpiar input inmediatamente para mejor UX
+  inp.value = ''; // Limpiar input inmediatamente
   const uid = activeContact.user_id;
+
+  // Añadir mensaje optimista con message_id temporal negativo.
+  const tempId = -Date.now();
+  const tempMsg = {
+    message_id: tempId,
+    sender_id: coachId,
+    receiver_id: uid,
+    content: text,
+    sent_at: new Date().toISOString(),
+    read_at: null
+  };
+  if (!threadCache[uid]) threadCache[uid] = [];
+  threadCache[uid].push(tempMsg);
+  const el = document.getElementById('chatMsgs');
+  el.innerHTML = renderThreadBubbles(threadCache[uid]);
+  el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+
   const r = await apiPost(`${API}/messages.php?action=send`, { receiver_id: uid, content: text });
   if (r.success) {
-    // Añadir optimistamente al cache local SIN recargar el hilo completo.
-    // Avanzar threadLastId: el polling no volverá a traer este mensaje.
-    const newMsg = {
-      message_id: r.message_id,
-      sender_id: coachId,
-      receiver_id: uid,
-      content: text,
-      sent_at: r.sent_at || new Date().toISOString(),
-      read_at: null
-    };
-    if (!threadCache[uid]) threadCache[uid] = [];
-    threadCache[uid].push(newMsg);
-    threadCache[uid] = threadCache[uid].slice(-100);
-    threadLastId[uid] = r.message_id;
-
-    const el = document.getElementById('chatMsgs');
-    const isAtBottom = el.scrollHeight - el.scrollTop <= el.clientHeight + 50;
+    // Reemplazar ID temporal por el ID real. El poll deduplicará por message_id.
+    const idx = threadCache[uid].findIndex(m => m.message_id === tempId);
+    if (idx !== -1) {
+      threadCache[uid][idx].message_id = r.message_id;
+      threadCache[uid][idx].sent_at = r.sent_at || threadCache[uid][idx].sent_at;
+    }
+    threadLastId[uid] = r.message_id; // Avanzar cursor del poll
     el.innerHTML = renderThreadBubbles(threadCache[uid]);
-    if (isAtBottom) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   } else {
-    inp.value = text; // Restaurar si el envío falló
+    // Eliminar mensaje optimista si falló
+    threadCache[uid] = threadCache[uid].filter(m => m.message_id !== tempId);
+    el.innerHTML = renderThreadBubbles(threadCache[uid]);
+    inp.value = text;
     alert(r.message || 'Error al enviar');
   }
 }

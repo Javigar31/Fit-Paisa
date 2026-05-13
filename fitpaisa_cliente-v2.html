@@ -2358,35 +2358,46 @@ function renderChat(forceBottom = true) {
   if (forceBottom) el.scrollTop = el.scrollHeight;
 }
 
+// Lock para evitar llamadas concurrentes al poll
+let isPolling = false;
+
 async function pollActiveChatRealtime() {
   // Solo pollear si hay un chat activo y el usuario está en la sección mensajes.
-  // Eliminada la condición visibilityState para que los mensajes lleguen aunque la pestaña esté en segundo plano.
   if (!activeChatUserId || active !== 'messages') return;
+  if (isPolling) return; // Evitar ejecuciones concurrentes del mismo interval
   const token = localStorage.getItem('fp_token');
-  if (!token) return; // Guard: evitar carrera si el token aún no existe
+  if (!token) return;
+  isPolling = true;
   const el = document.getElementById('chatMessages');
   const isAtBottom = el ? (el.scrollHeight - el.scrollTop <= el.clientHeight + 50) : true;
   try {
     const res = await fetch(`/api/messages.php?action=thread&with=${activeChatUserId}&since_id=${activeChatLastId}&limit=50`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    if (res.status === 401 || res.status === 403) return; // Token inválido/expirado: ignorar silenciosamente
+    if (res.status === 401 || res.status === 403) return;
     const data = await res.json();
     if (!data.success || !data.messages || !data.messages.length) return;
 
+    // DEDUPLICACIÓN: filtrar mensajes que ya están en el array local (por ID).
+    // Esto evita la race condition entre sendMsg (actualiza messages[]) y el poll.
+    const existingIds = new Set(messages.map(m => m.id));
     const u = JSON.parse(localStorage.getItem('fp_user') || '{}');
-    const incoming = data.messages.map(m => ({
-      id: m.message_id,
-      text: m.content,
-      mine: m.sender_id === u.user_id,
-      time: new Date(m.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }));
+    const incoming = data.messages
+      .filter(m => !existingIds.has(m.message_id)) // Solo mensajes nuevos de verdad
+      .map(m => ({
+        id: m.message_id,
+        text: m.content,
+        mine: m.sender_id == u.user_id, // == para evitar mismatch int vs string
+        time: new Date(m.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }));
+    if (!incoming.length) return; // Nada nuevo: no redibujar
+
     messages = messages.concat(incoming).slice(-100);
-    activeChatLastId = messages.length ? (messages[messages.length - 1].id || activeChatLastId) : activeChatLastId;
+    activeChatLastId = messages[messages.length - 1].id || activeChatLastId;
     renderChat(isAtBottom);
     loadLastMessage();
 
-    const hasUnreadIncoming = data.messages.some(m => m.sender_id === activeChatUserId && !m.read_at);
+    const hasUnreadIncoming = incoming.some(m => !m.mine);
     if (hasUnreadIncoming) {
       fetch('/api/messages.php?action=read', {
         method: 'POST',
@@ -2395,6 +2406,7 @@ async function pollActiveChatRealtime() {
       }).catch(() => {});
     }
   } catch (e) {}
+  finally { isPolling = false; } // Liberar lock siempre
 }
 
 setInterval(pollActiveChatRealtime, 2500);
@@ -2453,8 +2465,20 @@ async function sendMsg() {
   const text = inp.value.trim();
   if (!text || !activeChatUserId) return;
 
-  inp.value = ''; // Limpiar input inmediatamente para mejor UX
+  inp.value = ''; // Limpiar input inmediatamente
   const token = localStorage.getItem('fp_token');
+
+  // Añadir mensaje optimista con ID temporal negativo (evita esperar la respuesta del servidor).
+  // Si el poll llega antes que la respuesta, el mensaje ya está en messages[] con un ID temporal.
+  const tempId = -Date.now();
+  messages.push({
+    id: tempId,
+    text: text,
+    mine: true,
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  });
+  renderChat(true);
+
   try {
     const res = await fetch('/api/messages.php?action=send', {
       method: 'POST',
@@ -2463,24 +2487,27 @@ async function sendMsg() {
     });
     const data = await res.json();
     if (data.success) {
-      // Añadir optimistamente al array local SIN recargar el hilo completo.
-      // Avanzar activeChatLastId al nuevo message_id: el polling no volverá a traer este mensaje.
-      const u = JSON.parse(localStorage.getItem('fp_user') || '{}');
-      messages.push({
-        id: data.message_id,
-        text: text,
-        mine: true,
-        time: new Date(data.sent_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      });
-      messages = messages.slice(-100);
+      // Reemplazar ID temporal por el ID real devuelto por el servidor.
+      // El poll usaba since_id=<anteriorLastId>, pero al buscar m.message_id en existingIds
+      // no lo encontrará (tempId ≠ message_id real). Necesitamos reemplazar el tempId.
+      const idx = messages.findIndex(m => m.id === tempId);
+      if (idx !== -1) {
+        messages[idx].id = data.message_id; // Reemplazar ID temporal por el real
+      }
+      // Avanzar cursor: próximo poll traerá solo mensajes con ID > message_id
       activeChatLastId = data.message_id;
-      renderChat(true); // Forzar scroll al fondo
-      loadLastMessage(); // Actualizar preview del dashboard
+      renderChat(true);
+      loadLastMessage();
     } else {
-      inp.value = text; // Restaurar si el envío falló
+      // Eliminar mensaje optimista si falló
+      messages = messages.filter(m => m.id !== tempId);
+      renderChat(true);
+      inp.value = text;
     }
   } catch (e) {
-    inp.value = text; // Restaurar en caso de error de red
+    messages = messages.filter(m => m.id !== tempId);
+    renderChat(true);
+    inp.value = text;
   }
 }
 renderChat();
