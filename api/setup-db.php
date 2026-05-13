@@ -396,8 +396,33 @@ run_step($db, 'TABLE: body_logs', "
         hips       DECIMAL(5,2)    CHECK (hips > 0),
         chest      DECIMAL(5,2)    CHECK (chest > 0),
         log_date   DATE            NOT NULL DEFAULT CURRENT_DATE,
-        created_at TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+        created_at TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+        UNIQUE (profile_id, log_date)
     );
+");
+
+// Parche idempotente para BDs existentes sin el UNIQUE constraint
+run_step($db, 'PATCH: body_logs unique constraint', "
+    DO \$\$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.table_constraints
+            WHERE table_name = 'body_logs'
+              AND constraint_name = 'body_logs_profile_date_key'
+              AND constraint_type = 'UNIQUE'
+        ) THEN
+            -- Eliminar duplicados antes de añadir el constraint
+            DELETE FROM body_logs
+            WHERE log_id IN (
+                SELECT log_id FROM (
+                    SELECT log_id,
+                           ROW_NUMBER() OVER (PARTITION BY profile_id, log_date ORDER BY log_id DESC) AS rn
+                    FROM body_logs
+                ) t WHERE rn > 1
+            );
+            ALTER TABLE body_logs ADD CONSTRAINT body_logs_profile_date_key UNIQUE (profile_id, log_date);
+        END IF;
+    END\$\$;
 ");
 
 /* ══════════════════════════════════════════════════════════════════════
