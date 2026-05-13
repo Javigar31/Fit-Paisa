@@ -227,10 +227,9 @@ function handle_update_profile(array $payload): never
     if ($weight > 0) {
         $pid = fp_query('SELECT profile_id FROM profiles WHERE user_id = :uid', [':uid' => $userId])->fetchColumn();
         if ($pid) {
+            fp_query("DELETE FROM body_logs WHERE profile_id = :pid AND log_date = CURRENT_DATE", [':pid' => $pid]);
             fp_query(
-                "INSERT INTO body_logs (profile_id, weight, log_date) 
-                 VALUES (:pid, :w, CURRENT_DATE)
-                 ON CONFLICT (profile_id, log_date) DO UPDATE SET weight = EXCLUDED.weight",
+                "INSERT INTO body_logs (profile_id, weight, log_date) VALUES (:pid, :w, CURRENT_DATE)",
                 [':pid' => $pid, ':w' => $weight]
             );
         }
@@ -277,10 +276,9 @@ function handle_setup_macros(array $payload): never
     // Sincronizar con historial de medidas (body_logs)
     $pid = fp_query('SELECT profile_id FROM profiles WHERE user_id = :uid', [':uid' => $payload['user_id']])->fetchColumn();
     if ($pid) {
+        fp_query("DELETE FROM body_logs WHERE profile_id = :pid AND log_date = CURRENT_DATE", [':pid' => $pid]);
         fp_query(
-            "INSERT INTO body_logs (profile_id, weight, log_date) 
-             VALUES (:pid, :w, CURRENT_DATE)
-             ON CONFLICT (profile_id, log_date) DO UPDATE SET weight = EXCLUDED.weight",
+            "INSERT INTO body_logs (profile_id, weight, log_date) VALUES (:pid, :w, CURRENT_DATE)",
             [':pid' => $pid, ':w' => $w]
         );
     }
@@ -303,6 +301,7 @@ function handle_log_body(array $payload): never
     $pid = fp_query('SELECT profile_id FROM profiles WHERE user_id = :uid', [':uid' => $payload['user_id']])->fetchColumn();
     if (!$pid) fp_error(404, 'Perfil no encontrado.');
 
+    fp_query("DELETE FROM body_logs WHERE profile_id = :pid AND log_date = CURRENT_DATE", [':pid'=>$pid]);
     fp_query("INSERT INTO body_logs (profile_id, weight, log_date) VALUES (:pid, :w, CURRENT_DATE)", [':pid'=>$pid, ':w'=>$w]);
     fp_query("UPDATE profiles SET weight = :w, updated_at = NOW() WHERE profile_id = :pid", [':w'=>$w, ':pid'=>$pid]);
     fp_success(['message' => 'Registrado.']);
