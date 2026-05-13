@@ -732,6 +732,22 @@ async function saveEditUser(){
   editingUserId=null;
 }
 
+// ══ TOAST HELPER ══
+function showToast(msg, type = 'error') {
+  const existing = document.getElementById('fp-toast');
+  if (existing) existing.remove();
+  const t = document.createElement('div');
+  t.id = 'fp-toast';
+  t.textContent = msg;
+  const colors = { error: '#ff4d4d', success: 'var(--lime)', info: 'var(--purple)' };
+  t.style.cssText = `position:fixed;bottom:28px;right:28px;z-index:9999;padding:12px 20px;
+    background:${colors[type]||colors.error};color:#fff;border-radius:8px;
+    font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.4);
+    animation:toastIn .25s ease;pointer-events:none;max-width:360px;`;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
 // ══ ADD USER ══
 async function saveAddUser() {
   const nameInput = document.getElementById('add-user-name');
@@ -763,12 +779,9 @@ async function saveAddUser() {
   btn.disabled = true;
 
   try {
-    const res = await fetch(`${API_BASE}?action=create_user_manual`, {
+    const res = await fetch('/api/admin.php?action=create_user_manual', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
+      headers: fpHeaders(),
       body: JSON.stringify(payload)
     });
     const data = await res.json();
@@ -877,6 +890,12 @@ initDashboard();
 </script>
 
 <style>
+/* Toast animation */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* Optimizaciones de rendimiento para Móviles */
 @media (max-width: 768px) {
   .section { 
