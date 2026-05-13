@@ -458,7 +458,31 @@ git push origin master
 
 ***
 
-# Informe Tecnico (Bug Fix Auth): Logs de Login en Panel Admin (v10.2.1)
+# Informe Tecnico (Notificaciones): Sistema de Alertas en Navegador (v10.2.2)
+**Fecha:** 2026-05-13
+**Estado:** IMPLEMENTADO en entorno local. Listo para testing.
+
+## 1. Feature: Sistema de Notificaciones en Tiempo Real
+*   **Requisito**: Alertar a clientes y entrenadores de nuevos mensajes entrantes de forma inmediata, incluso si la pestaña no está activa o están en otra sección de la SPA.
+*   **Solucion Implementada**:
+    *   **Integración Web Notifications API**: Se incluyó la validación y solicitud nativa de permisos (`Notification.requestPermission()`).
+    *   **Arquitectura Híbrida de Polling**: 
+        *   Mantenido el *fast-polling* (2.5s) en `api/messages.php?action=thread` para el chat activo.
+        *   Implementado un *slow-polling* (5.0s) de fondo sobre `api/messages.php?action=inbox` para obtener el agregado global de mensajes sin leer (suma de unread_counts de todos los hilos).
+    *   **UX / Notificaciones**: Si se detecta un aumento en `globalUnreadCount`, se dispara una instancia de `Notification` a nivel SO si la página está oculta o si el permiso es `granted`. 
+    *   **Badges de UI**: Integración y actualización dinámica de `.nbadge` en la navegación basándose en el mismo polling de fondo sin interferir en el render de la lista activa.
+
+## 2. Archivos Modificados
+| Archivo | Accion | Descripcion |
+|---------|--------|-------------|
+| `fitpaisa_entrenador.html` | MODIFICADO | Lógica de Notificaciones Web y polling de inbox en segundo plano. |
+| `fitpaisa_cliente-v2.html` | MODIFICADO | Lógica equivalente de Notificaciones Web y badge update dinámico. |
+
+## 3. Consideraciones y Siguientes Pasos
+*   En Chrome/Edge, las notificaciones Push nativas funcionan correctamente cuando la pestaña no es la activa, requiriendo un servidor SSL local (o Vercel en prod) para no ser bloqueadas como intrusivas.
+*   A probar en staging.
+
+***# Informe Tecnico (Bug Fix Auth): Logs de Login en Panel Admin (v10.2.1)
 **Estado:** ESTABLE / DESPLEGADO en `testing`. Verificado satisfactoriamente.
 
 ## 1. Bug: last_login nunca se actualizaba al iniciar sesion

@@ -2395,6 +2395,48 @@ async function pollActiveChatRealtime() {
 
 setInterval(pollActiveChatRealtime, 2500);
 
+// Notificaciones Globales en Navegador (polling de Inbox)
+let globalUnreadCount = 0;
+if ("Notification" in window && Notification.permission === "default") {
+  Notification.requestPermission();
+}
+
+setInterval(async () => {
+  const token = localStorage.getItem('fp_token');
+  if (!token) return;
+  try {
+    const res = await fetch('/api/messages.php?action=inbox', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (data.success && data.threads) {
+      let totalUnread = 0;
+      data.threads.forEach(t => totalUnread += parseInt(t.unread_count || 0));
+      
+      const badge = document.querySelector('.nav-item .nbadge');
+      if (badge) {
+        if (totalUnread > 0) {
+          badge.textContent = totalUnread;
+          badge.style.display = 'inline-block';
+        } else {
+          badge.style.display = 'none';
+        }
+      }
+
+      if (totalUnread > globalUnreadCount) {
+        if ("Notification" in window && Notification.permission === "granted" && document.visibilityState !== "visible") {
+          new Notification("FitPaisa Cliente", {
+            body: `Tienes ${totalUnread - globalUnreadCount} nuevo(s) mensaje(s)`,
+            icon: "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23080a0f%22/><text x=%2250%22 y=%2266%22 font-family=%22Arial Black, sans-serif%22 font-size=%2258%22 font-weight=%22900%22 fill=%22%23ff3b3b%22 text-anchor=%22middle%22 style=%22filter:drop-shadow(0 0 4px %23ff3b3b)%22>FP</text></svg>"
+          });
+        }
+        // Actualizar dashboard cliente de forma pasiva si es necesario
+      }
+      globalUnreadCount = totalUnread;
+    }
+  } catch(e) {}
+}, 5000);
+
 async function sendMsg() {
   const inp = document.getElementById('chatInput');
   const text = inp.value.trim(); 
